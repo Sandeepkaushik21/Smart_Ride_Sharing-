@@ -1,9 +1,41 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 const BackButton = ({ to, text = 'Back' }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const historyRef = useRef([]);
+
+  // Track navigation history using sessionStorage and ref
+  useEffect(() => {
+    const currentPath = location.pathname + (location.search || '');
+    const excludedPaths = ['/', '/login', '/register', '/change-password'];
+
+    // Don't track excluded paths in history
+    if (!excludedPaths.includes(location.pathname)) {
+      // Get history from sessionStorage or initialize
+      const storedHistory = sessionStorage.getItem('navigationHistory');
+      if (storedHistory) {
+        try {
+          historyRef.current = JSON.parse(storedHistory);
+          if (!Array.isArray(historyRef.current)) historyRef.current = [];
+        } catch (e) {
+          historyRef.current = [];
+        }
+      }
+
+      // Add current path to history if it's not already the last entry
+      if (historyRef.current.length === 0 || historyRef.current[historyRef.current.length - 1] !== currentPath) {
+        historyRef.current.push(currentPath);
+        // Keep only last 20 entries to prevent memory issues
+        if (historyRef.current.length > 20) {
+          historyRef.current = historyRef.current.slice(-20);
+        }
+        sessionStorage.setItem('navigationHistory', JSON.stringify(historyRef.current));
+      }
+    }
+  }, [location.pathname, location.search]);
 
   // Don't show back button on landing page, login, register, or change password
   if (location.pathname === '/' || location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/change-password') {
@@ -12,10 +44,55 @@ const BackButton = ({ to, text = 'Back' }) => {
 
   const handleClick = () => {
     if (to) {
+      // If explicit 'to' prop is provided, use it
       navigate(to);
-    } else {
-      navigate(-1);
+      return;
     }
+
+    const excludedPaths = ['/', '/login', '/register', '/change-password'];
+
+    // Try stored history first (preferred). This prevents landing on home when a valid previous page exists.
+    const storedHistory = sessionStorage.getItem('navigationHistory');
+    if (storedHistory) {
+      try {
+        const history = JSON.parse(storedHistory);
+        if (Array.isArray(history) && history.length > 0) {
+          // Find the last entry that is not the current path and not excluded
+          // We iterate backwards to find the first valid previous page
+          for (let i = history.length - 1; i >= 0; i--) {
+            const entry = history[i];
+            if (!entry) continue;
+            // entry may include search params; compare pathname only for excludedPaths
+            const pathname = entry.split('?')[0];
+            if (entry === location.pathname + (location.search || '')) {
+              // skip current page entry
+              continue;
+            }
+            if (excludedPaths.includes(pathname)) {
+              // skip excluded paths
+              continue;
+            }
+            // We found a valid previous entry. Remove everything after it from stored history (pop back)
+            const newHistory = history.slice(0, i + 1);
+            sessionStorage.setItem('navigationHistory', JSON.stringify(newHistory));
+            // Navigate to that previous entry
+            navigate(entry);
+            return;
+          }
+        }
+      } catch (e) {
+        // parsing failed; fallthrough to native history
+      }
+    }
+
+    // If no valid stored history, fallback to browser's native back functionality
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+
+    // Final fallback: go to home
+    navigate('/');
   };
 
   return (
@@ -32,4 +109,3 @@ const BackButton = ({ to, text = 'Back' }) => {
 };
 
 export default BackButton;
-

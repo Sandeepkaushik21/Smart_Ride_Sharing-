@@ -91,5 +91,68 @@ public class AdminService {
                 .filter(user -> !user.getIsApproved())
                 .toList();
     }
+
+    public List<Map<String, Object>> getAllDrivers() {
+        List<User> drivers = userRepository.findAll().stream()
+                .filter(user -> user.getRoles().stream()
+                        .anyMatch(role -> role.getName().name().equals("ROLE_DRIVER")))
+                .filter(user -> user.getIsApproved() != null && user.getIsApproved())
+                .toList();
+
+        return drivers.stream().map(driver -> {
+            Map<String, Object> driverInfo = new HashMap<>();
+            driverInfo.put("id", driver.getId());
+            driverInfo.put("name", driver.getName());
+            driverInfo.put("email", driver.getEmail());
+            driverInfo.put("phone", driver.getPhone());
+            driverInfo.put("vehicleModel", driver.getVehicleModel());
+            driverInfo.put("licensePlate", driver.getLicensePlate());
+            driverInfo.put("driverRating", driver.getDriverRating() != null ? driver.getDriverRating() : 0.0);
+            
+            // Calculate total income from bookings (assuming 10% commission to company)
+            double totalIncome = bookingRepository.findByRideDriverId(driver.getId()).stream()
+                    .filter(booking -> booking.getStatus() == com.infosys.rsa.model.Booking.BookingStatus.CONFIRMED ||
+                            booking.getStatus() == com.infosys.rsa.model.Booking.BookingStatus.COMPLETED)
+                    .mapToDouble(booking -> booking.getFareAmount() != null ? booking.getFareAmount() * 0.10 : 0.0)
+                    .sum();
+            
+            driverInfo.put("companyIncome", totalIncome);
+            driverInfo.put("totalRides", rideRepository.findByDriverId(driver.getId()).size());
+            
+            return driverInfo;
+        }).toList();
+    }
+
+    public List<Map<String, Object>> getAllPassengers() {
+        List<User> passengers = userRepository.findAll().stream()
+                .filter(user -> user.getRoles().stream()
+                        .anyMatch(role -> role.getName().name().equals("ROLE_PASSENGER")))
+                .toList();
+
+        return passengers.stream().map(passenger -> {
+            Map<String, Object> passengerInfo = new HashMap<>();
+            passengerInfo.put("id", passenger.getId());
+            passengerInfo.put("name", passenger.getName());
+            passengerInfo.put("email", passenger.getEmail());
+            passengerInfo.put("phone", passenger.getPhone());
+            
+            // Calculate total bookings and spending
+            List<com.infosys.rsa.model.Booking> bookings = bookingRepository.findByPassengerId(passenger.getId());
+            long totalBookings = bookings.stream()
+                    .filter(booking -> booking.getStatus() == com.infosys.rsa.model.Booking.BookingStatus.CONFIRMED ||
+                            booking.getStatus() == com.infosys.rsa.model.Booking.BookingStatus.COMPLETED)
+                    .count();
+            double totalSpending = bookings.stream()
+                    .filter(booking -> booking.getStatus() == com.infosys.rsa.model.Booking.BookingStatus.CONFIRMED ||
+                            booking.getStatus() == com.infosys.rsa.model.Booking.BookingStatus.COMPLETED)
+                    .mapToDouble(booking -> booking.getFareAmount() != null ? booking.getFareAmount() : 0.0)
+                    .sum();
+            
+            passengerInfo.put("totalBookings", totalBookings);
+            passengerInfo.put("totalSpending", totalSpending);
+            
+            return passengerInfo;
+        }).toList();
+    }
 }
 

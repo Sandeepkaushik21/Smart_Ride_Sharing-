@@ -6,20 +6,11 @@ import { authService } from '../services/authService';
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
-  const user = authService.getCurrentUser();
   const isAuthenticated = authService.isAuthenticated();
 
   const handleLogout = () => {
     authService.logout();
     navigate('/');
-  };
-
-  const getDashboardLink = () => {
-    if (!user || !user.roles) return null;
-    if (user.roles.includes('ROLE_ADMIN')) return '/admin/dashboard';
-    if (user.roles.includes('ROLE_DRIVER')) return '/driver/dashboard';
-    if (user.roles.includes('ROLE_PASSENGER')) return '/passenger/dashboard';
-    return null;
   };
 
   return (
@@ -36,14 +27,6 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-4">
             {isAuthenticated ? (
               <>
-                {getDashboardLink() && (
-                  <Link
-                    to={getDashboardLink()}
-                    className="px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
-                  >
-                    Dashboard
-                  </Link>
-                )}
                 <Link
                   to="/profile"
                   className="px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 flex items-center space-x-1"
@@ -91,15 +74,6 @@ const Navbar = () => {
           <div className="md:hidden pb-4 space-y-2">
             {isAuthenticated ? (
               <>
-                {getDashboardLink() && (
-                  <Link
-                    to={getDashboardLink()}
-                    className="block px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    Dashboard
-                  </Link>
-                )}
                 <Link
                   to="/profile"
                   className="block px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
@@ -143,4 +117,3 @@ const Navbar = () => {
 };
 
 export default Navbar;
-

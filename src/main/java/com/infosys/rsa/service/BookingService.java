@@ -98,13 +98,13 @@ public class BookingService {
     }
 
     public Booking getBookingById(Long bookingId) {
-        return bookingRepository.findById(bookingId)
+        return bookingRepository.findByIdWithRide(bookingId)
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
     }
 
     @Transactional
     public Booking cancelBooking(Long passengerId, Long bookingId) {
-        Booking booking = bookingRepository.findById(bookingId)
+        Booking booking = bookingRepository.findByIdWithRide(bookingId)
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
 
         if (!booking.getPassenger().getId().equals(passengerId)) {
