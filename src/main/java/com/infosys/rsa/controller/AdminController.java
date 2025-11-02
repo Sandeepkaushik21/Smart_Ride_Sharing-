@@ -50,6 +50,18 @@ public class AdminController {
         return ResponseEntity.ok(pendingDrivers);
     }
 
+    @GetMapping("/drivers/all")
+    public ResponseEntity<?> getAllDrivers() {
+        List<Map<String, Object>> drivers = adminService.getAllDrivers();
+        return ResponseEntity.ok(drivers);
+    }
+
+    @GetMapping("/passengers/all")
+    public ResponseEntity<?> getAllPassengers() {
+        List<Map<String, Object>> passengers = adminService.getAllPassengers();
+        return ResponseEntity.ok(passengers);
+    }
+
     private static class ErrorResponse {
         private String message;
         public ErrorResponse(String message) {

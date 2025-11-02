@@ -20,5 +20,15 @@ export const adminService = {
     const response = await api.post(`/admin/drivers/${driverId}/reject`);
     return response.data;
   },
+
+  getAllDrivers: async () => {
+    const response = await api.get('/admin/drivers/all');
+    return response.data;
+  },
+
+  getAllPassengers: async () => {
+    const response = await api.get('/admin/passengers/all');
+    return response.data;
+  },
 };
 

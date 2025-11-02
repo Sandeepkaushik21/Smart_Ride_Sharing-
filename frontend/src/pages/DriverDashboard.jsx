@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, MapPin, Calendar, Clock, Users, Car, Navigation, CheckCircle, DollarSign, TrendingUp } from 'lucide-react';
+import { Plus, MapPin, Calendar, Clock, Users, Car, Navigation, CheckCircle } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import BackButton from '../components/BackButton';
@@ -57,7 +57,7 @@ const DriverDashboard = () => {
       await showSuccess('Ride cancelled successfully!');
       await fetchData();
     } catch (error) {
-      await showError(error.response?.data?.message || 'Error cancelling ride');
+      await showError(error.message || 'Error cancelling ride');
     }
   };
 
@@ -96,7 +96,7 @@ const DriverDashboard = () => {
       // Switch to rides tab to show updated list
       setActiveTab('rides');
     } catch (error) {
-      await showError(error.response?.data?.message || 'Error posting ride');
+      await showError(error.message || 'Error posting ride');
     } finally {
       setLoading(false);
     }
@@ -384,7 +384,11 @@ const DriverDashboard = () => {
                           </div>
                           <div className="bg-gray-50 px-3 py-2 rounded-lg">
                             <div className="text-gray-600">Date</div>
-                            <div className="font-semibold text-gray-900">{booking.ride?.date}</div>
+                            <div className="font-semibold text-gray-900">{booking.ride?.date || 'N/A'}</div>
+                          </div>
+                          <div className="bg-gray-50 px-3 py-2 rounded-lg">
+                            <div className="text-gray-600">Time</div>
+                            <div className="font-semibold text-gray-900">{booking.ride?.time || 'N/A'}</div>
                           </div>
                           <div className="bg-gray-50 px-3 py-2 rounded-lg">
                             <div className="text-gray-600">Fare</div>
