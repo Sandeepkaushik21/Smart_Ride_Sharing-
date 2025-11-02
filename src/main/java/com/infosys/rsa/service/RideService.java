@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 public class RideService {
@@ -27,6 +28,8 @@ public class RideService {
 
     @Autowired
     EmailService emailService;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Transactional
     public Ride postRide(Long driverId, RidePostRequest request) {
@@ -54,6 +57,23 @@ public class RideService {
         ride.setTotalDistance(distance);
         ride.setEstimatedFare(estimatedFare);
         ride.setStatus(Ride.RideStatus.SCHEDULED);
+
+        // Store vehicle photos as JSON string
+        if (request.getVehiclePhotos() != null && !request.getVehiclePhotos().isEmpty()) {
+            try {
+                String vehiclePhotosJson = objectMapper.writeValueAsString(request.getVehiclePhotos());
+                ride.setVehiclePhotosJson(vehiclePhotosJson);
+            } catch (Exception e) {
+                throw new RuntimeException("Error processing vehicle photos: " + e.getMessage());
+            }
+        }
+
+        // Store vehicle condition details
+        ride.setHasAC(request.getHasAC());
+        ride.setVehicleType(request.getVehicleType());
+        ride.setVehicleModel(request.getVehicleModel());
+        ride.setVehicleColor(request.getVehicleColor());
+        ride.setOtherFeatures(request.getOtherFeatures());
 
         Ride savedRide = rideRepository.save(ride);
 

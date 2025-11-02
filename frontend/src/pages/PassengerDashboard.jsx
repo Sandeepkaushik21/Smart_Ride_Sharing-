@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Search, MapPin, Calendar, Clock, User, CheckCircle, Car, Navigation, Star, Ticket } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Search, MapPin, Calendar, Clock, User, CheckCircle, Car, Navigation, Star, Ticket, Snowflake, ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import BackButton from '../components/BackButton';
@@ -58,10 +58,56 @@ const PassengerDashboard = () => {
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('search');
+    const [selectedSeats, setSelectedSeats] = useState({});
+    const [showBookingModal, setShowBookingModal] = useState({});
+    const [photoViewer, setPhotoViewer] = useState({ open: false, photos: [], currentIndex: 0 });
+
+    const openPhotoViewer = useCallback((photos, index = 0) => {
+        setPhotoViewer({ open: true, photos: photos, currentIndex: index });
+    }, []);
+
+    const closePhotoViewer = useCallback(() => {
+        setPhotoViewer({ open: false, photos: [], currentIndex: 0 });
+    }, []);
+
+    const nextPhoto = useCallback(() => {
+        setPhotoViewer((prev) => {
+            if (prev.currentIndex < prev.photos.length - 1) {
+                return { ...prev, currentIndex: prev.currentIndex + 1 };
+            }
+            return prev;
+        });
+    }, []);
+
+    const prevPhoto = useCallback(() => {
+        setPhotoViewer((prev) => {
+            if (prev.currentIndex > 0) {
+                return { ...prev, currentIndex: prev.currentIndex - 1 };
+            }
+            return prev;
+        });
+    }, []);
 
     useEffect(() => {
         fetchMyBookings();
     }, []);
+
+    // Keyboard navigation for photo viewer
+    useEffect(() => {
+        if (photoViewer.open) {
+            const handleKeyDown = (e) => {
+                if (e.key === 'Escape') {
+                    closePhotoViewer();
+                } else if (e.key === 'ArrowLeft') {
+                    prevPhoto();
+                } else if (e.key === 'ArrowRight') {
+                    nextPhoto();
+                }
+            };
+            window.addEventListener('keydown', handleKeyDown);
+            return () => window.removeEventListener('keydown', handleKeyDown);
+        }
+    }, [photoViewer.open, closePhotoViewer, prevPhoto, nextPhoto]);
 
     const fetchMyBookings = async () => {
         try {
@@ -85,9 +131,6 @@ const PassengerDashboard = () => {
             setLoading(false);
         }
     };
-
-    const [selectedSeats, setSelectedSeats] = useState({});
-    const [showBookingModal, setShowBookingModal] = useState({});
 
     const handleBook = async (rideId) => {
         setShowBookingModal({ ...showBookingModal, [rideId]: true });
@@ -113,22 +156,43 @@ const PassengerDashboard = () => {
         if (!confirm.isConfirmed) return;
 
         try {
-            await bookingService.createBooking({
+            const bookingResult = await bookingService.createBooking({
                 rideId,
                 pickupLocation: searchForm.source,
                 dropoffLocation: searchForm.destination,
                 numberOfSeats: numberOfSeats,
             });
-            await showSuccess('Ride booked successfully!');
+            
+            // Update UI optimistically for faster response
             setShowBookingModal({ ...showBookingModal, [rideId]: false });
             setSelectedSeats({ ...selectedSeats, [rideId]: 1 });
-            // Refresh bookings to show newly booked ride
-            await fetchMyBookings();
-            // Also refresh rides to update available seats
-            const updatedRides = await rideService.searchRides(searchForm);
-            setRides(updatedRides);
-            // Switch to bookings tab to show updated list
+            
+            // Optimistically update rides list (reduce available seats)
+            setRides((prevRides) =>
+                prevRides.map((r) =>
+                    r.id === rideId
+                        ? { ...r, availableSeats: r.availableSeats - numberOfSeats }
+                        : r
+                )
+            );
+            
+            // Show success immediately
+            await showSuccess('Ride booked successfully!');
+            
+            // Switch to bookings tab immediately
             setActiveTab('bookings');
+            
+            // Refresh data in background (non-blocking)
+            Promise.all([
+                fetchMyBookings(),
+                rideService.searchRides(searchForm).then((updatedRides) => {
+                    setRides(updatedRides);
+                }).catch((err) => {
+                    console.error('Error refreshing rides:', err);
+                })
+            ]).catch((err) => {
+                console.error('Error refreshing data:', err);
+            });
         } catch (error) {
             console.error('Booking error (passenger):', error, error.original || error);
             await showError(error.message || 'Error booking ride');
@@ -312,7 +376,7 @@ const PassengerDashboard = () => {
                                                         <span className="font-medium">{ride.availableSeats} seats available</span>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center space-x-4">
+                                                <div className="flex items-center space-x-4 mb-3">
                                                     <div className="flex items-center space-x-2">
                                                         <Car className="h-5 w-5 text-gray-500" />
                                                         <span className="font-medium text-gray-700">Driver: {ride.driver?.name || 'N/A'}</span>
@@ -324,6 +388,89 @@ const PassengerDashboard = () => {
                                                         </div>
                                                     )}
                                                 </div>
+
+                                                {/* Vehicle Photos */}
+                                                {ride.vehiclePhotosJson && (() => {
+                                                    try {
+                                                        const photos = JSON.parse(ride.vehiclePhotosJson);
+                                                        return photos.length > 0 ? (
+                                                            <div className="mb-3">
+                                                                <div className="text-xs font-semibold text-gray-600 mb-2 flex items-center">
+                                                                    <ZoomIn className="h-3 w-3 mr-1" />
+                                                                    Vehicle Photos (Click to view):
+                                                                </div>
+                                                                <div className="flex space-x-2 overflow-x-auto">
+                                                                    {photos.slice(0, 3).map((photo, idx) => (
+                                                                        <div
+                                                                            key={idx}
+                                                                            onClick={() => openPhotoViewer(photos, idx)}
+                                                                            className="relative cursor-pointer hover:opacity-80 transition-opacity group"
+                                                                        >
+                                                                            <img
+                                                                                src={photo}
+                                                                                alt={`Vehicle ${idx + 1}`}
+                                                                                className="w-20 h-20 object-cover rounded-lg border-2 border-gray-300"
+                                                                            />
+                                                                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-lg transition-all flex items-center justify-center">
+                                                                                <ZoomIn className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                    {photos.length > 3 && (
+                                                                        <div
+                                                                            onClick={() => openPhotoViewer(photos, 3)}
+                                                                            className="w-20 h-20 bg-gray-200 hover:bg-gray-300 rounded-lg border-2 border-gray-300 flex items-center justify-center text-xs text-gray-600 cursor-pointer transition-colors"
+                                                                        >
+                                                                            +{photos.length - 3} more
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        ) : null;
+                                                    } catch (e) {
+                                                        return null;
+                                                    }
+                                                })()}
+
+                                                {/* Vehicle Condition Details */}
+                                                {(ride.hasAC !== null || ride.vehicleType || ride.vehicleModel || ride.vehicleColor) && (
+                                                    <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                                                        <div className="text-xs font-semibold text-gray-600 mb-2">Vehicle Details:</div>
+                                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                                            {ride.vehicleType && (
+                                                                <div>
+                                                                    <span className="text-gray-600">Type:</span>
+                                                                    <span className="font-medium ml-1">{ride.vehicleType}</span>
+                                                                </div>
+                                                            )}
+                                                            {ride.hasAC !== null && (
+                                                                <div className="flex items-center">
+                                                                    <Snowflake className={`h-3 w-3 mr-1 ${ride.hasAC ? 'text-blue-500' : 'text-gray-400'}`} />
+                                                                    <span className="text-gray-600">AC:</span>
+                                                                    <span className="font-medium ml-1">{ride.hasAC ? 'Yes' : 'No'}</span>
+                                                                </div>
+                                                            )}
+                                                            {ride.vehicleModel && (
+                                                                <div>
+                                                                    <span className="text-gray-600">Model:</span>
+                                                                    <span className="font-medium ml-1">{ride.vehicleModel}</span>
+                                                                </div>
+                                                            )}
+                                                            {ride.vehicleColor && (
+                                                                <div>
+                                                                    <span className="text-gray-600">Color:</span>
+                                                                    <span className="font-medium ml-1">{ride.vehicleColor}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        {ride.otherFeatures && (
+                                                            <div className="mt-2 text-xs">
+                                                                <span className="text-gray-600">Features: </span>
+                                                                <span className="font-medium">{ride.otherFeatures}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="ml-6 flex flex-col items-end space-y-2">
                                                 <div className="text-right">
@@ -439,7 +586,7 @@ const PassengerDashboard = () => {
                                                         <span className="text-gray-700"><strong>To:</strong> {booking.dropoffLocation || booking.ride?.destination}</span>
                                                     </div>
                                                 </div>
-                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
                                                     <div className="bg-gray-50 px-3 py-2 rounded-lg">
                                                         <div className="text-gray-600">Date</div>
                                                         <div className="font-semibold text-gray-900">{formatDate(booking.ride?.date)}</div>
@@ -457,6 +604,83 @@ const PassengerDashboard = () => {
                                                         <div className="font-semibold text-gray-900">{booking.numberOfSeats || 1}</div>
                                                     </div>
                                                 </div>
+
+                                                {/* Vehicle Photos in Booking */}
+                                                {booking.ride?.vehiclePhotosJson && (() => {
+                                                    try {
+                                                        const photos = JSON.parse(booking.ride.vehiclePhotosJson);
+                                                        return photos.length > 0 ? (
+                                                            <div className="mb-4">
+                                                                <div className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                                                                    <ZoomIn className="h-4 w-4 mr-2" />
+                                                                    Vehicle Photos (Click to view):
+                                                                </div>
+                                                                <div className="flex space-x-2 overflow-x-auto">
+                                                                    {photos.map((photo, idx) => (
+                                                                        <div
+                                                                            key={idx}
+                                                                            onClick={() => openPhotoViewer(photos, idx)}
+                                                                            className="relative cursor-pointer hover:opacity-80 transition-opacity group"
+                                                                        >
+                                                                            <img
+                                                                                src={photo}
+                                                                                alt={`Vehicle ${idx + 1}`}
+                                                                                className="w-24 h-24 object-cover rounded-lg border-2 border-gray-300"
+                                                                            />
+                                                                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-lg transition-all flex items-center justify-center">
+                                                                                <ZoomIn className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        ) : null;
+                                                    } catch (e) {
+                                                        return null;
+                                                    }
+                                                })()}
+
+                                                {/* Vehicle Condition Details in Booking */}
+                                                {(booking.ride?.hasAC !== null || booking.ride?.vehicleType || booking.ride?.vehicleModel || booking.ride?.vehicleColor) && (
+                                                    <div className="bg-blue-50 rounded-lg p-4 mb-4 border-2 border-blue-200">
+                                                        <div className="text-sm font-semibold text-gray-700 mb-3">Vehicle Details:</div>
+                                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                                            {booking.ride.vehicleType && (
+                                                                <div>
+                                                                    <span className="text-gray-600 block mb-1">Vehicle Type:</span>
+                                                                    <span className="font-semibold text-gray-900">{booking.ride.vehicleType}</span>
+                                                                </div>
+                                                            )}
+                                                            {booking.ride.hasAC !== null && (
+                                                                <div>
+                                                                    <span className="text-gray-600 block mb-1">AC:</span>
+                                                                    <div className="flex items-center">
+                                                                        <Snowflake className={`h-4 w-4 mr-1 ${booking.ride.hasAC ? 'text-blue-500' : 'text-gray-400'}`} />
+                                                                        <span className="font-semibold text-gray-900">{booking.ride.hasAC ? 'Yes' : 'No'}</span>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                            {booking.ride.vehicleModel && (
+                                                                <div>
+                                                                    <span className="text-gray-600 block mb-1">Model:</span>
+                                                                    <span className="font-semibold text-gray-900">{booking.ride.vehicleModel}</span>
+                                                                </div>
+                                                            )}
+                                                            {booking.ride.vehicleColor && (
+                                                                <div>
+                                                                    <span className="text-gray-600 block mb-1">Color:</span>
+                                                                    <span className="font-semibold text-gray-900">{booking.ride.vehicleColor}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        {booking.ride.otherFeatures && (
+                                                            <div className="mt-3 pt-3 border-t border-blue-200">
+                                                                <span className="text-gray-600 text-sm block mb-1">Additional Features:</span>
+                                                                <span className="font-medium text-gray-800">{booking.ride.otherFeatures}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                                 {booking.status !== 'CANCELLED' && booking.status !== 'COMPLETED' && (
                                                     <div className="mt-4">
                                                         <button
@@ -476,6 +700,87 @@ const PassengerDashboard = () => {
                     </div>
                 )}
             </main>
+            
+            {/* Photo Viewer Modal */}
+            {photoViewer.open && (
+                <div
+                    className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center"
+                    onClick={closePhotoViewer}
+                >
+                    <div className="relative max-w-6xl max-h-full p-4" onClick={(e) => e.stopPropagation()}>
+                        {/* Close Button */}
+                        <button
+                            onClick={closePhotoViewer}
+                            className="absolute top-4 right-4 text-white bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full p-2 z-10 transition-all"
+                        >
+                            <X className="h-6 w-6" />
+                        </button>
+
+                        {/* Photo Counter */}
+                        <div className="absolute top-4 left-4 text-white bg-black bg-opacity-50 rounded-full px-4 py-2 z-10">
+                            {photoViewer.currentIndex + 1} / {photoViewer.photos.length}
+                        </div>
+
+                        {/* Main Image */}
+                        <img
+                            src={photoViewer.photos[photoViewer.currentIndex]}
+                            alt={`Vehicle photo ${photoViewer.currentIndex + 1}`}
+                            className="max-w-full max-h-[90vh] object-contain rounded-lg"
+                        />
+
+                        {/* Navigation Buttons */}
+                        {photoViewer.photos.length > 1 && (
+                            <>
+                                {photoViewer.currentIndex > 0 && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            prevPhoto();
+                                        }}
+                                        className="absolute left-4 top-1/2 -translate-y-1/2 text-white bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full p-3 transition-all"
+                                    >
+                                        <ChevronLeft className="h-6 w-6" />
+                                    </button>
+                                )}
+                                {photoViewer.currentIndex < photoViewer.photos.length - 1 && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            nextPhoto();
+                                        }}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-white bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full p-3 transition-all"
+                                    >
+                                        <ChevronRight className="h-6 w-6" />
+                                    </button>
+                                )}
+                            </>
+                        )}
+
+                        {/* Thumbnail Strip */}
+                        {photoViewer.photos.length > 1 && (
+                            <div className="mt-4 flex space-x-2 overflow-x-auto justify-center">
+                                {photoViewer.photos.map((photo, idx) => (
+                                    <img
+                                        key={idx}
+                                        src={photo}
+                                        alt={`Thumbnail ${idx + 1}`}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setPhotoViewer({ ...photoViewer, currentIndex: idx });
+                                        }}
+                                        className={`w-16 h-16 object-cover rounded-lg border-2 cursor-pointer transition-all ${
+                                            idx === photoViewer.currentIndex
+                                                ? 'border-white scale-110'
+                                                : 'border-gray-600 opacity-60 hover:opacity-100'
+                                        }`}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
             <Footer />
         </div>
     );

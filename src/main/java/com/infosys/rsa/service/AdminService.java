@@ -154,5 +154,26 @@ public class AdminService {
             return passengerInfo;
         }).toList();
     }
+
+    @Transactional
+    public void deleteUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Delete all bookings associated with this user
+        if (user.getRoles().stream().anyMatch(role -> role.getName().name().equals("ROLE_DRIVER"))) {
+            // If driver, delete their rides and bookings
+            rideRepository.findByDriverId(userId).forEach(ride -> {
+                bookingRepository.findByRideId(ride.getId()).forEach(bookingRepository::delete);
+                rideRepository.delete(ride);
+            });
+        }
+
+        // Delete bookings where user is passenger
+        bookingRepository.findByPassengerId(userId).forEach(bookingRepository::delete);
+
+        // Finally delete the user
+        userRepository.delete(user);
+    }
 }
 

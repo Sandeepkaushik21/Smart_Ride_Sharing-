@@ -10,30 +10,30 @@ const BackButton = ({ to, text = 'Back' }) => {
   // Track navigation history using sessionStorage and ref
   useEffect(() => {
     const currentPath = location.pathname + (location.search || '');
-    const excludedPaths = ['/', '/login', '/register', '/change-password'];
 
-    // Don't track excluded paths in history
-    if (!excludedPaths.includes(location.pathname)) {
-      // Get history from sessionStorage or initialize
-      const storedHistory = sessionStorage.getItem('navigationHistory');
-      if (storedHistory) {
-        try {
-          historyRef.current = JSON.parse(storedHistory);
-          if (!Array.isArray(historyRef.current)) historyRef.current = [];
-        } catch (e) {
-          historyRef.current = [];
-        }
+    // Always load stored history (so we can find earlier valid pages even if some were excluded)
+    const storedHistory = sessionStorage.getItem('navigationHistory');
+    if (storedHistory) {
+      try {
+        historyRef.current = JSON.parse(storedHistory);
+        if (!Array.isArray(historyRef.current)) historyRef.current = [];
+      } catch (e) {
+        historyRef.current = [];
       }
+    } else {
+      historyRef.current = [];
+    }
 
-      // Add current path to history if it's not already the last entry
-      if (historyRef.current.length === 0 || historyRef.current[historyRef.current.length - 1] !== currentPath) {
-        historyRef.current.push(currentPath);
-        // Keep only last 20 entries to prevent memory issues
-        if (historyRef.current.length > 20) {
-          historyRef.current = historyRef.current.slice(-20);
-        }
-        sessionStorage.setItem('navigationHistory', JSON.stringify(historyRef.current));
+    // Add current path to history if it's not the same as the last entry
+    // We still DO track excluded pages in storage so we can walk back past them when needed,
+    // but the button itself remains hidden on excluded routes (see the render guard below).
+    if (historyRef.current.length === 0 || historyRef.current[historyRef.current.length - 1] !== currentPath) {
+      historyRef.current.push(currentPath);
+      // Keep only last 50 entries to prevent memory issues
+      if (historyRef.current.length > 50) {
+        historyRef.current = historyRef.current.slice(-50);
       }
+      sessionStorage.setItem('navigationHistory', JSON.stringify(historyRef.current));
     }
   }, [location.pathname, location.search]);
 
@@ -87,7 +87,8 @@ const BackButton = ({ to, text = 'Back' }) => {
 
     // If no valid stored history, fallback to browser's native back functionality
     if (window.history.length > 1) {
-      navigate(-1);
+      // Use native history back which better reflects real browser navigation
+      window.history.back();
       return;
     }
 

@@ -1,6 +1,8 @@
 package com.infosys.rsa.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -8,6 +10,8 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "rides")
@@ -64,6 +68,26 @@ public class Ride {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    // Vehicle photos (stored as JSON array of base64 strings or URLs)
+    @Column(name = "vehicle_photos", columnDefinition = "LONGTEXT")
+    private String vehiclePhotosJson; // JSON array string
+
+    // Vehicle condition details
+    @Column(name = "has_ac")
+    private Boolean hasAC;
+
+    @Column(name = "vehicle_type")
+    private String vehicleType; // Car, Bike, etc.
+
+    @Column(name = "vehicle_model")
+    private String vehicleModel;
+
+    @Column(name = "vehicle_color")
+    private String vehicleColor;
+
+    @Column(name = "other_features", columnDefinition = "TEXT")
+    private String otherFeatures; // Additional vehicle features/details
+
     public enum RideStatus {
         SCHEDULED,
         ONGOING,
@@ -80,6 +104,19 @@ public class Ride {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    // Helper method to get vehicle photos as List
+    public List<String> getVehiclePhotosList() {
+        if (vehiclePhotosJson == null || vehiclePhotosJson.isEmpty()) {
+            return new ArrayList<>();
+        }
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            return mapper.readValue(vehiclePhotosJson, new TypeReference<List<String>>() {});
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
     }
 }
 

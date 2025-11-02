@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Car, CheckCircle, XCircle, TrendingUp, DollarSign, Shield, Activity } from 'lucide-react';
+import { Users, Car, CheckCircle, XCircle, TrendingUp, DollarSign, Shield, Activity, Trash2 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import BackButton from '../components/BackButton';
@@ -47,10 +47,21 @@ const AdminDashboard = () => {
         if (!confirm.isConfirmed) return;
 
         try {
+            // Optimistically remove from pending list immediately
+            setPendingDrivers((prev) => prev.filter((driver) => driver.id !== driverId));
+            
             await adminService.approveDriver(driverId);
             await showSuccess('Driver approved successfully!');
-            fetchData();
+            
+            // Refresh data in background (non-blocking)
+            Promise.all([
+                adminService.getPendingDrivers().then(setPendingDrivers).catch(() => {}),
+                adminService.getAllDrivers().then(setAllDrivers).catch(() => {}),
+                adminService.getDashboardStats().then(setStats).catch(() => {})
+            ]).catch(() => {});
         } catch (error) {
+            // Revert optimistic update on error
+            fetchData();
             await showError('Error approving driver');
         }
     };
@@ -65,11 +76,53 @@ const AdminDashboard = () => {
         if (!confirm.isConfirmed) return;
 
         try {
+            // Optimistically remove from pending list immediately
+            setPendingDrivers((prev) => prev.filter((driver) => driver.id !== driverId));
+            
             await adminService.rejectDriver(driverId);
             await showSuccess('Driver rejected');
-            fetchData();
+            
+            // Refresh data in background (non-blocking)
+            Promise.all([
+                adminService.getPendingDrivers().then(setPendingDrivers).catch(() => {}),
+                adminService.getDashboardStats().then(setStats).catch(() => {})
+            ]).catch(() => {});
         } catch (error) {
+            // Revert optimistic update on error
+            fetchData();
             await showError('Error rejecting driver');
+        }
+    };
+
+    const handleDeleteUser = async (userId, userName, userType) => {
+        const confirm = await showConfirm(
+            `Are you sure you want to delete ${userName}? This will permanently remove all their data including rides and bookings.`,
+            `Yes, Delete ${userType}`,
+            'Cancel'
+        );
+
+        if (!confirm.isConfirmed) return;
+
+        try {
+            if (userType === 'Driver') {
+                setAllDrivers((prev) => prev.filter((user) => user.id !== userId));
+            } else {
+                setAllPassengers((prev) => prev.filter((user) => user.id !== userId));
+            }
+            
+            await adminService.deleteUser(userId);
+            await showSuccess(`${userType} deleted successfully!`);
+            
+            // Refresh data in background (non-blocking)
+            Promise.all([
+                adminService.getAllDrivers().then(setAllDrivers).catch(() => {}),
+                adminService.getAllPassengers().then(setAllPassengers).catch(() => {}),
+                adminService.getDashboardStats().then(setStats).catch(() => {})
+            ]).catch(() => {});
+        } catch (error) {
+            // Revert optimistic update on error
+            fetchData();
+            await showError(`Error deleting ${userType.toLowerCase()}`);
         }
     };
 
@@ -253,6 +306,7 @@ const AdminDashboard = () => {
                                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Rating</th>
                                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Total Rides</th>
                                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Company Income</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
                                     </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
@@ -277,6 +331,15 @@ const AdminDashboard = () => {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-semibold text-green-600">₹{driver.companyIncome?.toFixed(2) || '0.00'}</div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <button
+                                                    onClick={() => handleDeleteUser(driver.id, driver.name, 'Driver')}
+                                                    className="flex items-center space-x-1 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium text-sm shadow-sm"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                    <span>Remove</span>
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
@@ -311,6 +374,7 @@ const AdminDashboard = () => {
                                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Contact</th>
                                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Total Bookings</th>
                                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Total Spending</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
                                     </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
@@ -328,6 +392,15 @@ const AdminDashboard = () => {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-semibold text-green-600">₹{passenger.totalSpending?.toFixed(2) || '0.00'}</div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <button
+                                                    onClick={() => handleDeleteUser(passenger.id, passenger.name, 'Passenger')}
+                                                    className="flex items-center space-x-1 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium text-sm shadow-sm"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                    <span>Remove</span>
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}

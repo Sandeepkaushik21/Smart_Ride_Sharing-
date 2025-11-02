@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, MapPin, Calendar, Clock, Users, Car, Navigation, CheckCircle } from 'lucide-react';
+import { Plus, MapPin, Calendar, Clock, Users, Car, Navigation, CheckCircle, X, Upload, Snowflake } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import BackButton from '../components/BackButton';
@@ -16,7 +16,13 @@ const DriverDashboard = () => {
     date: '',
     time: '',
     availableSeats: '',
+    hasAC: null,
+    vehicleType: '',
+    vehicleModel: '',
+    vehicleColor: '',
+    otherFeatures: '',
   });
+  const [vehiclePhotos, setVehiclePhotos] = useState([]);
   const [myRides, setMyRides] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -61,9 +67,66 @@ const DriverDashboard = () => {
     }
   };
 
+  const handlePhotoUpload = (e) => {
+    const files = Array.from(e.target.files);
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+    
+    if (imageFiles.length === 0) {
+      showError('Please select valid image files');
+      return;
+    }
+
+    const promises = imageFiles.map((file) => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          resolve(reader.result);
+        };
+        reader.onerror = () => {
+          resolve(null);
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    Promise.all(promises).then((base64Strings) => {
+      const validPhotos = base64Strings.filter(photo => photo !== null);
+      const updatedPhotos = [...vehiclePhotos, ...validPhotos].slice(0, 5); // Max 5 photos
+      setVehiclePhotos(updatedPhotos);
+      // Reset file input
+      e.target.value = '';
+    });
+  };
+
+  const removePhoto = (index) => {
+    setVehiclePhotos(vehiclePhotos.filter((_, i) => i !== index));
+  };
+
   const handlePostRide = async (e) => {
     e.preventDefault();
     
+    // Validate vehicle photos
+    if (vehiclePhotos.length < 4) {
+      await showError('Please upload at least 4 photos of your vehicle');
+      return;
+    }
+
+    if (vehiclePhotos.length > 5) {
+      await showError('Please upload maximum 5 photos');
+      return;
+    }
+
+    // Validate vehicle condition fields
+    if (postForm.hasAC === null || postForm.hasAC === undefined) {
+      await showError('Please specify if your vehicle has AC');
+      return;
+    }
+
+    if (!postForm.vehicleType || postForm.vehicleType.trim() === '') {
+      await showError('Please specify your vehicle type (Car, Bike, etc.)');
+      return;
+    }
+
     const confirm = await showConfirm(
       `Post a ride from ${postForm.source} to ${postForm.destination} on ${postForm.date}?`,
       'Yes, Post Ride',
@@ -81,6 +144,12 @@ const DriverDashboard = () => {
         date: postForm.date,
         time: postForm.time,
         availableSeats: parseInt(postForm.availableSeats),
+        vehiclePhotos: vehiclePhotos,
+        hasAC: postForm.hasAC,
+        vehicleType: postForm.vehicleType,
+        vehicleModel: postForm.vehicleModel,
+        vehicleColor: postForm.vehicleColor,
+        otherFeatures: postForm.otherFeatures,
       });
       await showSuccess('Ride posted successfully!');
       setShowPostForm(false);
@@ -90,7 +159,13 @@ const DriverDashboard = () => {
         date: '',
         time: '',
         availableSeats: '',
+        hasAC: null,
+        vehicleType: '',
+        vehicleModel: '',
+        vehicleColor: '',
+        otherFeatures: '',
       });
+      setVehiclePhotos([]);
       // Refresh data to show newly posted ride
       await fetchData();
       // Switch to rides tab to show updated list
@@ -212,6 +287,151 @@ const DriverDashboard = () => {
                   />
                 </div>
               </div>
+
+              {/* Vehicle Photos Section */}
+              <div className="border-t-2 border-gray-200 pt-6">
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  Vehicle Photos * (4-5 photos required)
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+                  {vehiclePhotos.map((photo, index) => (
+                    <div key={index} className="relative">
+                      <img
+                        src={photo}
+                        alt={`Vehicle ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-lg border-2 border-gray-300"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-all"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                  {vehiclePhotos.length < 5 && (
+                    <label className="cursor-pointer">
+                      <div className="w-full h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center hover:border-green-500 transition-all bg-gray-50">
+                        <div className="text-center">
+                          <Upload className="h-6 w-6 text-gray-400 mx-auto mb-1" />
+                          <span className="text-xs text-gray-500">Add Photo</span>
+                        </div>
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handlePhotoUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
+                {vehiclePhotos.length > 0 && vehiclePhotos.length < 4 && (
+                  <p className="text-sm text-orange-600 mt-2">
+                    Please upload at least {4 - vehiclePhotos.length} more photo(s)
+                  </p>
+                )}
+              </div>
+
+              {/* Vehicle Condition Details */}
+              <div className="border-t-2 border-gray-200 pt-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Vehicle Condition Details *</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Vehicle Type * (Car, Bike, etc.)
+                    </label>
+                    <select
+                      required
+                      value={postForm.vehicleType}
+                      onChange={(e) => setPostForm({ ...postForm, vehicleType: e.target.value })}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      <option value="">Select Vehicle Type</option>
+                      <option value="Car">Car</option>
+                      <option value="Bike">Bike</option>
+                      <option value="Scooter">Scooter</option>
+                      <option value="Auto">Auto</option>
+                      <option value="SUV">SUV</option>
+                      <option value="Van">Van</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Has AC? *
+                    </label>
+                    <div className="flex space-x-4 mt-2">
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="hasAC"
+                          value="true"
+                          checked={postForm.hasAC === true}
+                          onChange={() => setPostForm({ ...postForm, hasAC: true })}
+                          className="w-4 h-4 text-green-600"
+                          required
+                        />
+                        <span className="flex items-center">
+                          <Snowflake className="h-4 w-4 mr-1" />
+                          Yes
+                        </span>
+                      </label>
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="hasAC"
+                          value="false"
+                          checked={postForm.hasAC === false}
+                          onChange={() => setPostForm({ ...postForm, hasAC: false })}
+                          className="w-4 h-4 text-green-600"
+                          required
+                        />
+                        <span>No</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Vehicle Model
+                    </label>
+                    <input
+                      type="text"
+                      value={postForm.vehicleModel}
+                      onChange={(e) => setPostForm({ ...postForm, vehicleModel: e.target.value })}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="e.g., Honda City, Yamaha R15"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Vehicle Color
+                    </label>
+                    <input
+                      type="text"
+                      value={postForm.vehicleColor}
+                      onChange={(e) => setPostForm({ ...postForm, vehicleColor: e.target.value })}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="e.g., White, Black, Red"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Other Features
+                    </label>
+                    <textarea
+                      value={postForm.otherFeatures}
+                      onChange={(e) => setPostForm({ ...postForm, otherFeatures: e.target.value })}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      rows="3"
+                      placeholder="e.g., Music system, GPS navigation, Leather seats, etc."
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="flex space-x-4">
                 <button
                   type="submit"

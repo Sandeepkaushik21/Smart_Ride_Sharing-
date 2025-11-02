@@ -28,7 +28,7 @@ export const locationService = {
     }
 
     try {
-      // Search for the city first to get coordinates
+      // Search for the city first to get coordinates and bounding box
       const searchResponse = await fetch(
         `${LOCATIONIQ_BASE_URL}/search.php?key=${LOCATIONIQ_API_KEY}&q=${encodeURIComponent(cityName)}&format=json&limit=1&addressdetails=1`
       );
@@ -38,56 +38,130 @@ export const locationService = {
       }
 
       const searchResults = await searchResponse.json();
-      
       if (!searchResults || searchResults.length === 0) {
         return getDefaultLocations(cityName);
       }
 
       const city = searchResults[0];
-      const lat = city.lat;
-      const lon = city.lon;
 
-      // Get nearby places (popular locations) using reverse geocoding with address details
-      // We'll search for common location types near the city
-      const locationQueries = [
-        `${cityName} Railway Station`,
-        `${cityName} Airport`,
-        `${cityName} Central`,
-        `${cityName} City Center`,
-      ];
-
-      const locationPromises = locationQueries.map(async (query) => {
-        try {
-          const response = await fetch(
-            `${LOCATIONIQ_BASE_URL}/search.php?key=${LOCATIONIQ_API_KEY}&q=${encodeURIComponent(query)}&format=json&limit=1`
-          );
-          
-          if (response.ok) {
-            const results = await response.json();
-            if (results && results.length > 0) {
-              return results[0].display_name.split(',')[0]; // Get first part of display name
-            }
-          }
-          return null;
-        } catch (error) {
-          console.error(`Error fetching location: ${query}`, error);
-          return null;
-        }
-      });
-
-      const locations = await Promise.all(locationPromises);
-      
-      // Filter out null values and ensure we have at least 4 locations
-      const validLocations = locations.filter(loc => loc !== null);
-      
-      if (validLocations.length >= 4) {
-        return validLocations.slice(0, 4);
+      // Prepare a viewbox from the city's boundingbox (if available) to restrict POI searches
+      // LocationIQ / Nominatim boundingbox format: [south, north, west, east]
+      let viewboxParam = null;
+      if (city.boundingbox && city.boundingbox.length === 4) {
+        const south = city.boundingbox[0];
+        const north = city.boundingbox[1];
+        const west = city.boundingbox[2];
+        const east = city.boundingbox[3];
+        // Nominatim's viewbox expects: left,top,right,bottom => west,north,east,south
+        viewboxParam = `${west},${north},${east},${south}`;
       }
 
-      // If we don't have enough, fill with default locations
-      const defaultLocs = getDefaultLocations(cityName);
-      return [...validLocations, ...defaultLocs].slice(0, 4);
-      
+      // Prioritized POI categories/queries that commonly represent "popular locations" in a city
+      const poiQueries = [
+        'Airport',
+        'Railway station',
+        'Beach',
+        'Port',
+        'Harbour',
+        'Major hospital',
+        'Central bus station',
+        'University',
+        'Market',
+        'City center',
+        'Fort'
+      ];
+
+      // Helper to run a bounded search for a specific query and return a cleaned name or null
+      const fetchPoi = async (q) => {
+        try {
+          const url = new URL(`${LOCATIONIQ_BASE_URL}/search.php`);
+          url.searchParams.set('key', LOCATIONIQ_API_KEY);
+          url.searchParams.set('q', `${cityName} ${q}`);
+          url.searchParams.set('format', 'json');
+          url.searchParams.set('limit', '2');
+          url.searchParams.set('addressdetails', '1');
+          url.searchParams.set('extratags', '1');
+          url.searchParams.set('namedetails', '1');
+          // If we have a viewbox, bound the search to the city area for more relevant results
+          if (viewboxParam) {
+            url.searchParams.set('viewbox', viewboxParam);
+            url.searchParams.set('bounded', '1');
+          }
+
+          const response = await fetch(url.toString());
+          if (!response.ok) return null;
+          const results = await response.json();
+          if (!results || results.length === 0) return null;
+
+          // Prefer namedetails.name if available, else use the first token of display_name
+          const candidate = results.find(r => r.display_name);
+          if (!candidate) return null;
+
+          // Try to extract a concise human-friendly name
+          if (candidate.namedetails && candidate.namedetails.name) {
+            return candidate.namedetails.name;
+          }
+
+          // Use display_name first segment (before comma) as a concise label
+          if (candidate.display_name) {
+            return candidate.display_name.split(',')[0];
+          }
+
+          return null;
+        } catch (err) {
+          console.error('Error fetching POI', q, err);
+          return null;
+        }
+      };
+
+      // Run POI queries in sequence (small number => keep it simple) and collect unique results
+      const collected = [];
+      for (const q of poiQueries) {
+        const name = await fetchPoi(q);
+        if (name && !collected.includes(name)) {
+          collected.push(name);
+        }
+        // Stop early if we have a good number of locations
+        if (collected.length >= 6) break;
+      }
+
+      // If not enough results, try a broader search in the city's name (limit a few results)
+      if (collected.length < 4) {
+        try {
+          const broadUrl = new URL(`${LOCATIONIQ_BASE_URL}/search.php`);
+          broadUrl.searchParams.set('key', LOCATIONIQ_API_KEY);
+          broadUrl.searchParams.set('q', city.display_name || cityName);
+          broadUrl.searchParams.set('format', 'json');
+          broadUrl.searchParams.set('limit', '6');
+          broadUrl.searchParams.set('addressdetails', '1');
+          if (viewboxParam) {
+            broadUrl.searchParams.set('viewbox', viewboxParam);
+            broadUrl.searchParams.set('bounded', '1');
+          }
+
+          const broadResp = await fetch(broadUrl.toString());
+          if (broadResp.ok) {
+            const broadResults = await broadResp.json();
+            for (const r of broadResults) {
+              const label = (r.namedetails && r.namedetails.name) ? r.namedetails.name : (r.display_name ? r.display_name.split(',')[0] : null);
+              if (label && !collected.includes(label)) {
+                collected.push(label);
+                if (collected.length >= 6) break;
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Error doing broader city search', err);
+        }
+      }
+
+      // Final dedupe and return up to 6 items
+      const unique = Array.from(new Set(collected)).slice(0, 6);
+      if (unique.length > 0) return unique;
+
+      // Fallback to defaults if nothing useful found
+      return getDefaultLocations(cityName);
+
     } catch (error) {
       console.error('Error fetching locations from LocationIQ:', error);
       // Fallback to default locations
@@ -105,52 +179,52 @@ function getDefaultLocations(cityName) {
   // Predefined popular locations for major cities (fallback)
   const locationMap = {
     'chennai': [
-      'Chennai Central Railway Station',
-      'Chennai Airport',
-      'Chennai Fort',
-      'T Nagar Main Area'
+      'Chennai International Airport',
+      'Chennai Central',
+      'Marina Beach',
+      'Chennai Port'
     ],
     'mumbai': [
-      'Mumbai Central',
-      'Mumbai Airport',
-      'Bandra Kurla Complex',
-      'Andheri Main Area'
+      'Chhatrapati Shivaji Maharaj International Airport',
+      'Chhatrapati Shivaji Maharaj Terminus (CSMT)',
+      'Marine Drive',
+      'Gateway of India'
     ],
     'delhi': [
+      'Indira Gandhi International Airport',
       'New Delhi Railway Station',
-      'Delhi Airport',
       'Connaught Place',
-      'Gurgaon Sector 29'
+      'India Gate'
     ],
     'bangalore': [
-      'Bangalore City Railway Station',
-      'Bangalore Airport',
+      'Kempegowda International Airport',
+      'KSR Bangalore City Railway Station',
       'MG Road',
       'Electronic City'
     ],
     'kolkata': [
-      'Kolkata Howrah Station',
-      'Kolkata Airport',
+      'Netaji Subhas Chandra Bose International Airport',
+      'Howrah Junction',
       'Park Street',
-      'Salt Lake City'
+      'Victoria Memorial'
     ],
     'hyderabad': [
-      'Hyderabad Nampally Station',
-      'Hyderabad Airport',
-      'Banjara Hills',
-      'HITEC City'
+      'Rajiv Gandhi International Airport',
+      'Secunderabad Junction',
+      'HITEC City',
+      'Charminar'
     ],
     'pune': [
-      'Pune Railway Station',
-      'Pune Airport',
+      'Pune International Airport',
+      'Pune Junction',
       'Koregaon Park',
-      'Hinjawadi IT Park'
+      'Shaniwar Wada'
     ]
   };
 
   // Normalize city name for lookup
   const normalizedCity = cityName?.toLowerCase().trim();
-  
+
   // Find matching city
   for (const [city, locations] of Object.entries(locationMap)) {
     if (normalizedCity?.includes(city) || city.includes(normalizedCity)) {
