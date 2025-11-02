@@ -62,6 +62,16 @@ public class AdminController {
         return ResponseEntity.ok(passengers);
     }
 
+    @DeleteMapping("/users/{userId}")
+    public ResponseEntity<?> deleteUser(@PathVariable Long userId) {
+        try {
+            adminService.deleteUser(userId);
+            return ResponseEntity.ok(Map.of("message", "User deleted successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
     private static class ErrorResponse {
         private String message;
         public ErrorResponse(String message) {

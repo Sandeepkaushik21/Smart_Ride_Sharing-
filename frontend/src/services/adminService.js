@@ -30,5 +30,10 @@ export const adminService = {
     const response = await api.get('/admin/passengers/all');
     return response.data;
   },
+
+  deleteUser: async (userId) => {
+    const response = await api.delete(`/admin/users/${userId}`);
+    return response.data;
+  },
 };
 
