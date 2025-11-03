@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Search, MapPin, Calendar, Clock, User, CheckCircle, Car, Navigation, Star, Ticket, Snowflake, ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -7,6 +7,7 @@ import CityAutocomplete from '../components/CityAutocomplete';
 import { rideService } from '../services/rideService';
 import { bookingService } from '../services/bookingService';
 import { showConfirm, showSuccess, showError } from '../utils/swal';
+import { locationService } from '../services/locationService';
 
 const PassengerDashboard = () => {
     // Helper: format LocalDate (ISO string "yyyy-MM-dd" or Java time object) to human-friendly string
@@ -56,10 +57,59 @@ const PassengerDashboard = () => {
     });
     const [rides, setRides] = useState([]);
     const [bookings, setBookings] = useState([]);
+
+    // Helper: check if a date has passed (is before today)
+    const isDatePassed = useCallback((dateValue) => {
+        if (!dateValue) return false;
+        
+        let dateStr = '';
+        if (typeof dateValue === 'string') {
+            dateStr = dateValue; // Already in format 'yyyy-MM-dd'
+        } else if (typeof dateValue === 'object') {
+            // Convert Java LocalDate object to string
+            const year = dateValue.year || dateValue.value?.year;
+            const month = dateValue.month || dateValue.monthValue || dateValue.value?.month || dateValue.value?.monthValue;
+            const day = dateValue.day || dateValue.dayOfMonth || dateValue.value?.day || dateValue.value?.dayOfMonth;
+            if (year && month && day) {
+                const mm = String(month).padStart(2, '0');
+                const dd = String(day).padStart(2, '0');
+                dateStr = `${year}-${mm}-${dd}`;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+
+        // Compare with today's date (only date, not time)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const bookingDate = new Date(dateStr);
+        bookingDate.setHours(0, 0, 0, 0);
+        
+        return bookingDate < today;
+    }, []);
+
+    // Filter bookings to exclude cancelled and past dates
+    const filteredBookings = useMemo(() => {
+        return bookings.filter(booking => {
+            // Exclude cancelled bookings
+            if (booking.status === 'CANCELLED') {
+                return false;
+            }
+            // Exclude bookings with past dates
+            const rideDate = booking.ride?.date;
+            if (rideDate && isDatePassed(rideDate)) {
+                return false;
+            }
+            return true;
+        });
+    }, [bookings, isDatePassed]);
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('search');
     const [selectedSeats, setSelectedSeats] = useState({});
     const [showBookingModal, setShowBookingModal] = useState({});
+    const [bookingLoading, setBookingLoading] = useState({});
     const [photoViewer, setPhotoViewer] = useState({ open: false, photos: [], currentIndex: 0 });
 
     const openPhotoViewer = useCallback((photos, index = 0) => {
@@ -118,8 +168,18 @@ const PassengerDashboard = () => {
         }
     };
 
+    // Wizard state (1-2-3): 1) From/To Cities, 2) 4 popular locations each, 3) Date + Search
+    const [wizardStep, setWizardStep] = useState(1);
+    const [fromCity, setFromCity] = useState('');
+    const [toCity, setToCity] = useState('');
+
+    // No prefetching; step 2 will use real-time place autocomplete within the chosen cities
+
+    const goNext = () => setWizardStep((s) => Math.min(3, s + 1));
+    const goPrev = () => setWizardStep((s) => Math.max(1, s - 1));
+
     const handleSearch = async (e) => {
-        e.preventDefault();
+        if (e && e.preventDefault) e.preventDefault();
         setLoading(true);
         try {
             const data = await rideService.searchRides(searchForm);
@@ -156,6 +216,9 @@ const PassengerDashboard = () => {
         if (!confirm.isConfirmed) return;
 
         try {
+            // Show inline loading immediately
+            setBookingLoading(prev => ({ ...prev, [rideId]: true }));
+
             const bookingResult = await bookingService.createBooking({
                 rideId,
                 pickupLocation: searchForm.source,
@@ -176,8 +239,8 @@ const PassengerDashboard = () => {
                 )
             );
             
-            // Show success immediately
-            await showSuccess('Ride booked successfully!');
+            // Non-blocking success toast (don't await)
+            showSuccess('Ride booked successfully!');
             
             // Switch to bookings tab immediately
             setActiveTab('bookings');
@@ -196,6 +259,9 @@ const PassengerDashboard = () => {
         } catch (error) {
             console.error('Booking error (passenger):', error, error.original || error);
             await showError(error.message || 'Error booking ride');
+        }
+        finally {
+            setBookingLoading(prev => ({ ...prev, [rideId]: false }));
         }
     };
 
@@ -273,62 +339,160 @@ const PassengerDashboard = () => {
                             <Search className="h-5 w-5 text-purple-600" />
                             <span>Search Rides</span>
                         </h2>
-                        <form onSubmit={handleSearch} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        From *
-                                    </label>
-                                    <CityAutocomplete
-                                        value={searchForm.source}
-                                        onChange={(value) => setSearchForm({ ...searchForm, source: value })}
-                                        placeholder="Source city"
-                                        showNearbyLocations={true}
-                                    />
+
+                        {/* Stepper */}
+                        <div className="flex items-center justify-center space-x-4 mb-6">
+                            {[1,2,3].map((step) => (
+                                <div key={step} className="flex items-center">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${wizardStep >= step ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'}`}>
+                                        {step}
+                                    </div>
+                                    {step !== 3 && (
+                                        <div className={`w-10 h-1 mx-2 ${wizardStep > step ? 'bg-purple-600' : 'bg-gray-200'}`}></div>
+                                    )}
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        To *
-                                    </label>
-                                    <CityAutocomplete
-                                        value={searchForm.destination}
-                                        onChange={(value) => setSearchForm({ ...searchForm, destination: value })}
-                                        placeholder="Destination city"
-                                        showNearbyLocations={true}
-                                    />
+                            ))}
+                        </div>
+
+                        {/* Step 1: Pick From & To Cities (cities only) */}
+                        {wizardStep === 1 && (
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">From City *</label>
+                                        <CityAutocomplete
+                                            value={fromCity}
+                                            onChange={(v) => {
+                                                setFromCity(v);
+                                                setSearchForm({ ...searchForm, source: '' });
+                                            }}
+                                            placeholder="Type a city (e.g., Chennai)"
+                                            mode="city"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">To City *</label>
+                                        <CityAutocomplete
+                                            value={toCity}
+                                            onChange={(v) => {
+                                                setToCity(v);
+                                                setSearchForm({ ...searchForm, destination: '' });
+                                            }}
+                                            placeholder="Type a city (e.g., Bengaluru)"
+                                            mode="city"
+                                        />
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Date *
-                                    </label>
-                                    <input
-                                        type="date"
-                                        required
-                                        value={searchForm.date}
-                                        onChange={(e) => setSearchForm({ ...searchForm, date: e.target.value })}
-                                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                        min={new Date().toISOString().split('T')[0]}
-                                    />
+                                <div className="flex justify-end">
+                                    <button
+                                        disabled={!fromCity || !toCity || fromCity.trim().length < 2 || toCity.trim().length < 2}
+                                        onClick={goNext}
+                                        className="px-6 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
+                                    >
+                                        Next
+                                    </button>
                                 </div>
                             </div>
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full md:w-auto px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 font-semibold shadow-lg transform hover:scale-105 transition-all flex items-center justify-center space-x-2"
-                            >
-                                {loading ? (
-                                    <>
-                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                                        <span>Searching...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Search className="h-5 w-5" />
-                                        <span>Search Rides</span>
-                                    </>
-                                )}
-                            </button>
-                        </form>
+                        )}
+
+                        {/* Step 2: Pick From/To locations (realtime autocomplete within selected cities) */}
+                        {wizardStep === 2 && (
+                            <div className="space-y-6">
+                                <div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1">From (any place in {fromCity})</label>
+                                            <CityAutocomplete
+                                                value={searchForm.source}
+                                                onChange={(value) => setSearchForm({ ...searchForm, source: value })}
+                                                placeholder={`Search a place in ${fromCity}`}
+                                                withinCity={fromCity}
+                                                disableCache={true}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1">To (any place in {toCity})</label>
+                                            <CityAutocomplete
+                                                value={searchForm.destination}
+                                                onChange={(value) => setSearchForm({ ...searchForm, destination: value })}
+                                                placeholder={`Search a place in ${toCity}`}
+                                                withinCity={toCity}
+                                                disableCache={true}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex justify-between">
+                                    <button onClick={goPrev} className="px-6 py-2 bg-gray-200 rounded-lg">Back</button>
+                                    <button
+                                        disabled={!searchForm.source || !searchForm.destination}
+                                        onClick={goNext}
+                                        className="px-6 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Step 3: Date and Search */}
+                        {wizardStep === 3 && (
+                            <form onSubmit={handleSearch} className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">From *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={searchForm.source}
+                                            onChange={(e) => setSearchForm({ ...searchForm, source: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">To *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={searchForm.destination}
+                                            onChange={(e) => setSearchForm({ ...searchForm, destination: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Date *</label>
+                                        <input
+                                            type="date"
+                                            required
+                                            value={searchForm.date}
+                                            onChange={(e) => setSearchForm({ ...searchForm, date: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                            min={new Date().toISOString().split('T')[0]}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex justify-between">
+                                    <button type="button" onClick={goPrev} className="px-6 py-2 bg-gray-200 rounded-lg">Back</button>
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 font-semibold shadow-lg transform hover:scale-105 transition-all flex items-center justify-center space-x-2"
+                                    >
+                                        {loading ? (
+                                            <>
+                                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                                <span>Searching...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Search className="h-5 w-5" />
+                                                <span>Search Rides</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </form>
+                        )}
                     </div>
                 )}
 
@@ -500,9 +664,10 @@ const PassengerDashboard = () => {
                                                         <div className="flex space-x-2">
                                                             <button
                                                                 onClick={() => handleConfirmBooking(ride.id)}
-                                                                className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 text-sm font-semibold"
+                                                                disabled={!!bookingLoading[ride.id]}
+                                                                className={`px-4 py-2 rounded-lg text-white text-sm font-semibold ${bookingLoading[ride.id] ? 'bg-green-400 cursor-not-allowed' : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'}`}
                                                             >
-                                                                Confirm
+                                                                {bookingLoading[ride.id] ? 'Booking…' : 'Confirm'}
                                                             </button>
                                                             <button
                                                                 onClick={() => {
@@ -521,14 +686,14 @@ const PassengerDashboard = () => {
                                                             setSelectedSeats({ ...selectedSeats, [ride.id]: 1 });
                                                             handleBook(ride.id);
                                                         }}
-                                                        disabled={ride.availableSeats === 0}
+                                                        disabled={ride.availableSeats === 0 || bookingLoading[ride.id]}
                                                         className={`px-6 py-3 rounded-lg font-semibold shadow-lg transform hover:scale-105 transition-all ${
-                                                            ride.availableSeats === 0
+                                                            ride.availableSeats === 0 || bookingLoading[ride.id]
                                                                 ? 'bg-gray-400 text-white cursor-not-allowed'
                                                                 : 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700'
                                                         }`}
                                                     >
-                                                        {ride.availableSeats === 0 ? 'Full' : 'Book Now'}
+                                                        {ride.availableSeats === 0 ? 'Full' : bookingLoading[ride.id] ? 'Processing…' : 'Book Now'}
                                                     </button>
                                                 )}
                                             </div>
@@ -545,18 +710,18 @@ const PassengerDashboard = () => {
                         <div className="bg-gradient-to-r from-purple-600 to-blue-600 px-6 py-4">
                             <h2 className="text-xl font-bold text-white flex items-center space-x-2">
                                 <Ticket className="h-5 w-5" />
-                                <span>My Bookings ({bookings.length})</span>
+                                <span>My Bookings ({filteredBookings.length})</span>
                             </h2>
                         </div>
                         <div className="divide-y divide-gray-200">
-                            {bookings.length === 0 ? (
+                            {filteredBookings.length === 0 ? (
                                 <div className="p-12 text-center">
                                     <Ticket className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                                     <p className="text-gray-600 text-base font-medium">No bookings yet</p>
                                     <p className="text-gray-500 text-xs mt-2">Start searching for rides!</p>
                                 </div>
                             ) : (
-                                bookings.map((booking) => (
+                                filteredBookings.map((booking) => (
                                     <div key={booking.id} className="p-6 hover:bg-gradient-to-r hover:from-purple-50 hover:to-blue-50 transition-all">
                                         <div className="flex justify-between items-start">
                                             <div className="flex-1">

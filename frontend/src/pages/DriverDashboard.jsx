@@ -7,6 +7,7 @@ import CityAutocomplete from '../components/CityAutocomplete';
 import { rideService } from '../services/rideService';
 import { bookingService } from '../services/bookingService';
 import { showConfirm, showSuccess, showError } from '../utils/swal';
+import { locationService } from '../services/locationService';
 
 const DriverDashboard = () => {
   const [showPostForm, setShowPostForm] = useState(false);
@@ -27,10 +28,48 @@ const DriverDashboard = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('rides');
+  // Wizard for Post Ride (1: From/To Cities, 2: 4 popular locations each, 3: Details)
+  const [postStep, setPostStep] = useState(1);
+  const [fromCity, setFromCity] = useState('');
+  const [toCity, setToCity] = useState('');
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  // No prefetching; step 2 uses realtime place autocomplete within the chosen cities
+
+  // Helper: check if a date has passed (is before today)
+  const isDatePassed = (dateValue) => {
+    if (!dateValue) return false;
+    
+    let dateStr = '';
+    if (typeof dateValue === 'string') {
+      dateStr = dateValue; // Already in format 'yyyy-MM-dd'
+    } else if (typeof dateValue === 'object') {
+      // Convert Java LocalDate object to string
+      const year = dateValue.year || dateValue.value?.year;
+      const month = dateValue.month || dateValue.monthValue || dateValue.value?.month || dateValue.value?.monthValue;
+      const day = dateValue.day || dateValue.dayOfMonth || dateValue.value?.day || dateValue.value?.dayOfMonth;
+      if (year && month && day) {
+        const mm = String(month).padStart(2, '0');
+        const dd = String(day).padStart(2, '0');
+        dateStr = `${year}-${mm}-${dd}`;
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+
+    // Compare with today's date (only date, not time)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const rideDate = new Date(dateStr);
+    rideDate.setHours(0, 0, 0, 0);
+    
+    return rideDate < today;
+  };
 
   const fetchData = async () => {
     try {
@@ -48,6 +87,33 @@ const DriverDashboard = () => {
       setBookings([]);
     }
   };
+
+  // Filter rides to exclude cancelled and past dates
+  const filteredRides = myRides.filter(ride => {
+    // Exclude cancelled rides
+    if (ride.status === 'CANCELLED') {
+      return false;
+    }
+    // Exclude rides with past dates
+    if (ride.date && isDatePassed(ride.date)) {
+      return false;
+    }
+    return true;
+  });
+
+  // Filter bookings to exclude cancelled and past dates
+  const filteredBookings = bookings.filter(booking => {
+    // Exclude cancelled bookings
+    if (booking.status === 'CANCELLED') {
+      return false;
+    }
+    // Exclude bookings with past dates
+    const rideDate = booking.ride?.date;
+    if (rideDate && isDatePassed(rideDate)) {
+      return false;
+    }
+    return true;
+  });
 
   const handleCancelRide = async (rideId) => {
     const confirm = await showConfirm(
@@ -223,242 +289,261 @@ const DriverDashboard = () => {
               <Plus className="h-5 w-5 text-green-600" />
               <span>Post a New Ride</span>
             </h2>
-            <form onSubmit={handlePostRide} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    From *
-                  </label>
-                  <CityAutocomplete
-                    value={postForm.source}
-                    onChange={(value) => setPostForm({ ...postForm, source: value })}
-                    placeholder="Source city"
-                    showNearbyLocations={true}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    To *
-                  </label>
-                  <CityAutocomplete
-                    value={postForm.destination}
-                    onChange={(value) => setPostForm({ ...postForm, destination: value })}
-                    placeholder="Destination city"
-                    showNearbyLocations={true}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Date *
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={postForm.date}
-                    onChange={(e) => setPostForm({ ...postForm, date: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                    min={new Date().toISOString().split('T')[0]}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Time *
-                  </label>
-                  <input
-                    type="time"
-                    required
-                    value={postForm.time}
-                    onChange={(e) => setPostForm({ ...postForm, time: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Available Seats *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min={1}
-                    value={postForm.availableSeats}
-                    onChange={(e) => setPostForm({ ...postForm, availableSeats: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                    placeholder="4"
-                  />
-                </div>
-              </div>
 
-              {/* Vehicle Photos Section */}
-              <div className="border-t-2 border-gray-200 pt-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
-                  Vehicle Photos * (4-5 photos required)
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
-                  {vehiclePhotos.map((photo, index) => (
-                    <div key={index} className="relative">
-                      <img
-                        src={photo}
-                        alt={`Vehicle ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-lg border-2 border-gray-300"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removePhoto(index)}
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-all"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                  {vehiclePhotos.length < 5 && (
-                    <label className="cursor-pointer">
-                      <div className="w-full h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center hover:border-green-500 transition-all bg-gray-50">
-                        <div className="text-center">
-                          <Upload className="h-6 w-6 text-gray-400 mx-auto mb-1" />
-                          <span className="text-xs text-gray-500">Add Photo</span>
-                        </div>
-                      </div>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handlePhotoUpload}
-                        className="hidden"
-                      />
-                    </label>
-                  )}
+            {/* Stepper */}
+            <div className="flex items-center justify-center space-x-4 mb-6">
+              {[1,2,3].map((s) => (
+                <div key={s} className="flex items-center">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${postStep >= s ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'}`}>{s}</div>
+                  {s !== 3 && <div className={`w-10 h-1 mx-2 ${postStep > s ? 'bg-green-600' : 'bg-gray-200'}`}></div>}
                 </div>
-                {vehiclePhotos.length > 0 && vehiclePhotos.length < 4 && (
-                  <p className="text-sm text-orange-600 mt-2">
-                    Please upload at least {4 - vehiclePhotos.length} more photo(s)
-                  </p>
-                )}
-              </div>
+              ))}
+            </div>
 
-              {/* Vehicle Condition Details */}
-              <div className="border-t-2 border-gray-200 pt-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Vehicle Condition Details *</h3>
+            {/* Step 1: From/To Cities (cities only) */}
+            {postStep === 1 && (
+              <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Vehicle Type * (Car, Bike, etc.)
-                    </label>
-                    <select
-                      required
-                      value={postForm.vehicleType}
-                      onChange={(e) => setPostForm({ ...postForm, vehicleType: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                    >
-                      <option value="">Select Vehicle Type</option>
-                      <option value="Car">Car</option>
-                      <option value="Bike">Bike</option>
-                      <option value="Scooter">Scooter</option>
-                      <option value="Auto">Auto</option>
-                      <option value="SUV">SUV</option>
-                      <option value="Van">Van</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Has AC? *
-                    </label>
-                    <div className="flex space-x-4 mt-2">
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="hasAC"
-                          value="true"
-                          checked={postForm.hasAC === true}
-                          onChange={() => setPostForm({ ...postForm, hasAC: true })}
-                          className="w-4 h-4 text-green-600"
-                          required
-                        />
-                        <span className="flex items-center">
-                          <Snowflake className="h-4 w-4 mr-1" />
-                          Yes
-                        </span>
-                      </label>
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="hasAC"
-                          value="false"
-                          checked={postForm.hasAC === false}
-                          onChange={() => setPostForm({ ...postForm, hasAC: false })}
-                          className="w-4 h-4 text-green-600"
-                          required
-                        />
-                        <span>No</span>
-                      </label>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Vehicle Model
-                    </label>
-                    <input
-                      type="text"
-                      value={postForm.vehicleModel}
-                      onChange={(e) => setPostForm({ ...postForm, vehicleModel: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                      placeholder="e.g., Honda City, Yamaha R15"
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">From City *</label>
+                    <CityAutocomplete
+                      value={fromCity}
+                      onChange={(v) => {
+                        setFromCity(v);
+                        setPostForm({ ...postForm, source: '' });
+                      }}
+                      placeholder="Type a city (e.g., Chennai)"
+                      mode="city"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Vehicle Color
-                    </label>
-                    <input
-                      type="text"
-                      value={postForm.vehicleColor}
-                      onChange={(e) => setPostForm({ ...postForm, vehicleColor: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                      placeholder="e.g., White, Black, Red"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Other Features
-                    </label>
-                    <textarea
-                      value={postForm.otherFeatures}
-                      onChange={(e) => setPostForm({ ...postForm, otherFeatures: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                      rows="3"
-                      placeholder="e.g., Music system, GPS navigation, Leather seats, etc."
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">To City *</label>
+                    <CityAutocomplete
+                      value={toCity}
+                      onChange={(v) => {
+                        setToCity(v);
+                        setPostForm({ ...postForm, destination: '' });
+                      }}
+                      placeholder="Type a city (e.g., Bengaluru)"
+                      mode="city"
                     />
                   </div>
                 </div>
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setPostStep(2)}
+                    disabled={!fromCity || !toCity || fromCity.trim().length < 2 || toCity.trim().length < 2}
+                    className="px-6 py-2 bg-green-600 text-white rounded-lg disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
+            )}
 
-              <div className="flex space-x-4">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-8 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 disabled:opacity-50 font-semibold shadow-lg transform hover:scale-105 transition-all flex items-center space-x-2"
-                >
-                  {loading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      <span>Posting...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="h-5 w-5" />
-                      <span>Post Ride</span>
-                    </>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowPostForm(false)}
-                  className="px-8 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-semibold shadow-md transition-all"
-                >
-                  Cancel
-                </button>
+            {/* Step 2: From/To with realtime autocomplete within selected cities */}
+            {postStep === 2 && (
+              <div className="space-y-6">
+                <div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">From (any place in {fromCity})</label>
+                      <CityAutocomplete
+                        value={postForm.source}
+                        onChange={(value) => setPostForm({ ...postForm, source: value })}
+                        placeholder={`Search a place in ${fromCity}`}
+                        withinCity={fromCity}
+                        disableCache={true}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">To (any place in {toCity})</label>
+                      <CityAutocomplete
+                        value={postForm.destination}
+                        onChange={(value) => setPostForm({ ...postForm, destination: value })}
+                        placeholder={`Search a place in ${toCity}`}
+                        withinCity={toCity}
+                        disableCache={true}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-between">
+                  <button onClick={() => setPostStep(1)} className="px-6 py-2 bg-gray-200 rounded-lg">Back</button>
+                  <button
+                    onClick={() => setPostStep(3)}
+                    disabled={!postForm.source || !postForm.destination}
+                    className="px-6 py-2 bg-green-600 text-white rounded-lg disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
-            </form>
+            )}
+
+            {/* Step 3: Details */}
+            {postStep === 3 && (
+              <form onSubmit={handlePostRide} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">From *</label>
+                    <input
+                      type="text"
+                      required
+                      value={postForm.source}
+                      onChange={(e) => setPostForm({ ...postForm, source: e.target.value })}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">To *</label>
+                    <input
+                      type="text"
+                      required
+                      value={postForm.destination}
+                      onChange={(e) => setPostForm({ ...postForm, destination: e.target.value })}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Date *</label>
+                    <input
+                      type="date"
+                      required
+                      value={postForm.date}
+                      onChange={(e) => setPostForm({ ...postForm, date: e.target.value })}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Time *</label>
+                    <input
+                      type="time"
+                      required
+                      value={postForm.time}
+                      onChange={(e) => setPostForm({ ...postForm, time: e.target.value })}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Available Seats *</label>
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      value={postForm.availableSeats}
+                      onChange={(e) => setPostForm({ ...postForm, availableSeats: e.target.value })}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="4"
+                    />
+                  </div>
+                </div>
+
+                {/* Vehicle Photos Section */}
+                <div className="border-t-2 border-gray-200 pt-6">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">Vehicle Photos * (4-5 photos required)</label>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+                    {vehiclePhotos.map((photo, index) => (
+                      <div key={index} className="relative">
+                        <img src={photo} alt={`Vehicle ${index + 1}`} className="w-full h-32 object-cover rounded-lg border-2 border-gray-300" />
+                        <button type="button" onClick={() => removePhoto(index)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-all">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                    {vehiclePhotos.length < 5 && (
+                      <label className="cursor-pointer">
+                        <div className="w-full h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center hover:border-green-500 transition-all bg-gray-50">
+                          <div className="text-center">
+                            <Upload className="h-6 w-6 text-gray-400 mx-auto mb-1" />
+                            <span className="text-xs text-gray-500">Add Photo</span>
+                          </div>
+                        </div>
+                        <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} className="hidden" />
+                      </label>
+                    )}
+                  </div>
+                  {vehiclePhotos.length > 0 && vehiclePhotos.length < 4 && (
+                    <p className="text-sm text-orange-600 mt-2">Please upload at least {4 - vehiclePhotos.length} more photo(s)</p>
+                  )}
+                </div>
+
+                {/* Vehicle Condition Details */}
+                <div className="border-t-2 border-gray-200 pt-6">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Vehicle Condition Details *</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Vehicle Type * (Car, Bike, etc.)</label>
+                      <select
+                        required
+                        value={postForm.vehicleType}
+                        onChange={(e) => setPostForm({ ...postForm, vehicleType: e.target.value })}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      >
+                        <option value="">Select Vehicle Type</option>
+                        <option value="Car">Car</option>
+                        <option value="Bike">Bike</option>
+                        <option value="Scooter">Scooter</option>
+                        <option value="Auto">Auto</option>
+                        <option value="SUV">SUV</option>
+                        <option value="Van">Van</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Has AC? *</label>
+                      <div className="flex space-x-4 mt-2">
+                        <label className="flex items-center space-x-2 cursor-pointer">
+                          <input type="radio" name="hasAC" value="true" checked={postForm.hasAC === true} onChange={() => setPostForm({ ...postForm, hasAC: true })} className="w-4 h-4 text-green-600" required />
+                          <span className="flex items-center"><Snowflake className="h-4 w-4 mr-1" />Yes</span>
+                        </label>
+                        <label className="flex items-center space-x-2 cursor-pointer">
+                          <input type="radio" name="hasAC" value="false" checked={postForm.hasAC === false} onChange={() => setPostForm({ ...postForm, hasAC: false })} className="w-4 h-4 text-green-600" required />
+                          <span>No</span>
+                        </label>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Vehicle Model</label>
+                      <input type="text" value={postForm.vehicleModel} onChange={(e) => setPostForm({ ...postForm, vehicleModel: e.target.value })} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="e.g., Honda City, Yamaha R15" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Vehicle Color</label>
+                      <input type="text" value={postForm.vehicleColor} onChange={(e) => setPostForm({ ...postForm, vehicleColor: e.target.value })} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="e.g., White, Black, Red" />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Other Features</label>
+                      <textarea value={postForm.otherFeatures} onChange={(e) => setPostForm({ ...postForm, otherFeatures: e.target.value })} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" rows="3" placeholder="e.g., Music system, GPS navigation, Leather seats, etc." />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-between">
+                  <button type="button" onClick={() => setPostStep(2)} className="px-8 py-3 bg-gray-200 rounded-lg">Back</button>
+                  <div className="flex space-x-4">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="px-8 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 disabled:opacity-50 font-semibold shadow-lg transform hover:scale-105 transition-all flex items-center space-x-2"
+                    >
+                      {loading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          <span>Posting...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-5 w-5" />
+                          <span>Post Ride</span>
+                        </>
+                      )}
+                    </button>
+                    <button type="button" onClick={() => setShowPostForm(false)} className="px-8 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-semibold shadow-md transition-all">Cancel</button>
+                  </div>
+                </div>
+              </form>
+            )}
           </div>
         )}
 
@@ -493,18 +578,18 @@ const DriverDashboard = () => {
             <div className="bg-gradient-to-r from-green-600 to-teal-600 px-6 py-4">
               <h2 className="text-xl font-bold text-white flex items-center space-x-2">
                 <Navigation className="h-5 w-5" />
-                <span>My Posted Rides</span>
+                <span>My Posted Rides ({filteredRides.length})</span>
               </h2>
             </div>
             <div className="divide-y divide-gray-200">
-              {myRides.length === 0 ? (
+              {filteredRides.length === 0 ? (
                 <div className="p-12 text-center">
                   <Car className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-600 text-base font-medium">No rides posted yet</p>
                   <p className="text-gray-500 text-xs mt-2">Click "Post New Ride" to get started!</p>
                 </div>
               ) : (
-                myRides.map((ride) => (
+                filteredRides.map((ride) => (
                   <div key={ride.id} className="p-6 hover:bg-gradient-to-r hover:from-green-50 hover:to-teal-50 transition-all">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
@@ -565,18 +650,18 @@ const DriverDashboard = () => {
             <div className="bg-gradient-to-r from-green-600 to-teal-600 px-6 py-4">
               <h2 className="text-xl font-bold text-white flex items-center space-x-2">
                 <Users className="h-5 w-5" />
-                <span>Bookings for My Rides ({bookings.length})</span>
+                <span>Bookings for My Rides ({filteredBookings.length})</span>
               </h2>
             </div>
             <div className="divide-y divide-gray-200">
-              {bookings.length === 0 ? (
+              {filteredBookings.length === 0 ? (
                 <div className="p-12 text-center">
                   <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-600 text-base font-medium">No bookings yet</p>
                   <p className="text-gray-500 text-xs mt-2">Passengers will appear here when they book your rides</p>
                 </div>
               ) : (
-                bookings.map((booking) => (
+                filteredBookings.map((booking) => (
                   <div key={booking.id} className="p-6 hover:bg-gradient-to-r hover:from-green-50 hover:to-teal-50 transition-all">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">

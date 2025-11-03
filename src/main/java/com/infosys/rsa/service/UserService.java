@@ -47,7 +47,7 @@ public class UserService {
         return userRepository.findAll().stream()
                 .filter(user -> user.getRoles().stream()
                         .anyMatch(role -> role.getName().name().equals("ROLE_DRIVER")))
-                .filter(user -> !user.getIsApproved())
+                .filter(user -> user.getIsApproved() == null) // Only drivers not yet reviewed
                 .toList();
     }
 }
