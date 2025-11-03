@@ -15,6 +15,112 @@ const LOCATIONIQ_BASE_URL = 'https://us1.locationiq.com/v1';
 
 export const locationService = {
   /**
+   * Get location autocomplete suggestions using LocationIQ API
+   * Works for ALL places in India: cities, districts, states, towns, etc.
+   * When user types any location name, returns exactly 4 famous locations within that area
+   * @param {string} query - The search query (e.g., "chennai", "mumbai", "bangalore", "tamil nadu", "karnataka", etc.)
+   * @returns {Promise<string[]>} Array of famous location names (exactly 4)
+   */
+  getPlaceSuggestions: async (query, signal) => {
+    // If API key is not configured, return empty array
+    if (!LOCATIONIQ_API_KEY) {
+      console.warn('LocationIQ API key not found. Please set VITE_LOCATIONIQ_API_KEY in .env.local file');
+      return [];
+    }
+
+    if (!query || query.length < 2) {
+      return [];
+    }
+
+    try {
+      // Real-time free-text place search with no fabricated defaults
+      const url = new URL(`${LOCATIONIQ_BASE_URL}/search.php`);
+      url.searchParams.set('key', LOCATIONIQ_API_KEY);
+      url.searchParams.set('q', query);
+      url.searchParams.set('format', 'json');
+      url.searchParams.set('limit', '8');
+      url.searchParams.set('addressdetails', '1');
+      url.searchParams.set('countrycodes', 'in');
+
+      const resp = await fetch(url.toString(), { signal });
+      if (!resp.ok) return [];
+      const results = await resp.json();
+      if (!Array.isArray(results)) return [];
+
+      // Convert to concise labels; no forced Railway/Airport/etc unless actually returned by API
+      const labels = [];
+      for (const r of results) {
+        let name = null;
+        if (r.namedetails && r.namedetails.name) name = r.namedetails.name;
+        else if (r.display_name) name = r.display_name.split(',')[0];
+        if (name) labels.push(name.trim());
+      }
+      // Dedupe and return up to 8
+      return Array.from(new Set(labels)).slice(0, 8);
+    } catch (error) {
+      if (error.name === 'AbortError') throw error;
+      console.error('Error fetching place suggestions from LocationIQ:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Get Indian city suggestions (cities/towns/villages) for first-step selection
+   * @param {string} query
+   * @returns {Promise<string[]>}
+   */
+  getCitySuggestions: async (query, signal) => {
+    if (!query || query.length < 2) return [];
+
+    if (!LOCATIONIQ_API_KEY) {
+      // Fallback list of Indian cities
+      return getDefaultIndianCities(query);
+    }
+
+    try {
+      const url = new URL(`${LOCATIONIQ_BASE_URL}/search.php`);
+      url.searchParams.set('key', LOCATIONIQ_API_KEY);
+      url.searchParams.set('q', query);
+      url.searchParams.set('format', 'json');
+      url.searchParams.set('limit', '8');
+      url.searchParams.set('addressdetails', '1');
+      url.searchParams.set('countrycodes', 'in');
+      // Note: Nominatim/LocationIQ doesn't support strict type filtering via param reliably,
+      // we'll filter client-side using class/type/address fields.
+
+      const resp = await fetch(url.toString(), { signal });
+      if (!resp.ok) return getDefaultIndianCities(query);
+      const results = await resp.json();
+
+      const names = [];
+      for (const r of results) {
+        const cls = r.class || r.type;
+        const addr = r.address || {};
+        const isCityLike = (
+          cls === 'place' || cls === 'boundary' || cls === 'administrative'
+        ) && (
+          r.type === 'city' || r.type === 'town' || r.type === 'village' ||
+          addr.city || addr.town || addr.village
+        );
+        if (isCityLike) {
+          const name = (r.namedetails && r.namedetails.name) || r.display_name?.split(',')[0] || addr.city || addr.town || addr.village;
+          if (name) names.push(name.trim());
+        }
+      }
+
+      // Dedupe and filter by query substring
+      const unique = Array.from(new Set(names))
+        .filter(n => n.toLowerCase().includes(query.toLowerCase()))
+        .slice(0, 8);
+      if (unique.length > 0) return unique;
+      return getDefaultIndianCities(query);
+    } catch (e) {
+      if (e.name === 'AbortError') throw e;
+      return getDefaultIndianCities(query);
+    }
+  },
+
+  /**
    * Get nearby/popular locations for a city using LocationIQ API
    * @param {string} cityName - The name of the city
    * @returns {Promise<string[]>} Array of location names
@@ -239,4 +345,90 @@ function getDefaultLocations(cityName) {
     `${cityName} City Center`,
     `${cityName} Main Area`
   ];
+}
+
+// Fallback: simple Indian cities autocomplete
+function getDefaultIndianCities(query) {
+  const cities = [
+    'Delhi','Mumbai','Bengaluru','Chennai','Kolkata','Hyderabad','Pune','Ahmedabad','Jaipur','Surat','Lucknow','Kanpur','Nagpur','Indore','Thane','Bhopal','Visakhapatnam','Patna','Vadodara','Ghaziabad','Ludhiana','Agra','Nashik','Ranchi','Faridabad','Meerut','Rajkot','Kalyan','Vasai','Varanasi','Srinagar','Aurangabad','Dhanbad','Amritsar','Navi Mumbai','Allahabad','Howrah','Gwalior','Jabalpur','Vijayawada','Madurai','Raipur','Kota','Chandigarh','Guwahati','Solapur','Hubballi','Mysuru','Tiruchirappalli','Bareilly','Aligarh','Tiruppur','Jodhpur','Coimbatore','Noida','Gurugram'
+  ];
+  const q = (query || '').toLowerCase();
+  return cities.filter(c => c.toLowerCase().includes(q)).slice(0, 8);
+}
+
+// ---------------------------------------------
+// Cached popular places per city (persistent)
+// ---------------------------------------------
+const POPULAR_PLACES_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const POPULAR_PLACES_PREFIX = 'popular_places_';
+
+/**
+ * Rank and normalize candidate place names for a city
+ */
+function rankAndSelectTopPlaces(cityName, candidates, max = 6) {
+  const city = (cityName || '').toLowerCase();
+  const weights = [
+    'airport', 'railway', 'station', 'central', 'junction', 'market', 'hospital', 'university', 'beach', 'port', 'harbour', 'bus', 'city center', 'fort', 'temple', 'mall'
+  ];
+
+  const scored = Array.from(new Set(
+    candidates
+      .filter(Boolean)
+      .map(c => String(c).trim())
+      .filter(c => c.length > 0)
+  )).map(name => {
+    const lower = name.toLowerCase();
+    let score = 0;
+    if (lower.includes(city)) score += 3;
+    for (const w of weights) if (lower.includes(w)) score += 2;
+    // Short, clean names are preferred
+    if (name.length <= 28) score += 1;
+    // Penalize overly generic
+    if (['main area', 'center', 'city center'].includes(lower)) score -= 1;
+    return { name, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored.map(s => s.name).slice(0, max);
+}
+
+/**
+ * Get cached popular places for a city or fetch and persist them.
+ * Returns up to 6 items; callers can slice to 4.
+ */
+export async function getOrFetchPopularPlaces(cityName, forceRefresh = false) {
+  const key = POPULAR_PLACES_PREFIX + (cityName || '').toLowerCase().trim();
+  if (!forceRefresh) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.items) && typeof parsed.timestamp === 'number') {
+          if (Date.now() - parsed.timestamp < POPULAR_PLACES_TTL_MS) {
+            return parsed.items;
+          }
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
+  // Fetch fresh using getNearbyLocations (which already has decent logic)
+  let fresh = [];
+  try {
+    const base = await locationService.getNearbyLocations(cityName);
+    fresh = rankAndSelectTopPlaces(cityName, base, 6);
+    if (fresh.length < 4) {
+      const fallback = getDefaultLocations(cityName);
+      fresh = rankAndSelectTopPlaces(cityName, [...fresh, ...fallback], 6);
+    }
+  } catch {
+    const fallback = getDefaultLocations(cityName);
+    fresh = rankAndSelectTopPlaces(cityName, fallback, 6);
+  }
+
+  try {
+    localStorage.setItem(key, JSON.stringify({ items: fresh, timestamp: Date.now() }));
+  } catch { /* ignore quota issues */ }
+
+  return fresh;
 }

@@ -75,7 +75,7 @@ public class AuthService {
             user.setVehicleModel(request.getVehicleModel());
             user.setLicensePlate(request.getLicensePlate());
             user.setVehicleCapacity(request.getVehicleCapacity());
-            user.setIsApproved(false); // Drivers need admin approval
+            user.setIsApproved(null); // Drivers need admin approval - null means pending review
         } else {
             Role passengerRole = roleRepository.findByName(Role.ERole.ROLE_PASSENGER)
                     .orElseThrow(() -> new RuntimeException("Error: Role is not found."));

@@ -69,7 +69,7 @@ public class AdminService {
         long pendingDrivers = userRepository.findAll().stream()
                 .filter(user -> user.getRoles().stream()
                         .anyMatch(role -> role.getName().name().equals("ROLE_DRIVER")))
-                .filter(user -> !user.getIsApproved())
+                .filter(user -> user.getIsApproved() == null) // Only drivers not yet reviewed
                 .count();
         long totalRides = rideRepository.count();
         long totalBookings = bookingRepository.count();
@@ -88,7 +88,7 @@ public class AdminService {
         return userRepository.findAll().stream()
                 .filter(user -> user.getRoles().stream()
                         .anyMatch(role -> role.getName().name().equals("ROLE_DRIVER")))
-                .filter(user -> !user.getIsApproved())
+                .filter(user -> user.getIsApproved() == null) // Only drivers not yet reviewed
                 .toList();
     }
 

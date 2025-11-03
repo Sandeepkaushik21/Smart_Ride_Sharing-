@@ -36,7 +36,7 @@ public class RideService {
         User driver = userRepository.findById(driverId)
                 .orElseThrow(() -> new RuntimeException("Driver not found"));
 
-        if (!driver.getIsApproved()) {
+        if (driver.getIsApproved() == null || !driver.getIsApproved()) {
             throw new RuntimeException("Driver account is not approved yet");
         }
 

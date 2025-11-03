@@ -1,15 +1,19 @@
-import { useState, useEffect, useRef } from 'react';
-import { cityService } from '../services/cityService';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { locationService } from '../services/locationService';
 import { MapPin } from 'lucide-react';
 
-const CityAutocomplete = ({ value, onChange, placeholder, className, showNearbyLocations = false }) => {
+// Cache for suggestions to avoid redundant API calls
+const suggestionsCache = new Map();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+const CityAutocomplete = ({ value, onChange, placeholder, className, mode = 'place', withinCity = '', disableCache = false }) => {
   const [suggestions, setSuggestions] = useState([]);
-  const [nearbyLocations, setNearbyLocations] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [inputValue, setInputValue] = useState(value || '');
-  const [showNearby, setShowNearby] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const dropdownRef = useRef(null);
+  const debounceTimer = useRef(null);
+  const abortControllerRef = useRef(null);
 
   useEffect(() => {
     setInputValue(value || '');
@@ -19,7 +23,6 @@ const CityAutocomplete = ({ value, onChange, placeholder, className, showNearbyL
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowSuggestions(false);
-        setShowNearby(false);
       }
     };
 
@@ -27,60 +30,91 @@ const CityAutocomplete = ({ value, onChange, placeholder, className, showNearbyL
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Cleanup on unmount
   useEffect(() => {
-    // Fetch nearby locations when city is selected
-    if (showNearbyLocations && inputValue && inputValue.length >= 3) {
-      fetchNearbyLocations(inputValue);
-    }
-  }, [inputValue, showNearbyLocations]);
-
-  const fetchNearbyLocations = async (cityName) => {
-    try {
-      const locations = await locationService.getNearbyLocations(cityName);
-      setNearbyLocations(locations);
-      setShowNearby(true);
-    } catch (error) {
-      console.error('Error fetching nearby locations:', error);
-    }
-  };
-
-  const fetchSuggestions = async (query) => {
-    if (query.length >= 2) {
-      try {
-        const data = await cityService.getSuggestions(query);
-        setSuggestions(data || []);
-        setShowSuggestions(true);
-      } catch (error) {
-        console.error('Error fetching city suggestions:', error);
-        setSuggestions([]);
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
-    } else {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, []);
+
+  const fetchSuggestions = useCallback(async (query) => {
+    if (!query || query.length < 2) {
       setSuggestions([]);
       setShowSuggestions(false);
+      return;
     }
-  };
+
+    // Check cache first
+    const cityPrefix = (withinCity || '').toLowerCase().trim();
+    const cacheKey = (cityPrefix ? cityPrefix + '|' : '') + query.toLowerCase().trim();
+    const cachedData = disableCache ? null : suggestionsCache.get(cacheKey);
+    
+    if (cachedData && Date.now() - cachedData.timestamp < CACHE_DURATION) {
+      setSuggestions(cachedData.suggestions);
+      setShowSuggestions(cachedData.suggestions.length > 0);
+      return;
+    }
+
+    // Cancel any pending requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    abortControllerRef.current = new AbortController();
+    setIsLoading(true);
+
+    try {
+      const effectiveQuery = withinCity ? `${withinCity} ${query}` : query;
+      const data = mode === 'city'
+        ? await locationService.getCitySuggestions(effectiveQuery, abortControllerRef.current.signal)
+        : await locationService.getPlaceSuggestions(effectiveQuery, abortControllerRef.current.signal);
+      
+      // Store in cache
+      if (!disableCache && data && data.length > 0) {
+        suggestionsCache.set(cacheKey, {
+          suggestions: data,
+          timestamp: Date.now()
+        });
+      }
+      
+      setSuggestions(data || []);
+      setShowSuggestions(data && data.length > 0);
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        // Request was cancelled, ignore
+        return;
+      }
+      console.error('Error fetching place suggestions:', error);
+      setSuggestions([]);
+      setShowSuggestions(false);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [mode, withinCity, disableCache]);
 
   const handleInputChange = (e) => {
     const newValue = e.target.value;
     setInputValue(newValue);
     onChange(newValue);
-    fetchSuggestions(newValue);
-    setShowNearby(false);
+    
+    // Debounce API calls to avoid excessive requests
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    
+    debounceTimer.current = setTimeout(() => {
+      fetchSuggestions(newValue);
+    }, 600); // Increased to 600ms for better performance
   };
 
   const handleSuggestionClick = (suggestion) => {
     setInputValue(suggestion);
     onChange(suggestion);
-    setShowSuggestions(false);
-    if (showNearbyLocations) {
-      fetchNearbyLocations(suggestion);
-    }
-  };
-
-  const handleNearbyLocationClick = (location) => {
-    setInputValue(location);
-    onChange(location);
-    setShowNearby(false);
     setShowSuggestions(false);
   };
 
@@ -94,40 +128,26 @@ const CityAutocomplete = ({ value, onChange, placeholder, className, showNearbyL
           if (suggestions.length > 0) setShowSuggestions(true);
         }}
         placeholder={placeholder}
-        className={className || 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500'}
+        className={className || 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent'}
       />
-      {showSuggestions && suggestions.length > 0 && (
-        <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+      {isLoading && inputValue.length >= 2 && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-3">
+          <div className="text-sm text-gray-600 text-center">Loading suggestions...</div>
+        </div>
+      )}
+      {showSuggestions && suggestions.length > 0 && !isLoading && (
+        <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg overflow-hidden">
           {suggestions.map((suggestion, index) => (
             <li
               key={index}
               onClick={() => handleSuggestionClick(suggestion)}
-              className="px-4 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+              className="px-4 py-3 hover:bg-purple-50 cursor-pointer border-b border-gray-100 last:border-b-0 flex items-center space-x-2 transition-colors"
             >
-              {suggestion}
+              <MapPin className="h-4 w-4 text-purple-600 flex-shrink-0" />
+              <span className="text-gray-800">{suggestion}</span>
             </li>
           ))}
         </ul>
-      )}
-      {showNearby && nearbyLocations.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-3">
-          <div className="text-xs font-semibold text-gray-600 mb-2 flex items-center space-x-1">
-            <MapPin className="h-3 w-3" />
-            <span>Popular locations in {inputValue}:</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {nearbyLocations.map((location, index) => (
-              <button
-                key={index}
-                type="button"
-                onClick={() => handleNearbyLocationClick(location)}
-                className="text-left px-3 py-2 bg-gray-50 hover:bg-blue-50 rounded-md text-sm border border-gray-200 hover:border-blue-300 transition-colors"
-              >
-                {location}
-              </button>
-            ))}
-          </div>
-        </div>
       )}
     </div>
   );
