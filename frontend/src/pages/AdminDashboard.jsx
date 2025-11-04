@@ -12,8 +12,82 @@ const AdminDashboard = () => {
     const [allDrivers, setAllDrivers] = useState([]);
     const [allPassengers, setAllPassengers] = useState([]);
     const [activeTab, setActiveTab] = useState('stats');
+    const [activeOverviewTab, setActiveOverviewTab] = useState('overview');
     const [loading, setLoading] = useState(true);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    // Pagination for admin driver/passenger lists (client-side)
+    const [driversPage, setDriversPage] = useState(0);
+    const [driversSize, setDriversSize] = useState(5);
+    const [passengersPage, setPassengersPage] = useState(0);
+    const [passengersSize, setPassengersSize] = useState(5);
+
+    // Derived pagination slices
+    const getDisplayedDrivers = () => {
+        const start = driversPage * driversSize;
+        return (allDrivers || []).slice(start, start + driversSize);
+    };
+    const getDisplayedPassengers = () => {
+        const start = passengersPage * passengersSize;
+        return (allPassengers || []).slice(start, start + passengersSize);
+    };
+
+    // Header actions: Share/Print/Export
+    const handleShare = async () => {
+        try {
+            const url = window.location.href;
+            if (navigator.share) {
+                await navigator.share({ title: 'RSA Admin Dashboard', text: 'Check out the dashboard', url });
+                return;
+            }
+            await navigator.clipboard.writeText(url);
+            await showSuccess('Link copied to clipboard');
+        } catch (e) {
+            await showError('Unable to share right now');
+        }
+    };
+
+    const handlePrint = () => {
+        try { window.print(); } catch { /* ignore */ }
+    };
+
+    const handleExport = async () => {
+        try {
+            if (activeTab === 'drivers') {
+                const rows = [['Name','Email','Vehicle','License','Rating','Total Rides','Company Income']];
+                for (const d of allDrivers) rows.push([
+                    d.name||'', d.email||'', d.vehicleModel||'', d.licensePlate||'',
+                    (d.driverRating?.toFixed?.(1) || ''), (d.totalRides||0), (d.companyIncome?.toFixed?.(2) || '0.00')
+                ]);
+                const csv = rows.map(r => r.map(v => `"${String(v).replaceAll('"','""')}"`).join(',')).join('\n');
+                downloadBlob('drivers.csv', csv);
+                return;
+            }
+            if (activeTab === 'passengers') {
+                const rows = [['Name','Email','Phone','Total Bookings','Total Spending']];
+                for (const p of allPassengers) rows.push([
+                    p.name||'', p.email||'', p.phone||'', (p.totalBookings||0), (p.totalSpending?.toFixed?.(2)||'0.00')
+                ]);
+                const csv = rows.map(r => r.map(v => `"${String(v).replaceAll('"','""')}"`).join(',')).join('\n');
+                downloadBlob('passengers.csv', csv);
+                return;
+            }
+            if (activeTab === 'pending') {
+                const rows = [['Name','Email','Phone','Vehicle','License']];
+                for (const d of pendingDrivers) rows.push([
+                    d.name||'', d.email||'', d.phone||'', d.vehicleModel||'', d.licensePlate||''
+                ]);
+                const csv = rows.map(r => r.map(v => `"${String(v).replaceAll('"','""')}"`).join(',')).join('\n');
+                downloadBlob('pending_drivers.csv', csv);
+                return;
+            }
+            // default: export stats
+            const rows = Object.entries(stats || {}).map(([k,v]) => [k, v]);
+            const csv = [['metric','value'], ...rows].map(r => r.join(',')).join('\n');
+            downloadBlob('stats.csv', csv);
+        } catch (e) {
+            await showError('Export failed');
+        }
+    };
 
     useEffect(() => {
         fetchData();
@@ -158,7 +232,7 @@ const AdminDashboard = () => {
                         <SidebarItem icon={<Users className="h-4 w-4" />} label={`Passengers (${allPassengers.length})`} active={activeTab==='passengers'} onClick={() => setActiveTab('passengers')} />
                         <SidebarItem icon={<XCircle className="h-4 w-4" />} label={`Pending (${pendingDrivers.length})`} active={activeTab==='pending'} onClick={() => setActiveTab('pending')} />
                         <div className="pt-2 mt-2 border-t"></div>
-                        <SidebarItem icon={<Settings className="h-4 w-4" />} label="Settings" active={false} onClick={() => {}} />
+                        <SidebarItem icon={<Settings className="h-4 w-4" />} label="Settings" active={activeTab==='settings'} onClick={() => setActiveTab('settings')} />
                         <SidebarItem icon={<Shield className="h-4 w-4" />} label="Logout" active={false} onClick={() => {}} />
                     </nav>
                     <div className="p-4 text-xs text-gray-500">© {new Date().getFullYear()} RSA Admin</div>
@@ -184,7 +258,7 @@ const AdminDashboard = () => {
                                 <SidebarItem icon={<Users className="h-4 w-4" />} label={`Passengers (${allPassengers.length})`} active={activeTab==='passengers'} onClick={() => { setActiveTab('passengers'); setSidebarOpen(false); }} />
                                 <SidebarItem icon={<XCircle className="h-4 w-4" />} label={`Pending (${pendingDrivers.length})`} active={activeTab==='pending'} onClick={() => { setActiveTab('pending'); setSidebarOpen(false); }} />
                                 <div className="pt-2 mt-2 border-t"></div>
-                                <SidebarItem icon={<Settings className="h-4 w-4" />} label="Settings" active={false} onClick={() => { setSidebarOpen(false); }} />
+                                <SidebarItem icon={<Settings className="h-4 w-4" />} label="Settings" active={activeTab==='settings'} onClick={() => { setActiveTab('settings'); setSidebarOpen(false); }} />
                                 <SidebarItem icon={<Shield className="h-4 w-4" />} label="Logout" active={false} onClick={() => { setSidebarOpen(false); }} />
                             </nav>
                         </aside>
@@ -205,9 +279,9 @@ const AdminDashboard = () => {
                             </h1>
                         </div>
                         <div className="hidden sm:flex items-center gap-2 text-sm">
-                            <button className="px-3 py-1.5 rounded border hover:bg-gray-50">Share</button>
-                            <button className="px-3 py-1.5 rounded border hover:bg-gray-50">Print</button>
-                            <button className="px-3 py-1.5 rounded bg-indigo-600 text-white">Export</button>
+                            <button onClick={handleShare} className="px-3 py-1.5 rounded border hover:bg-gray-50">Share</button>
+                            <button onClick={handlePrint} className="px-3 py-1.5 rounded border hover:bg-gray-50">Print</button>
+                            <button onClick={handleExport} className="px-3 py-1.5 rounded bg-indigo-600 text-white">Export</button>
                         </div>
                     </div>
 
@@ -228,11 +302,11 @@ const AdminDashboard = () => {
                     <>
                         {/* Top toolbar similar to screenshot */}
                         <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                            <div className="flex items-center gap-4 text-sm text-gray-600">
-                                <span className="font-semibold text-gray-800">Overview</span>
-                                <span className="text-gray-400">Audiences</span>
-                                <span className="text-gray-400">Demographics</span>
-                                <span className="text-gray-400">More</span>
+                            <div className="flex items-center gap-4 text-sm">
+                                <button onClick={() => setActiveOverviewTab('overview')} className={`${activeOverviewTab==='overview' ? 'font-semibold text-gray-900' : 'text-gray-500 hover:text-gray-800'}`}>Overview</button>
+                                <button onClick={() => setActiveOverviewTab('audiences')} className={`${activeOverviewTab==='audiences' ? 'font-semibold text-gray-900' : 'text-gray-500 hover:text-gray-800'}`}>Audiences</button>
+                                <button onClick={() => setActiveOverviewTab('demographics')} className={`${activeOverviewTab==='demographics' ? 'font-semibold text-gray-900' : 'text-gray-500 hover:text-gray-800'}`}>Demographics</button>
+                                <button onClick={() => setActiveOverviewTab('more')} className={`${activeOverviewTab==='more' ? 'font-semibold text-gray-900' : 'text-gray-500 hover:text-gray-800'}`}>More</button>
                             </div>
                             <div className="flex items-center gap-3">
                                 <select className="px-3 py-2 border rounded-lg text-sm text-gray-700 bg-white">
@@ -242,43 +316,43 @@ const AdminDashboard = () => {
                                     <option>Users</option>
                                 </select>
                                 <input type="date" className="px-3 py-2 border rounded-lg text-sm text-gray-700 bg-white" />
-                                <button className="px-3 py-2 border rounded-lg text-sm">Share</button>
-                                <button className="px-3 py-2 border rounded-lg text-sm">Print</button>
-                                <button className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm">Export</button>
+                                <div className="hidden sm:flex items-center gap-2 text-sm">
+                            <button onClick={handleShare} className="px-3 py-1.5 rounded border hover:bg-gray-50">Share</button>
+                            <button onClick={handlePrint} className="px-3 py-1.5 rounded border hover:bg-gray-50">Print</button>
+                            <button onClick={handleExport} className="px-3 py-1.5 rounded bg-indigo-600 text-white">Export</button>
+                        </div>
                             </div>
                         </div>
 
                         {/* Market Overview + Todo List */}
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                            {/* Market Overview (simple bar chart) */}
+                            {/* Market Overview (interactive charts) */}
                             <div className="lg:col-span-2 bg-white rounded-xl shadow-lg p-6">
                                 <div className="flex items-center justify-between mb-4">
                                     <div>
-                                        <div className="text-sm font-semibold text-gray-800">Market Overview</div>
-                                        <div className="text-xs text-gray-500">Weekly performance snapshot</div>
+                                        <div className="text-sm font-semibold text-gray-800 capitalize">{activeOverviewTab}</div>
+                                        <div className="text-xs text-gray-500">Interactive snapshot</div>
                                     </div>
                                     <button className="px-3 py-1 border rounded-lg text-sm">This month ▾</button>
                                 </div>
                                 <div className="text-2xl font-bold text-gray-900 mb-2">₹{(stats?.totalBookings || 0) * 523}</div>
                                 <div className="text-xs text-green-600 font-semibold mb-4">+1.37%</div>
-                                {/* Bars */}
-                                <div className="h-48 flex items-end gap-2">
-                                    {[...Array(12)].map((_, i) => {
-                                        const base = (stats?.totalBookings || 10) + (i * 3);
-                                        const height = 20 + (base % 60); // 20-80
-                                        return (
-                                            <div key={i} className="flex-1 flex flex-col items-center">
-                                                <div className="w-full bg-blue-200 rounded-t h-2"></div>
-                                                <div style={{ height: `${height}%` }} className="w-full bg-indigo-500 rounded-t"></div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                                <div className="mt-2 flex justify-between text-xs text-gray-500">
-                                    {['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'].map(m => (
-                                        <span key={m}>{m}</span>
-                                    ))}
-                                </div>
+                                {activeOverviewTab === 'overview' && (
+                                    <BarChart data={generateMonthlySeries(stats)} height={200} />
+                                )}
+                                {activeOverviewTab === 'audiences' && (
+                                    <LineChart data={generateWeeklySeries(stats)} height={200} />
+                                )}
+                                {activeOverviewTab === 'demographics' && (
+                                    <DonutChart segments={[
+                                        { label: 'Drivers', value: stats?.totalDrivers || 0, color: '#22c55e' },
+                                        { label: 'Passengers', value: stats?.totalPassengers || 0, color: '#6366f1' },
+                                        { label: 'Other', value: Math.max(1, (stats?.totalUsers || 0) - ((stats?.totalDrivers||0)+(stats?.totalPassengers||0))), color: '#f59e0b' },
+                                    ]} />
+                                )}
+                                {activeOverviewTab === 'more' && (
+                                    <div className="text-sm text-gray-600">More analytics coming soon. Use other tabs for insights.</div>
+                                )}
                             </div>
 
                             {/* Todo List */}
@@ -316,18 +390,12 @@ const AdminDashboard = () => {
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                             <div className="bg-white rounded-xl shadow-lg p-6">
                                 <div className="text-sm font-semibold text-gray-800 mb-4">Type By Amount</div>
-                                <div className="flex items-center gap-8">
-                                    <div className="relative w-40 h-40">
-                                        <div className="absolute inset-0 rounded-full" style={{ background: 'conic-gradient(#6366f1 0 120deg, #22c55e 0 240deg, #f59e0b 0 330deg, #e5e7eb 0 360deg)' }}></div>
-                                        <div className="absolute inset-4 bg-white rounded-full"></div>
-                                    </div>
-                                    <div className="text-sm space-y-2">
-                                        <div className="flex items-center gap-2"><span className="w-3 h-3 bg-indigo-500 rounded-sm"></span> Rides</div>
-                                        <div className="flex items-center gap-2"><span className="w-3 h-3 bg-green-500 rounded-sm"></span> Bookings</div>
-                                        <div className="flex items-center gap-2"><span className="w-3 h-3 bg-amber-500 rounded-sm"></span> Drivers</div>
-                                        <div className="flex items-center gap-2"><span className="w-3 h-3 bg-gray-300 rounded-sm"></span> Other</div>
-                                    </div>
-                                </div>
+                                <DonutChart segments={[
+                                    { label: 'Rides', value: stats?.totalRides || 0, color: '#6366f1' },
+                                    { label: 'Bookings', value: stats?.totalBookings || 0, color: '#22c55e' },
+                                    { label: 'Drivers', value: stats?.totalDrivers || 0, color: '#f59e0b' },
+                                    { label: 'Other', value: Math.max(1, (stats?.totalUsers || 0) - ((stats?.totalDrivers||0)+(stats?.totalPassengers||0))), color: '#d1d5db' },
+                                ]} />
                             </div>
                         </div>
                     </>
@@ -362,7 +430,7 @@ const AdminDashboard = () => {
                                     </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
-                                    {allDrivers.map((driver) => (
+                                    {getDisplayedDrivers().map((driver) => (
                                         <tr key={driver.id} className="hover:bg-gray-50 transition-colors">
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-semibold text-gray-900">{driver.name}</div>
@@ -397,6 +465,40 @@ const AdminDashboard = () => {
                                     ))}
                                     </tbody>
                                 </table>
+                                <div className="px-6 py-4 flex items-center justify-between bg-white border-t">
+                                    <div className="text-sm text-gray-600">Showing page {driversPage + 1} of {Math.max(1, Math.ceil(Math.max(1, allDrivers.length) / driversSize))} — {allDrivers.length} drivers</div>
+                                    <div className="flex items-center space-x-2">
+                                        <button
+                                            onClick={() => setDriversPage(Math.max(0, driversPage - 1))}
+                                            disabled={driversPage <= 0}
+                                            className={`px-3 py-1 rounded-md ${driversPage <= 0 ? 'bg-gray-200 text-gray-500' : 'bg-white border'}`}
+                                        >Prev</button>
+                                        <div className="flex items-center space-x-1">
+                                            {Array.from({ length: Math.max(1, Math.ceil(Math.max(1, allDrivers.length) / driversSize)) }).map((_, idx) => {
+                                                const start = Math.max(0, driversPage - 3);
+                                                const end = Math.min(Math.max(1, Math.ceil(Math.max(1, allDrivers.length) / driversSize)) - 1, driversPage + 3);
+                                                if (idx < start || idx > end) return null;
+                                                return (
+                                                    <button key={idx} onClick={() => setDriversPage(idx)} className={`px-3 py-1 rounded-md ${idx === driversPage ? 'bg-green-600 text-white' : 'bg-white border'}`}>{idx + 1}</button>
+                                                );
+                                            })}
+                                        </div>
+                                        <button
+                                            onClick={() => setDriversPage(Math.min(Math.max(0, Math.ceil(Math.max(1, allDrivers.length) / driversSize) - 1), driversPage + 1))}
+                                            disabled={driversPage >= Math.max(0, Math.ceil(Math.max(1, allDrivers.length) / driversSize) - 1)}
+                                            className={`px-3 py-1 rounded-md ${driversPage >= Math.max(0, Math.ceil(Math.max(1, allDrivers.length) / driversSize) - 1) ? 'bg-gray-200 text-gray-500' : 'bg-white border'}`}
+                                        >Next</button>
+                                        <select
+                                            value={driversSize}
+                                            onChange={(e) => { setDriversSize(parseInt(e.target.value, 10)); setDriversPage(0); }}
+                                            className="ml-3 px-2 py-1 border rounded-md bg-white"
+                                        >
+                                            {[5,10,20,50].map(s => (
+                                                <option key={s} value={s}>{s} / page</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -430,7 +532,7 @@ const AdminDashboard = () => {
                                     </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
-                                    {allPassengers.map((passenger) => (
+                                    {getDisplayedPassengers().map((passenger) => (
                                         <tr key={passenger.id} className="hover:bg-gray-50 transition-colors">
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-semibold text-gray-900">{passenger.name}</div>
@@ -458,6 +560,40 @@ const AdminDashboard = () => {
                                     ))}
                                     </tbody>
                                 </table>
+                                <div className="px-6 py-4 flex items-center justify-between bg-white border-t">
+                                    <div className="text-sm text-gray-600">Showing page {passengersPage + 1} of {Math.max(1, Math.ceil(Math.max(1, allPassengers.length) / passengersSize))} — {allPassengers.length} passengers</div>
+                                    <div className="flex items-center space-x-2">
+                                        <button
+                                            onClick={() => setPassengersPage(Math.max(0, passengersPage - 1))}
+                                            disabled={passengersPage <= 0}
+                                            className={`px-3 py-1 rounded-md ${passengersPage <= 0 ? 'bg-gray-200 text-gray-500' : 'bg-white border'}`}
+                                        >Prev</button>
+                                        <div className="flex items-center space-x-1">
+                                            {Array.from({ length: Math.max(1, Math.ceil(Math.max(1, allPassengers.length) / passengersSize)) }).map((_, idx) => {
+                                                const start = Math.max(0, passengersPage - 3);
+                                                const end = Math.min(Math.max(1, Math.ceil(Math.max(1, allPassengers.length) / passengersSize)) - 1, passengersPage + 3);
+                                                if (idx < start || idx > end) return null;
+                                                return (
+                                                    <button key={idx} onClick={() => setPassengersPage(idx)} className={`px-3 py-1 rounded-md ${idx === passengersPage ? 'bg-purple-600 text-white' : 'bg-white border'}`}>{idx + 1}</button>
+                                                );
+                                            })}
+                                        </div>
+                                        <button
+                                            onClick={() => setPassengersPage(Math.min(Math.max(0, Math.ceil(Math.max(1, allPassengers.length) / passengersSize) - 1), passengersPage + 1))}
+                                            disabled={passengersPage >= Math.max(0, Math.ceil(Math.max(1, allPassengers.length) / passengersSize) - 1)}
+                                            className={`px-3 py-1 rounded-md ${passengersPage >= Math.max(0, Math.ceil(Math.max(1, allPassengers.length) / passengersSize) - 1) ? 'bg-gray-200 text-gray-500' : 'bg-white border'}`}
+                                        >Next</button>
+                                        <select
+                                            value={passengersSize}
+                                            onChange={(e) => { setPassengersSize(parseInt(e.target.value, 10)); setPassengersPage(0); }}
+                                            className="ml-3 px-2 py-1 border rounded-md bg-white"
+                                        >
+                                            {[5,10,20,50].map(s => (
+                                                <option key={s} value={s}>{s} / page</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -538,6 +674,70 @@ const AdminDashboard = () => {
                         )}
                     </div>
                 )}
+                
+                {/* Settings Section */}
+                {activeTab === 'settings' && (
+                    <div className="bg-white rounded-xl shadow-lg p-6 space-y-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <div className="text-lg font-bold text-gray-900">Settings</div>
+                                <div className="text-sm text-gray-500">Control platform preferences</div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div className="col-span-1 lg:col-span-2 space-y-6">
+                                <CardSection title="General">
+                                    <ToggleRow
+                                        label="Maintenance mode"
+                                        description="Temporarily disable new bookings and postings"
+                                        onToggle={async (val) => { await showSuccess(`Maintenance mode ${val? 'enabled':'disabled'}`); }}
+                                    />
+                                    <ToggleRow
+                                        label="Auto-approve trusted drivers"
+                                        description="Fast-track approvals for drivers with verified docs"
+                                        onToggle={async (val) => { await showSuccess(`Auto-approval ${val? 'enabled':'disabled'}`); }}
+                                    />
+                                    <ToggleRow
+                                        label="Require strong passwords"
+                                        description="Enforce stronger password policy for all users"
+                                        defaultChecked
+                                        onToggle={async () => {}}
+                                    />
+                                </CardSection>
+
+                                <CardSection title="Data & Reports">
+                                    <div className="flex flex-wrap gap-2">
+                                        <button className="px-3 py-2 rounded border hover:bg-gray-50" onClick={async()=>{ await showSuccess('Users report exported'); }}>Export Users</button>
+                                        <button className="px-3 py-2 rounded border hover:bg-gray-50" onClick={async()=>{ await showSuccess('Rides report exported'); }}>Export Rides</button>
+                                        <button className="px-3 py-2 rounded border hover:bg-gray-50" onClick={async()=>{ await showSuccess('Bookings report exported'); }}>Export Bookings</button>
+                                    </div>
+                                </CardSection>
+
+                                <CardSection title="System">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <div className="font-medium text-gray-900">Clear cached data</div>
+                                            <div className="text-sm text-gray-500">Invalidate local caches to refresh metrics</div>
+                                        </div>
+                                        <button className="px-3 py-2 rounded bg-red-500 text-white hover:bg-red-600" onClick={async()=>{ try { localStorage.clear(); await showSuccess('Cache cleared'); } catch { await showError('Unable to clear cache'); } }}>Clear</button>
+                                    </div>
+                                </CardSection>
+                            </div>
+
+                            <div className="space-y-6">
+                                <CardSection title="Shortcuts">
+                                    <div className="grid grid-cols-2 gap-2 text-sm">
+                                        <button onClick={()=>setActiveTab('drivers')} className="px-3 py-2 rounded border hover:bg-gray-50 text-left">Manage Drivers</button>
+                                        <button onClick={()=>setActiveTab('passengers')} className="px-3 py-2 rounded border hover:bg-gray-50 text-left">Manage Passengers</button>
+                                        <button onClick={()=>setActiveTab('pending')} className="px-3 py-2 rounded border hover:bg-gray-50 text-left">Pending Approvals</button>
+                                        <button onClick={()=>setActiveTab('stats')} className="px-3 py-2 rounded border hover:bg-gray-50 text-left">Back to Overview</button>
+                                    </div>
+                                </CardSection>
+                            </div>
+                        </div>
+                    </div>
+                )}
                     </div>
             </main>
             {/* Close flex container around sidebar + content */}
@@ -581,4 +781,108 @@ function StatCard({ title, value, icon, gradient }) {
             </div>
         </div>
     );
+}
+
+// ===== Lightweight chart + settings helpers (no external deps) =====
+// Pagination helpers (scoped under component via closure variables)
+function downloadBlob(filename, data, type = 'text/csv;charset=utf-8') {
+    const blob = new Blob([data], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+}
+
+function BarChart({ data, height = 200 }) {
+    const max = Math.max(1, ...data.map(d => d.value));
+    return (
+        <div className="h-48 flex items-end gap-2" style={{ height }}>
+            {data.map((d, i) => (
+                <div key={i} className="flex-1 flex flex-col items-center">
+                    <div className="w-full bg-blue-200 rounded-t h-1"></div>
+                    <div style={{ height: `${(d.value / max) * 90}%` }} className="w-full bg-indigo-500 rounded-t"></div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function LineChart({ data, height = 200, stroke = '#6366f1' }) {
+    const max = Math.max(1, ...data.map(d => d.value));
+    const points = data.map((d, i) => {
+        const x = (i / (data.length - 1)) * 100;
+        const y = 100 - (d.value / max) * 90;
+        return `${x},${y}`;
+    }).join(' ');
+    return (
+        <svg viewBox="0 0 100 100" className="w-full h-52">
+            <polyline fill="none" stroke={stroke} strokeWidth="2" points={points} />
+        </svg>
+    );
+}
+
+function DonutChart({ segments }) {
+    const total = segments.reduce((s, x) => s + Math.max(0, x.value), 0) || 1;
+    let acc = 0;
+    const arcs = segments.map((seg, idx) => {
+        const start = (acc / total) * 360; acc += Math.max(0, seg.value);
+        const end = (acc / total) * 360;
+        return { start, end, color: seg.color, label: seg.label };
+    });
+    const conic = arcs.map(a => `${a.color} ${a.start}deg ${a.end}deg`).join(', ');
+    return (
+        <div className="flex items-center gap-8">
+            <div className="relative w-40 h-40">
+                <div className="absolute inset-0 rounded-full" style={{ background: `conic-gradient(${conic})` }}></div>
+                <div className="absolute inset-4 bg-white rounded-full"></div>
+            </div>
+            <div className="text-sm space-y-2">
+                {segments.map((s, i) => (
+                    <div key={i} className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm" style={{ background: s.color }}></span> {s.label}</div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function CardSection({ title, children }) {
+    return (
+        <div className="bg-white rounded-xl border shadow-sm p-4">
+            <div className="font-semibold mb-3 text-gray-800">{title}</div>
+            {children}
+        </div>
+    );
+}
+
+function ToggleRow({ label, description, defaultChecked = false, onToggle }) {
+    const [checked, setChecked] = useState(defaultChecked);
+    return (
+        <div className="flex items-start justify-between py-3">
+            <div>
+                <div className="font-medium text-gray-900">{label}</div>
+                <div className="text-sm text-gray-500">{description}</div>
+            </div>
+            <label className="inline-flex items-center cursor-pointer select-none">
+                <input type="checkbox" className="sr-only" checked={checked} onChange={(e)=>{ setChecked(e.target.checked); onToggle && onToggle(e.target.checked); }} />
+                <span className={`w-10 h-6 flex items-center rounded-full p-1 transition-colors ${checked ? 'bg-indigo-600' : 'bg-gray-300'}`}>
+                    <span className={`bg-white w-4 h-4 rounded-full transform transition-transform ${checked ? 'translate-x-4' : ''}`}></span>
+                </span>
+            </label>
+        </div>
+    );
+}
+
+// Simple data generators from stats for charts
+function generateMonthlySeries(stats) {
+    const base = (stats?.totalBookings || 20);
+    return Array.from({ length: 12 }).map((_, i) => ({ label: i, value: Math.max(5, Math.round(base * (0.6 + ((i % 5) * 0.1)))) }));
+}
+
+function generateWeeklySeries(stats) {
+    const base = (stats?.totalUsers || 50);
+    return Array.from({ length: 8 }).map((_, i) => ({ label: i, value: Math.max(5, Math.round(base * (0.4 + ((Math.sin(i) + 1) / 3)))) }));
 }

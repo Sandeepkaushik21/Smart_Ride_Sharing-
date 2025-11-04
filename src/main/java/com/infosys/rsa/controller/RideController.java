@@ -2,6 +2,8 @@ package com.infosys.rsa.controller;
 
 import com.infosys.rsa.dto.RidePostRequest;
 import com.infosys.rsa.dto.RideSearchRequest;
+import com.infosys.rsa.dto.RideResponse;
+import com.infosys.rsa.model.Booking;
 import com.infosys.rsa.model.Ride;
 import com.infosys.rsa.security.UserDetailsServiceImpl.UserPrincipal;
 import com.infosys.rsa.service.BookingService;
@@ -14,6 +16,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -41,7 +44,9 @@ public class RideController {
     @GetMapping("/search")
     public ResponseEntity<?> searchRides(@ModelAttribute RideSearchRequest request) {
         List<Ride> rides = rideService.searchRides(request);
-        return ResponseEntity.ok(rides);
+        // Map to DTO to ensure driver info is included and shape is stable
+        List<RideResponse> response = rides.stream().map(RideResponse::new).collect(Collectors.toList());
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/my-rides")
@@ -68,7 +73,13 @@ public class RideController {
         try {
             UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
             Ride ride = bookingService.cancelRideForDriver(userPrincipal.getId(), id);
-            return ResponseEntity.ok(ride);
+
+            // Return updated lists so frontend can update counts without extra round-trip
+            List<Ride> myRides = rideService.getRidesByDriver(userPrincipal.getId());
+            List<Booking> driverBookings = bookingService.getBookingsByDriver(userPrincipal.getId());
+
+            CancelRideResponse resp = new CancelRideResponse(ride, myRides, driverBookings);
+            return ResponseEntity.ok(resp);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
@@ -83,5 +94,21 @@ public class RideController {
             return message;
         }
     }
-}
 
+    // Response DTO for cancel ride
+    private static class CancelRideResponse {
+        private Ride ride;
+        private List<Ride> myRides;
+        private List<Booking> driverBookings;
+
+        public CancelRideResponse(Ride ride, List<Ride> myRides, List<Booking> driverBookings) {
+            this.ride = ride;
+            this.myRides = myRides;
+            this.driverBookings = driverBookings;
+        }
+
+        public Ride getRide() { return ride; }
+        public List<Ride> getMyRides() { return myRides; }
+        public List<Booking> getDriverBookings() { return driverBookings; }
+    }
+}
