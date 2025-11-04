@@ -7,7 +7,7 @@ import CityAutocomplete from '../components/CityAutocomplete';
 import { rideService } from '../services/rideService';
 import { bookingService } from '../services/bookingService';
 import { showConfirm, showSuccess, showError } from '../utils/swal';
-import { locationService } from '../services/locationService';
+import { authService } from '../services/authService';
 
 const DriverDashboard = () => {
   const [showPostForm, setShowPostForm] = useState(false);
@@ -25,7 +25,16 @@ const DriverDashboard = () => {
   });
   const [vehiclePhotos, setVehiclePhotos] = useState([]);
   const [myRides, setMyRides] = useState([]);
+  // Support paginated bookings for drivers
   const [bookings, setBookings] = useState([]);
+  const [bookingsPage, setBookingsPage] = useState(0); // zero-based
+  const [bookingsSize, setBookingsSize] = useState(3);
+  const [bookingsTotalPages, setBookingsTotalPages] = useState(0);
+  // const [bookingsTotalElements, setBookingsTotalElements] = useState(0);
+  // Pagination for rides (driver)
+  const [ridesPage, setRidesPage] = useState(0);
+  const [ridesSize, setRidesSize] = useState(3); // default 3 per page
+  const [ridesTotalPages, setRidesTotalPages] = useState(0);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('rides');
   // Wizard for Post Ride (1: From/To Cities, 2: 4 popular locations each, 3: Details)
@@ -73,13 +82,30 @@ const DriverDashboard = () => {
 
   const fetchData = async () => {
     try {
+      // Try to request paginated rides & bookings; services should accept page/size but fall back to full arrays
       const [ridesData, bookingsData] = await Promise.all([
-        rideService.getMyRides(),
-        bookingService.getDriverBookings(),
+        // rideService may accept pagination args
+        rideService.getMyRides({ page: ridesPage, size: ridesSize }).catch(() => rideService.getMyRides()),
+        bookingService.getDriverBookings({ page: bookingsPage, size: bookingsSize }).catch(() => bookingService.getDriverBookings()),
       ]);
-      // Ensure we're setting arrays
-      setMyRides(Array.isArray(ridesData) ? ridesData : []);
-      setBookings(Array.isArray(bookingsData) ? bookingsData : []);
+
+      // Handle rides response (array or paginated)
+      if (Array.isArray(ridesData)) {
+        setMyRides(ridesData);
+        setRidesTotalPages(0);
+      } else {
+        setMyRides(Array.isArray(ridesData.content) ? ridesData.content : []);
+        setRidesTotalPages(Number.isFinite(ridesData.totalPages) ? ridesData.totalPages : 0);
+      }
+
+      // bookingService is expected to return either an array (legacy) or a paginated response
+      if (Array.isArray(bookingsData)) {
+        setBookings(bookingsData);
+        setBookingsTotalPages(0);
+      } else {
+        setBookings(Array.isArray(bookingsData.content) ? bookingsData.content : []);
+        setBookingsTotalPages(Number.isFinite(bookingsData.totalPages) ? bookingsData.totalPages : 0);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       // Set empty arrays on error to prevent undefined issues
@@ -88,32 +114,81 @@ const DriverDashboard = () => {
     }
   };
 
+  // Separate helper to fetch only bookings for pagination changes
+  const fetchBookingsPage = async (page = bookingsPage, size = bookingsSize) => {
+    try {
+      const resp = await bookingService.getDriverBookings({ page, size });
+      if (Array.isArray(resp)) {
+        setBookings(resp);
+        setBookingsTotalPages(0);
+        // setBookingsTotalElements(resp.length);
+      } else {
+        setBookings(Array.isArray(resp.content) ? resp.content : []);
+        setBookingsTotalPages(Number.isFinite(resp.totalPages) ? resp.totalPages : 0);
+        // setBookingsTotalElements(Number.isFinite(resp.totalElements) ? resp.totalElements : (Array.isArray(resp.content) ? resp.content.length : 0));
+      }
+      setBookingsPage(page);
+      setBookingsSize(size);
+    } catch (err) {
+      console.error('Error fetching bookings page:', err);
+      setBookings([]);
+    }
+  };
+
+  // Fetch rides page (server-side if available, otherwise keep full list and use client-side slicing)
+  const fetchRidesPage = async (page = ridesPage, size = ridesSize) => {
+    try {
+      const resp = await rideService.getMyRides({ page, size });
+      if (Array.isArray(resp)) {
+        // server returned full array
+        setMyRides(resp);
+        setRidesTotalPages(0);
+      } else {
+        setMyRides(Array.isArray(resp.content) ? resp.content : []);
+        setRidesTotalPages(Number.isFinite(resp.totalPages) ? resp.totalPages : 0);
+      }
+      setRidesPage(page);
+      setRidesSize(size);
+    } catch (err) {
+      // Fallback: try non-paginated endpoint
+      try {
+        const all = await rideService.getMyRides();
+        setMyRides(Array.isArray(all) ? all : []);
+        setRidesTotalPages(0);
+      } catch (e) {
+        console.error('Error fetching rides page:', err, e);
+        setMyRides([]);
+      }
+    }
+  };
+
+  // When the user opens the bookings tab, ensure we have the correct page loaded.
+  useEffect(() => {
+    if (activeTab === 'bookings') {
+      fetchBookingsPage(bookingsPage, bookingsSize);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
   // Filter rides to exclude cancelled and past dates
-  const filteredRides = myRides.filter(ride => {
-    // Exclude cancelled rides
-    if (ride.status === 'CANCELLED') {
-      return false;
-    }
-    // Exclude rides with past dates
-    if (ride.date && isDatePassed(ride.date)) {
-      return false;
-    }
-    return true;
-  });
+  const filteredRides = myRides.filter(ride => !(ride.status === 'CANCELLED' || (ride.date && isDatePassed(ride.date))));
 
   // Filter bookings to exclude cancelled and past dates
-  const filteredBookings = bookings.filter(booking => {
-    // Exclude cancelled bookings
-    if (booking.status === 'CANCELLED') {
-      return false;
-    }
-    // Exclude bookings with past dates
-    const rideDate = booking.ride?.date;
-    if (rideDate && isDatePassed(rideDate)) {
-      return false;
-    }
-    return true;
-  });
+  const filteredBookings = bookings.filter(booking => !(booking.status === 'CANCELLED' || (booking.ride?.date && isDatePassed(booking.ride.date))));
+
+  // Compute displayed arrays: server-side pagination returns already-paged content (ridesTotalPages>0),
+  // otherwise fall back to client-side slicing of the full arrays.
+  const displayedRides = (() => {
+    if (ridesTotalPages > 0) return filteredRides;
+    const start = ridesPage * ridesSize;
+    return filteredRides.slice(start, start + ridesSize);
+  })();
+
+  const displayedBookings = (() => {
+    if (bookingsTotalPages > 0) return filteredBookings;
+    const start = bookingsPage * bookingsSize;
+    return filteredBookings.slice(start, start + bookingsSize);
+  })();
 
   const handleCancelRide = async (rideId) => {
     const confirm = await showConfirm(
@@ -125,9 +200,31 @@ const DriverDashboard = () => {
     if (!confirm.isConfirmed) return;
 
     try {
-      await rideService.cancelRide(rideId);
+      // Use response payload which includes updated lists
+      const resp = await rideService.cancelRide(rideId);
+      // If backend returned the consolidated response, update local state directly
+      if (resp && resp.myRides) {
+        setMyRides(Array.isArray(resp.myRides) ? resp.myRides : []);
+      } else {
+        // fallback: remove cancelled ride locally
+        setMyRides(prev => prev.map(r => r.id === rideId ? ({...r, status: 'CANCELLED'}) : r));
+      }
+
+      if (resp && resp.driverBookings) {
+        // If backend returned paginated driverBookings, attempt to set paging info
+        const db = resp.driverBookings;
+        if (Array.isArray(db)) {
+          setBookings(db);
+          setBookingsTotalPages(0);
+          // setBookingsTotalElements(db.length);
+        } else {
+          setBookings(Array.isArray(db.content) ? db.content : []);
+          setBookingsTotalPages(Number.isFinite(db.totalPages) ? db.totalPages : 0);
+        }
+      }
+
       await showSuccess('Ride cancelled successfully!');
-      await fetchData();
+      // Keep UI on same tab; counts should update from state above
     } catch (error) {
       await showError(error.message || 'Error cancelling ride');
     }
@@ -258,7 +355,14 @@ const DriverDashboard = () => {
                 <Car className="h-6 w-6 text-green-600" />
                 <span>Driver Dashboard</span>
               </h1>
-              <p className="text-gray-600 mt-2 text-sm">Post rides and manage your bookings</p>
+              <p className="text-gray-600 mt-2 text-sm">
+                Post rides and manage your bookings
+                {(() => {
+                  const currentUser = authService.getCurrentUser();
+                  const driverName = currentUser?.name || currentUser?.email || '';
+                  return driverName ? ` • ${driverName}` : '';
+                })()}
+              </p>
             </div>
             <button
               onClick={() => setShowPostForm(!showPostForm)}
@@ -558,7 +662,7 @@ const DriverDashboard = () => {
             }`}
           >
             <Car className="inline h-5 w-5 mr-2" />
-            My Rides ({myRides.length})
+            My Rides ({filteredRides.length})
           </button>
           <button
             onClick={() => setActiveTab('bookings')}
@@ -569,7 +673,7 @@ const DriverDashboard = () => {
             }`}
           >
             <CheckCircle className="inline h-5 w-5 mr-2" />
-            Bookings ({bookings.length})
+            Bookings ({filteredBookings.length})
           </button>
         </div>
 
@@ -582,14 +686,14 @@ const DriverDashboard = () => {
               </h2>
             </div>
             <div className="divide-y divide-gray-200">
-              {filteredRides.length === 0 ? (
+              {displayedRides.length === 0 ? (
                 <div className="p-12 text-center">
                   <Car className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-600 text-base font-medium">No rides posted yet</p>
                   <p className="text-gray-500 text-xs mt-2">Click "Post New Ride" to get started!</p>
                 </div>
               ) : (
-                filteredRides.map((ride) => (
+                displayedRides.map((ride) => (
                   <div key={ride.id} className="p-6 hover:bg-gradient-to-r hover:from-green-50 hover:to-teal-50 transition-all">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
@@ -642,27 +746,83 @@ const DriverDashboard = () => {
                 ))
               )}
             </div>
-          </div>
-        )}
+            {/* Rides Pagination Controls */}
+            {((ridesTotalPages > 0 && ridesTotalPages > 1) || (ridesTotalPages === 0 && filteredRides.length > ridesSize)) && (
+              <div className="px-6 py-4 flex items-center justify-between bg-white border-t">
+                <div className="text-sm text-gray-600">Showing page {ridesPage + 1} {ridesTotalPages > 0 ? `of ${ridesTotalPages}` : ``} — {filteredRides.length} rides</div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => {
+                      const p = Math.max(0, ridesPage - 1);
+                      if (ridesTotalPages > 0) fetchRidesPage(p, ridesSize); else setRidesPage(p);
+                    }}
+                    disabled={ridesPage <= 0}
+                    className={`px-3 py-1 rounded-md ${ridesPage <= 0 ? 'bg-gray-200 text-gray-500' : 'bg-white border'}`}
+                  >Prev</button>
+
+                  <div className="flex items-center space-x-1">
+                    {Array.from({ length: ridesTotalPages > 0 ? ridesTotalPages : Math.ceil(Math.max(1, filteredRides.length) / ridesSize) }).map((_, idx) => {
+                      const total = ridesTotalPages > 0 ? ridesTotalPages : Math.ceil(Math.max(1, filteredRides.length) / ridesSize);
+                      const start = Math.max(0, ridesPage - 3);
+                      const end = Math.min(total - 1, ridesPage + 3);
+                      if (idx < start || idx > end) return null;
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            if (ridesTotalPages > 0) fetchRidesPage(idx, ridesSize); else setRidesPage(idx);
+                          }}
+                          className={`px-3 py-1 rounded-md ${idx === ridesPage ? 'bg-green-600 text-white' : 'bg-white border'}`}
+                        >{idx + 1}</button>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      const p = Math.min((ridesTotalPages > 0 ? ridesTotalPages - 1 : Math.max(0, Math.ceil(filteredRides.length / ridesSize) - 1)), ridesPage + 1);
+                      if (ridesTotalPages > 0) fetchRidesPage(p, ridesSize); else setRidesPage(p);
+                    }}
+                    disabled={ridesPage >= ((ridesTotalPages > 0 ? ridesTotalPages - 1 : Math.max(0, Math.ceil(filteredRides.length / ridesSize) - 1)))}
+                    className={`px-3 py-1 rounded-md ${ridesPage >= ((ridesTotalPages > 0 ? ridesTotalPages - 1 : Math.max(0, Math.ceil(filteredRides.length / ridesSize) - 1))) ? 'bg-gray-200 text-gray-500' : 'bg-white border'}`}
+                  >Next</button>
+
+                  <select
+                    value={ridesSize}
+                    onChange={(e) => {
+                      const s = parseInt(e.target.value, 10);
+                      if (ridesTotalPages > 0) fetchRidesPage(0, s); else { setRidesSize(s); setRidesPage(0); }
+                    }}
+                    className="ml-3 px-2 py-1 border rounded-md bg-white"
+                  >
+                    {[3,5,10,20].map(s => (
+                      <option key={s} value={s}>{s} / page</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+           </div>
+         )}
 
         {activeTab === 'bookings' && (
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            <div className="bg-gradient-to-r from-green-600 to-teal-600 px-6 py-4">
+            <div className="bg-gradient-to-r from-green-600 to-blue-600 px-6 py-4">
               <h2 className="text-xl font-bold text-white flex items-center space-x-2">
-                <Users className="h-5 w-5" />
-                <span>Bookings for My Rides ({filteredBookings.length})</span>
+                <CheckCircle className="h-5 w-5" />
+                <span>My Bookings ({filteredBookings.length})</span>
               </h2>
             </div>
             <div className="divide-y divide-gray-200">
-              {filteredBookings.length === 0 ? (
+              {displayedBookings.length === 0 ? (
                 <div className="p-12 text-center">
-                  <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                  <Ticket className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-600 text-base font-medium">No bookings yet</p>
-                  <p className="text-gray-500 text-xs mt-2">Passengers will appear here when they book your rides</p>
+                  <p className="text-gray-500 text-xs mt-2">Start accepting rides!</p>
                 </div>
               ) : (
-                filteredBookings.map((booking) => (
-                  <div key={booking.id} className="p-6 hover:bg-gradient-to-r hover:from-green-50 hover:to-teal-50 transition-all">
+                displayedBookings.map((booking) => (
+                  <div key={booking.id} className="p-6 hover:bg-gradient-to-r hover:from-green-50 hover:to-blue-50 transition-all">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center space-x-4 mb-3">
@@ -706,13 +866,59 @@ const DriverDashboard = () => {
                 ))
               )}
             </div>
-          </div>
-        )}
-      </main>
+            {/* Pagination Controls */}
+            {((bookingsTotalPages > 0 && bookingsTotalPages > 1) || (bookingsTotalPages === 0 && filteredBookings.length > bookingsSize)) && (
+               <div className="px-6 py-4 flex items-center justify-between bg-white border-t">
+                 <div className="text-sm text-gray-600">Showing page {bookingsPage + 1} of {bookingsTotalPages} — {filteredBookings.length} bookings</div>
+                 <div className="flex items-center space-x-2">
+                   <button
+                     onClick={() => fetchBookingsPage(Math.max(0, bookingsPage - 1), bookingsSize)}
+                     disabled={bookingsPage <= 0}
+                     className={`px-3 py-1 rounded-md ${bookingsPage <= 0 ? 'bg-gray-200 text-gray-500' : 'bg-white border'}`}
+                   >Prev</button>
+                   {/* Render up to 7 page buttons centered around current page */}
+                   <div className="flex items-center space-x-1">
+                     {Array.from({ length: (bookingsTotalPages > 0 ? bookingsTotalPages : Math.ceil(Math.max(1, filteredBookings.length) / bookingsSize)) }).map((_, idx) => {
+                       const total = bookingsTotalPages > 0 ? bookingsTotalPages : Math.ceil(Math.max(1, filteredBookings.length) / bookingsSize);
+                       const start = Math.max(0, bookingsPage - 3);
+                       const end = Math.min(total - 1, bookingsPage + 3);
+                       if (idx < start || idx > end) return null;
+                       return (
+                         <button
+                           key={idx}
+                           onClick={() => {
+                             if (bookingsTotalPages > 0) fetchBookingsPage(idx, bookingsSize); else setBookingsPage(idx);
+                           }}
+                           className={`px-3 py-1 rounded-md ${idx === bookingsPage ? 'bg-green-600 text-white' : 'bg-white border'}`}
+                         >{idx + 1}</button>
+                       );
+                     })}
+                   </div>
+                   <button
+                     onClick={() => fetchBookingsPage(Math.min(bookingsTotalPages - 1, bookingsPage + 1), bookingsSize)}
+                     disabled={bookingsPage >= bookingsTotalPages - 1}
+                     className={`px-3 py-1 rounded-md ${bookingsPage >= bookingsTotalPages - 1 ? 'bg-gray-200 text-gray-500' : 'bg-white border'}`}
+                   >Next</button>
 
-      <Footer />
-    </div>
-  );
-};
+                   <select
+                     value={bookingsSize}
+                     onChange={(e) => fetchBookingsPage(0, parseInt(e.target.value, 10))}
+                     className="ml-3 px-2 py-1 border rounded-md bg-white"
+                   >
+                     {[3,5,10,20,50].map(s => (
+                       <option key={s} value={s}>{s} / page</option>
+                     ))}
+                   </select>
+                 </div>
+               </div>
+            )}
+            </div>
+          )}
+        </main>
 
-export default DriverDashboard;
+        <Footer />
+     </div>
+   );
+ };
+
+ export default DriverDashboard;

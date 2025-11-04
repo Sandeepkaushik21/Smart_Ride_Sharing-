@@ -7,7 +7,6 @@ import CityAutocomplete from '../components/CityAutocomplete';
 import { rideService } from '../services/rideService';
 import { bookingService } from '../services/bookingService';
 import { showConfirm, showSuccess, showError } from '../utils/swal';
-import { locationService } from '../services/locationService';
 
 const PassengerDashboard = () => {
     // Helper: format LocalDate (ISO string "yyyy-MM-dd" or Java time object) to human-friendly string
@@ -57,11 +56,44 @@ const PassengerDashboard = () => {
     });
     const [rides, setRides] = useState([]);
     const [bookings, setBookings] = useState([]);
+    // Pagination for passenger bookings: show 1 booking per page
+    const [bookingsPage, setBookingsPage] = useState(0);
+    const [bookingsSize] = useState(1); // fixed at 1 per user request
+    const [bookingsTotalPages, setBookingsTotalPages] = useState(0);
+
+    // =========================================================================
+    // ✨ MISSING WIZARD STATE & LOGIC INJECTION START ✨
+    // =========================================================================
+    const [wizardStep, setWizardStep] = useState(1);
+    const [fromCity, setFromCity] = useState('');
+    const [toCity, setToCity] = useState('');
+
+    const goNext = useCallback(() => {
+        // Step 1 -> 2: Copy City names to searchForm (for display in step 2/3)
+        if (wizardStep === 1) {
+            setSearchForm(prev => ({ ...prev, source: fromCity, destination: toCity }));
+            setWizardStep(2);
+            // Step 2 -> 3: Check if locations are selected
+        } else if (wizardStep === 2) {
+            if (searchForm.source && searchForm.destination) {
+                // Pre-fill date with today's date if not set
+                if (!searchForm.date) {
+                    const today = new Date().toISOString().split('T')[0];
+                    setSearchForm(prev => ({ ...prev, date: today }));
+                }
+                setWizardStep(3);
+            }
+        }
+    }, [wizardStep, fromCity, toCity, searchForm.source, searchForm.destination, searchForm.date]);
+
+    const goPrev = useCallback(() => {
+        setWizardStep(prev => Math.max(1, prev - 1));
+    }, []);
 
     // Helper: check if a date has passed (is before today)
     const isDatePassed = useCallback((dateValue) => {
         if (!dateValue) return false;
-        
+
         let dateStr = '';
         if (typeof dateValue === 'string') {
             dateStr = dateValue; // Already in format 'yyyy-MM-dd'
@@ -86,25 +118,29 @@ const PassengerDashboard = () => {
         today.setHours(0, 0, 0, 0);
         const bookingDate = new Date(dateStr);
         bookingDate.setHours(0, 0, 0, 0);
-        
+
         return bookingDate < today;
     }, []);
 
     // Filter bookings to exclude cancelled and past dates
-    const filteredBookings = useMemo(() => {
-        return bookings.filter(booking => {
-            // Exclude cancelled bookings
-            if (booking.status === 'CANCELLED') {
-                return false;
-            }
-            // Exclude bookings with past dates
-            const rideDate = booking.ride?.date;
-            if (rideDate && isDatePassed(rideDate)) {
-                return false;
-            }
-            return true;
-        });
-    }, [bookings, isDatePassed]);
+    const filteredBookings = useMemo(() => bookings.filter(booking => !(booking.status === 'CANCELLED' || (booking.ride?.date && isDatePassed(booking.ride.date)))), [bookings, isDatePassed]);
+
+    // Handle client-side pagination if server-side is not available (bookingsTotalPages === 0)
+    const displayedBookings = useMemo(() => {
+        if (bookingsTotalPages > 0) {
+            // Server-side pagination: use the 'bookings' array directly (it's already the current page)
+            return bookings;
+        }
+        // Client-side pagination: slice the filtered list
+        const start = bookingsPage * bookingsSize;
+        const end = start + bookingsSize;
+        return filteredBookings.slice(start, end);
+    }, [filteredBookings, bookingsPage, bookingsSize, bookingsTotalPages, bookings]);
+
+    // =========================================================================
+    // ✨ MISSING WIZARD STATE & LOGIC INJECTION END ✨
+    // =========================================================================
+
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('search');
     const [selectedSeats, setSelectedSeats] = useState({});
@@ -138,8 +174,34 @@ const PassengerDashboard = () => {
         });
     }, []);
 
+    // Fetch passenger bookings; attempt server-side pagination, fallback to full list
+    const fetchMyBookings = async (page = bookingsPage, size = bookingsSize) => {
+        try {
+            const resp = await bookingService.getMyBookings({ page, size });
+            if (Array.isArray(resp)) {
+                setBookings(resp);
+                setBookingsTotalPages(0);
+            } else {
+                setBookings(Array.isArray(resp.content) ? resp.content : []);
+                setBookingsTotalPages(Number.isFinite(resp.totalPages) ? resp.totalPages : 0);
+            }
+            setBookingsPage(page);
+        } catch (error) {
+            // Fallback to non-paginated endpoint
+            try {
+                const data = await bookingService.getMyBookings();
+                setBookings(Array.isArray(data) ? data : []);
+                setBookingsTotalPages(0);
+                setBookingsPage(0);
+            } catch (e) {
+                console.error('Error fetching bookings:', error, e);
+            }
+        }
+    };
+
     useEffect(() => {
-        fetchMyBookings();
+        // Load first page on mount
+        fetchMyBookings(0, bookingsSize);
     }, []);
 
     // Keyboard navigation for photo viewer
@@ -159,33 +221,65 @@ const PassengerDashboard = () => {
         }
     }, [photoViewer.open, closePhotoViewer, prevPhoto, nextPhoto]);
 
-    const fetchMyBookings = async () => {
-        try {
-            const data = await bookingService.getMyBookings();
-            setBookings(data);
-        } catch (error) {
-            console.error('Error fetching bookings:', error);
+    // Helper to fetch a specific bookings page (server-side) or just set local page for client-side slicing
+    const fetchBookingsPage = async (page = 0) => {
+        if (bookingsTotalPages > 0) {
+            await fetchMyBookings(page, bookingsSize);
+        } else {
+            // client-side: we already have full bookings array, just set page
+            setBookingsPage(page);
         }
     };
-
-    // Wizard state (1-2-3): 1) From/To Cities, 2) 4 popular locations each, 3) Date + Search
-    const [wizardStep, setWizardStep] = useState(1);
-    const [fromCity, setFromCity] = useState('');
-    const [toCity, setToCity] = useState('');
-
-    // No prefetching; step 2 will use real-time place autocomplete within the chosen cities
-
-    const goNext = () => setWizardStep((s) => Math.min(3, s + 1));
-    const goPrev = () => setWizardStep((s) => Math.max(1, s - 1));
 
     const handleSearch = async (e) => {
         if (e && e.preventDefault) e.preventDefault();
         setLoading(true);
         try {
             const data = await rideService.searchRides(searchForm);
-            setRides(data);
+
+            // Debug raw response to help diagnose missing driver info
+            console.debug('[PassengerDashboard] raw search response:', data);
+
+            // Support pageable responses: pick data.content if present
+            const list = Array.isArray(data) ? data : (data && Array.isArray(data.content) ? data.content : []);
+
+            // Normalize different possible backend shapes so frontend can always read driver.name
+            const normalized = list.map((r) => {
+                if (!r || typeof r !== 'object') return r;
+
+                // If driver is already an object with name -> use it
+                if (r.driver && typeof r.driver === 'object') return { ...r, driver: r.driver };
+
+                // If driver comes as a nested 'driverInfo' or 'driverResponse'
+                if (r.driverInfo && typeof r.driverInfo === 'object') return { ...r, driver: r.driverInfo };
+                if (r.driverResponse && typeof r.driverResponse === 'object') return { ...r, driver: r.driverResponse };
+
+                // If driver is just a string (driver name)
+                if (typeof r.driver === 'string') return { ...r, driver: { id: null, name: r.driver, driverRating: null } };
+
+                // Flat fields: driverName / driver_name / name under driver_* keys
+                const nameFromFlat = r.driverName || r.driver_name || r.name || r.drivername;
+                if (nameFromFlat) {
+                    return {
+                        ...r,
+                        driver: {
+                            id: r.driverId || r.driver_id || null,
+                            name: nameFromFlat,
+                            driverRating: r.driverRating ?? r.driver_rating ?? null,
+                        }
+                    };
+                }
+
+                // Finally, if the response came from our new RideResponse DTO, it should have driver with fields; but if it's missing, leave null
+                return { ...r, driver: r.driver || null };
+            });
+
+            console.debug('[PassengerDashboard] normalized rides:', normalized);
+
+            setRides(normalized);
             setActiveTab('results');
         } catch (error) {
+            console.error('[PassengerDashboard] search error:', error);
             await showError('Error searching rides');
         } finally {
             setLoading(false);
@@ -219,17 +313,17 @@ const PassengerDashboard = () => {
             // Show inline loading immediately
             setBookingLoading(prev => ({ ...prev, [rideId]: true }));
 
-            const bookingResult = await bookingService.createBooking({
+            await bookingService.createBooking({
                 rideId,
                 pickupLocation: searchForm.source,
                 dropoffLocation: searchForm.destination,
                 numberOfSeats: numberOfSeats,
             });
-            
+
             // Update UI optimistically for faster response
             setShowBookingModal({ ...showBookingModal, [rideId]: false });
             setSelectedSeats({ ...selectedSeats, [rideId]: 1 });
-            
+
             // Optimistically update rides list (reduce available seats)
             setRides((prevRides) =>
                 prevRides.map((r) =>
@@ -238,13 +332,13 @@ const PassengerDashboard = () => {
                         : r
                 )
             );
-            
+
             // Non-blocking success toast (don't await)
             showSuccess('Ride booked successfully!');
-            
+
             // Switch to bookings tab immediately
             setActiveTab('bookings');
-            
+
             // Refresh data in background (non-blocking)
             Promise.all([
                 fetchMyBookings(),
@@ -275,13 +369,51 @@ const PassengerDashboard = () => {
         if (!confirm.isConfirmed) return;
 
         try {
-            await bookingService.cancelBooking(bookingId);
+            const resp = await bookingService.cancelBooking(bookingId);
+            // If server returned consolidated response, update local state
+            if (resp && resp.myBookings) {
+                setBookings(Array.isArray(resp.myBookings) ? resp.myBookings : []);
+            } else {
+                // fallback: remove cancelled booking locally
+                setBookings(prev => prev.map(b => b.id === bookingId ? ({...b, status: 'CANCELLED'}) : b));
+            }
+
+            // If server returned updated ride, update rides list to reflect available seats
+            if (resp && resp.updatedRide && Array.isArray(rides)) {
+                setRides(prev => prev.map(r => r.id === resp.updatedRide.id ? resp.updatedRide : r));
+            }
+
             await showSuccess('Booking cancelled successfully!');
-            await fetchMyBookings();
         } catch (error) {
             console.error('Cancel booking error (passenger):', error, error.original || error);
             await showError(error.message || 'Error cancelling booking');
         }
+    };
+
+    // New helper functions to extract driver name and rating from various possible fields
+    const getDriverName = (ride) => {
+        if (!ride) return 'N/A';
+        // Priority: Check ride.driver.name first (from RideResponse.DriverInfo)
+        // Then check flat fields, then fallback to email
+        const name = (
+            ride?.driver?.name ||
+            ride?.driverName ||
+            ride?.driver_name ||
+            ride?.drivername ||
+            (typeof ride.driver === 'string' ? ride.driver : null) ||
+            ride?.driver?.fullName ||
+            ride?.driver?.email ||
+            'N/A'
+        );
+        // If we got email as fallback, still show it (better than N/A)
+        // But prefer showing the actual name from driver.name
+        return name && name !== 'N/A' ? name : 'N/A';
+    };
+
+    const getDriverRating = (ride) => {
+        const raw = ride?.driver?.driverRating ?? ride?.driverRating ?? ride?.driver_rating ?? null;
+        const num = raw !== null && raw !== undefined ? Number(raw) : null;
+        return Number.isNaN(num) ? null : num;
     };
 
     return (
@@ -329,7 +461,7 @@ const PassengerDashboard = () => {
                         }`}
                     >
                         <CheckCircle className="inline h-5 w-5 mr-2" />
-                        My Bookings ({bookings.length})
+                        My Bookings ({filteredBookings.length})
                     </button>
                 </div>
 
@@ -423,7 +555,7 @@ const PassengerDashboard = () => {
                                     </div>
                                 </div>
                                 <div className="flex justify-between">
-                                    <button onClick={goPrev} className="px-6 py-2 bg-gray-200 rounded-lg">Back</button>
+                                    <button type="button" onClick={goPrev} className="px-6 py-2 bg-gray-200 rounded-lg">Back</button>
                                     <button
                                         disabled={!searchForm.source || !searchForm.destination}
                                         onClick={goNext}
@@ -541,16 +673,19 @@ const PassengerDashboard = () => {
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center space-x-4 mb-3">
-                                                    <div className="flex items-center space-x-2">
-                                                        <Car className="h-5 w-5 text-gray-500" />
-                                                        <span className="font-medium text-gray-700">Driver: {ride.driver?.name || 'N/A'}</span>
+                                                    <div className="flex items-center space-x-2 bg-gray-100 px-3 py-1 rounded-lg">
+                                                        <Car className="h-4 w-4 text-gray-500" />
+                                                        <span className="font-medium text-gray-700">Driver: {getDriverName(ride)}</span>
                                                     </div>
-                                                    {ride.driver?.driverRating && (
-                                                        <div className="flex items-center space-x-1 bg-yellow-100 px-2 py-1 rounded">
-                                                            <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                                                            <span className="text-sm font-semibold text-yellow-700">{ride.driver.driverRating.toFixed(1)}</span>
-                                                        </div>
-                                                    )}
+                                                    <div className="flex items-center space-x-2 bg-gray-100 px-3 py-1 rounded-lg">
+                                                        <Star className="h-4 w-4 text-gray-500" />
+                                                        <span className="font-medium text-gray-700">
+                                                            {(() => {
+                                                                const r = getDriverRating(ride);
+                                                                return r !== null && !isNaN(r) ? r.toFixed(1) : 'N/A';
+                                                            })()}
+                                                        </span>
+                                                    </div>
                                                 </div>
 
                                                 {/* Vehicle Photos */}
@@ -714,14 +849,14 @@ const PassengerDashboard = () => {
                             </h2>
                         </div>
                         <div className="divide-y divide-gray-200">
-                            {filteredBookings.length === 0 ? (
+                            {displayedBookings.length === 0 ? (
                                 <div className="p-12 text-center">
                                     <Ticket className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                                     <p className="text-gray-600 text-base font-medium">No bookings yet</p>
                                     <p className="text-gray-500 text-xs mt-2">Start searching for rides!</p>
                                 </div>
                             ) : (
-                                filteredBookings.map((booking) => (
+                                displayedBookings.map((booking) => (
                                     <div key={booking.id} className="p-6 hover:bg-gradient-to-r hover:from-purple-50 hover:to-blue-50 transition-all">
                                         <div className="flex justify-between items-start">
                                             <div className="flex-1">
@@ -862,88 +997,134 @@ const PassengerDashboard = () => {
                                 ))
                             )}
                         </div>
-                    </div>
-                )}
-            </main>
-            
-            {/* Photo Viewer Modal */}
-            {photoViewer.open && (
-                <div
-                    className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center"
-                    onClick={closePhotoViewer}
-                >
-                    <div className="relative max-w-6xl max-h-full p-4" onClick={(e) => e.stopPropagation()}>
-                        {/* Close Button */}
-                        <button
-                            onClick={closePhotoViewer}
-                            className="absolute top-4 right-4 text-white bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full p-2 z-10 transition-all"
-                        >
-                            <X className="h-6 w-6" />
-                        </button>
 
-                        {/* Photo Counter */}
-                        <div className="absolute top-4 left-4 text-white bg-black bg-opacity-50 rounded-full px-4 py-2 z-10">
-                            {photoViewer.currentIndex + 1} / {photoViewer.photos.length}
-                        </div>
-
-                        {/* Main Image */}
-                        <img
-                            src={photoViewer.photos[photoViewer.currentIndex]}
-                            alt={`Vehicle photo ${photoViewer.currentIndex + 1}`}
-                            className="max-w-full max-h-[90vh] object-contain rounded-lg"
-                        />
-
-                        {/* Navigation Buttons */}
-                        {photoViewer.photos.length > 1 && (
-                            <>
-                                {photoViewer.currentIndex > 0 && (
+                        {/* Pagination Controls - show when more than one page */}
+                        {((bookingsTotalPages > 0 && bookingsTotalPages > 1) || (bookingsTotalPages === 0 && filteredBookings.length > bookingsSize)) && (
+                            <div className="px-6 py-4 flex items-center justify-between bg-white border-t">
+                                <div className="text-sm text-gray-600">Showing page {bookingsPage + 1} {bookingsTotalPages > 0 ? `of ${bookingsTotalPages}` : ''} — {filteredBookings.length} bookings</div>
+                                <div className="flex items-center space-x-2">
                                     <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            prevPhoto();
-                                        }}
-                                        className="absolute left-4 top-1/2 -translate-y-1/2 text-white bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full p-3 transition-all"
-                                    >
-                                        <ChevronLeft className="h-6 w-6" />
-                                    </button>
-                                )}
-                                {photoViewer.currentIndex < photoViewer.photos.length - 1 && (
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            nextPhoto();
-                                        }}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-white bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full p-3 transition-all"
-                                    >
-                                        <ChevronRight className="h-6 w-6" />
-                                    </button>
-                                )}
-                            </>
-                        )}
+                                        onClick={() => fetchBookingsPage(Math.max(0, bookingsPage - 1))}
+                                        disabled={bookingsPage <= 0}
+                                        className={`px-3 py-1 rounded-md ${bookingsPage <= 0 ? 'bg-gray-200 text-gray-500' : 'bg-white border'}`}
+                                    >Prev</button>
 
-                        {/* Thumbnail Strip */}
-                        {photoViewer.photos.length > 1 && (
-                            <div className="mt-4 flex space-x-2 overflow-x-auto justify-center">
-                                {photoViewer.photos.map((photo, idx) => (
-                                    <img
-                                        key={idx}
-                                        src={photo}
-                                        alt={`Thumbnail ${idx + 1}`}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setPhotoViewer({ ...photoViewer, currentIndex: idx });
-                                        }}
-                                        className={`w-16 h-16 object-cover rounded-lg border-2 cursor-pointer transition-all ${
-                                            idx === photoViewer.currentIndex
-                                                ? 'border-white scale-110'
-                                                : 'border-gray-600 opacity-60 hover:opacity-100'
-                                        }`}
-                                    />
-                                ))}
+                                    <div className="flex items-center space-x-1">
+                                        {Array.from({ length: bookingsTotalPages > 0 ? bookingsTotalPages : Math.ceil(Math.max(1, filteredBookings.length) / bookingsSize) }).map((_, idx) => {
+                                            const total = bookingsTotalPages > 0 ? bookingsTotalPages : Math.ceil(Math.max(1, filteredBookings.length) / bookingsSize);
+                                            // Simple logic to show a few pages around the current one plus ends
+                                            const isCurrent = idx === bookingsPage;
+                                            const isEdge = idx === 0 || idx === total - 1;
+                                            const isNear = Math.abs(idx - bookingsPage) <= 2;
+                                            const isEllipsisStart = !isNear && idx === 1;
+                                            const isEllipsisEnd = !isNear && idx === total - 2;
+
+                                            if (!isCurrent && !isEdge && !isNear) {
+                                                if (isEllipsisStart) return <span key="ellipsis-start" className="px-3 py-1 text-gray-500">...</span>;
+                                                if (isEllipsisEnd) return <span key="ellipsis-end" className="px-3 py-1 text-gray-500">...</span>;
+                                                return null;
+                                            }
+
+                                            return (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => fetchBookingsPage(idx)}
+                                                    className={`px-3 py-1 rounded-md ${isCurrent ? 'bg-purple-600 text-white' : 'bg-white border hover:bg-gray-100'}`}
+                                                >{idx + 1}</button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <button
+                                        onClick={() => fetchBookingsPage(Math.min((bookingsTotalPages > 0 ? bookingsTotalPages - 1 : Math.max(0, Math.ceil(filteredBookings.length / bookingsSize) - 1)), bookingsPage + 1))}
+                                        disabled={bookingsPage >= ((bookingsTotalPages > 0 ? bookingsTotalPages - 1 : Math.max(0, Math.ceil(filteredBookings.length / bookingsSize) - 1)))}
+                                        className={`px-3 py-1 rounded-md ${bookingsPage >= ((bookingsTotalPages > 0 ? bookingsTotalPages - 1 : Math.max(0, Math.ceil(filteredBookings.length / bookingsSize) - 1))) ? 'bg-gray-200 text-gray-500' : 'bg-white border'}`}
+                                    >Next</button>
+                                </div>
                             </div>
                         )}
                     </div>
+                    )}
+            </main>
+
+            {/* Photo Viewer Modal */}
+            {photoViewer.open && (
+            <div
+                className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center"
+                onClick={closePhotoViewer}
+            >
+                <div className="relative max-w-6xl max-h-full p-4" onClick={(e) => e.stopPropagation()}>
+                    {/* Close Button */}
+                    <button
+                        onClick={closePhotoViewer}
+                        className="absolute top-4 right-4 text-white bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full p-2 z-10 transition-all"
+                    >
+                        <X className="h-6 w-6" />
+                    </button>
+
+                    {/* Photo Counter */}
+                    <div className="absolute top-4 left-4 text-white bg-black bg-opacity-50 rounded-full px-4 py-2 z-10">
+                        {photoViewer.currentIndex + 1} / {photoViewer.photos.length}
+                    </div>
+
+                    {/* Main Image */}
+                    <img
+                        src={photoViewer.photos[photoViewer.currentIndex]}
+                        alt={`Vehicle photo ${photoViewer.currentIndex + 1}`}
+                        className="max-w-full max-h-[90vh] object-contain rounded-lg"
+                    />
+
+                    {/* Navigation Buttons */}
+                    {photoViewer.photos.length > 1 && (
+                        <>
+                            {photoViewer.currentIndex > 0 && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        prevPhoto();
+                                    }}
+                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-white bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full p-3 transition-all"
+                                >
+                                    <ChevronLeft className="h-6 w-6" />
+                                </button>
+                            )}
+                            {photoViewer.currentIndex < photoViewer.photos.length - 1 && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        nextPhoto();
+                                    }}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full p-3 transition-all"
+                                >
+                                    <ChevronRight className="h-6 w-6" />
+                                </button>
+                            )}
+                        </>
+                    )}
+
+                    {/* Thumbnail Strip */}
+                    {photoViewer.photos.length > 1 && (
+                        <div className="mt-4 flex space-x-2 overflow-x-auto justify-center">
+                            {photoViewer.photos.map((photo, idx) => (
+                                <img
+                                    key={idx}
+                                    src={photo}
+                                    alt={`Thumbnail ${idx + 1}`}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setPhotoViewer({ ...photoViewer, currentIndex: idx });
+                                    }}
+                                    className={`w-16 h-16 object-cover rounded-lg border-2 cursor-pointer transition-all ${
+                                        idx === photoViewer.currentIndex
+                                            ? 'border-white scale-110'
+                                            : 'border-gray-600 opacity-60 hover:opacity-100'
+                                    }`}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
+            </div>
             )}
 
             <Footer />
@@ -952,3 +1133,4 @@ const PassengerDashboard = () => {
 };
 
 export default PassengerDashboard;
+

@@ -2,6 +2,7 @@ package com.infosys.rsa.controller;
 
 import com.infosys.rsa.dto.BookingRequest;
 import com.infosys.rsa.model.Booking;
+import com.infosys.rsa.model.Ride;
 import com.infosys.rsa.security.UserDetailsServiceImpl.UserPrincipal;
 import com.infosys.rsa.service.BookingService;
 import jakarta.validation.Valid;
@@ -73,7 +74,13 @@ public class BookingController {
         try {
             UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
             Booking booking = bookingService.cancelBooking(userPrincipal.getId(), id);
-            return ResponseEntity.ok(booking);
+
+            // Return updated passenger bookings and updated ride to refresh UI
+            List<Booking> myBookings = bookingService.getBookingsByPassenger(userPrincipal.getId());
+            Ride updatedRide = booking.getRide();
+
+            CancelBookingResponse resp = new CancelBookingResponse(booking, myBookings, updatedRide);
+            return ResponseEntity.ok(resp);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
@@ -88,5 +95,20 @@ public class BookingController {
             return message;
         }
     }
-}
 
+    private static class CancelBookingResponse {
+        private Booking cancelledBooking;
+        private List<Booking> myBookings;
+        private Ride updatedRide;
+
+        public CancelBookingResponse(Booking cancelledBooking, List<Booking> myBookings, Ride updatedRide) {
+            this.cancelledBooking = cancelledBooking;
+            this.myBookings = myBookings;
+            this.updatedRide = updatedRide;
+        }
+
+        public Booking getCancelledBooking() { return cancelledBooking; }
+        public List<Booking> getMyBookings() { return myBookings; }
+        public Ride getUpdatedRide() { return updatedRide; }
+    }
+}

@@ -29,8 +29,7 @@ const Navbar = () => {
               <>
                 <Link
                   to="/profile"
-                  className="px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 flex items-center space-x-1"
-                >
+                  className="px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 flex items-center space-x-1">
                   <User className="h-4 w-4" />
                   <span>Profile</span>
                 </Link>

@@ -27,8 +27,11 @@ export const bookingService = {
     return response.data;
   },
 
-  getDriverBookings: async () => {
-    const response = await api.get('/bookings/driver-bookings');
+  // Support server-side pagination for driver bookings.
+  // Accepts an optional params object { page, size, sort, ... } and forwards it as query params.
+  getDriverBookings: async (params = {}) => {
+    // If the backend doesn't support pagination this will still work (server will ignore params)
+    const response = await api.get('/bookings/driver-bookings', { params });
     return response.data;
   },
 
