@@ -14,5 +14,9 @@ public class BookingRequest {
     
     @Min(value = 1, message = "Number of seats must be at least 1")
     private Integer numberOfSeats = 1;
+
+    // Optional payment information (for tracking)
+    private String paymentId;
+    private String transactionId;
 }
 

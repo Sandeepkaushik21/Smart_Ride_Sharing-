@@ -49,8 +49,9 @@ public class RideResponse {
     public RideResponse(Ride r) {
         if (r == null) return;
         this.id = r.getId();
-        this.source = r.getSource();
-        this.destination = r.getDestination();
+        // Display city-level route (for user visibility)
+        this.source = r.getCitySource();
+        this.destination = r.getCityDestination();
         this.date = r.getDate();
         this.time = r.getTime();
         this.availableSeats = r.getAvailableSeats();

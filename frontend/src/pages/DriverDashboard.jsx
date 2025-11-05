@@ -291,7 +291,7 @@ const DriverDashboard = () => {
     }
 
     const confirm = await showConfirm(
-      `Post a ride from ${postForm.source} to ${postForm.destination} on ${postForm.date}?`,
+      `Post a ride from ${fromCity} to ${toCity} on ${postForm.date}?`,
       'Yes, Post Ride',
       'Cancel'
     );
@@ -301,9 +301,12 @@ const DriverDashboard = () => {
     setLoading(true);
 
     try {
+      // Use city names for both city-level and specific locations
       await rideService.postRide({
-        source: postForm.source,
-        destination: postForm.destination,
+        citySource: fromCity,
+        cityDestination: toCity,
+        source: fromCity,
+        destination: toCity,
         date: postForm.date,
         time: postForm.time,
         availableSeats: parseInt(postForm.availableSeats),
@@ -317,8 +320,6 @@ const DriverDashboard = () => {
       await showSuccess('Ride posted successfully!');
       setShowPostForm(false);
       setPostForm({
-        source: '',
-        destination: '',
         date: '',
         time: '',
         availableSeats: '',
@@ -328,6 +329,9 @@ const DriverDashboard = () => {
         vehicleColor: '',
         otherFeatures: '',
       });
+      setFromCity('');
+      setToCity('');
+      setPostStep(1);
       setVehiclePhotos([]);
       // Refresh data to show newly posted ride
       await fetchData();
@@ -396,10 +400,10 @@ const DriverDashboard = () => {
 
             {/* Stepper */}
             <div className="flex items-center justify-center space-x-4 mb-6">
-              {[1,2,3].map((s) => (
+              {[1,2].map((s) => (
                 <div key={s} className="flex items-center">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${postStep >= s ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'}`}>{s}</div>
-                  {s !== 3 && <div className={`w-10 h-1 mx-2 ${postStep > s ? 'bg-green-600' : 'bg-gray-200'}`}></div>}
+                  {s !== 2 && <div className={`w-10 h-1 mx-2 ${postStep > s ? 'bg-green-600' : 'bg-gray-200'}`}></div>}
                 </div>
               ))}
             </div>
@@ -414,7 +418,6 @@ const DriverDashboard = () => {
                       value={fromCity}
                       onChange={(v) => {
                         setFromCity(v);
-                        setPostForm({ ...postForm, source: '' });
                       }}
                       placeholder="Type a city (e.g., Chennai)"
                       mode="city"
@@ -426,7 +429,6 @@ const DriverDashboard = () => {
                       value={toCity}
                       onChange={(v) => {
                         setToCity(v);
-                        setPostForm({ ...postForm, destination: '' });
                       }}
                       placeholder="Type a city (e.g., Bengaluru)"
                       mode="city"
@@ -445,70 +447,25 @@ const DriverDashboard = () => {
               </div>
             )}
 
-            {/* Step 2: From/To with realtime autocomplete within selected cities */}
+            {/* Step 2: Details */}
             {postStep === 2 && (
-              <div className="space-y-6">
-                <div>
+              <form onSubmit={handlePostRide} className="space-y-6">
+                {/* Review Selected Route */}
+                <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded-lg">
+                  <h3 className="text-sm font-semibold text-green-800 mb-3">Review Your Route</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">From (any place in {fromCity})</label>
-                      <CityAutocomplete
-                        value={postForm.source}
-                        onChange={(value) => setPostForm({ ...postForm, source: value })}
-                        placeholder={`Search a place in ${fromCity}`}
-                        withinCity={fromCity}
-                        disableCache={true}
-                      />
+                      <label className="block text-xs font-semibold text-green-700 mb-1">From</label>
+                      <div className="text-sm font-medium text-gray-900">{fromCity}</div>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">To (any place in {toCity})</label>
-                      <CityAutocomplete
-                        value={postForm.destination}
-                        onChange={(value) => setPostForm({ ...postForm, destination: value })}
-                        placeholder={`Search a place in ${toCity}`}
-                        withinCity={toCity}
-                        disableCache={true}
-                      />
+                      <label className="block text-xs font-semibold text-green-700 mb-1">To</label>
+                      <div className="text-sm font-medium text-gray-900">{toCity}</div>
                     </div>
                   </div>
                 </div>
-                <div className="flex justify-between">
-                  <button onClick={() => setPostStep(1)} className="px-6 py-2 bg-gray-200 rounded-lg">Back</button>
-                  <button
-                    onClick={() => setPostStep(3)}
-                    disabled={!postForm.source || !postForm.destination}
-                    className="px-6 py-2 bg-green-600 text-white rounded-lg disabled:opacity-50"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            )}
 
-            {/* Step 3: Details */}
-            {postStep === 3 && (
-              <form onSubmit={handlePostRide} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">From *</label>
-                    <input
-                      type="text"
-                      required
-                      value={postForm.source}
-                      onChange={(e) => setPostForm({ ...postForm, source: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">To *</label>
-                    <input
-                      type="text"
-                      required
-                      value={postForm.destination}
-                      onChange={(e) => setPostForm({ ...postForm, destination: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg"
-                    />
-                  </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Date *</label>
                     <input
