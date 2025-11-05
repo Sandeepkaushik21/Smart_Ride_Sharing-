@@ -72,6 +72,10 @@ public class User {
     @Column(name = "total_rides")
     private Integer totalRides = 0;
 
+    // Wallet balance for drivers (earnings from rides)
+    @Column(name = "wallet_balance")
+    private Double walletBalance = 0.0;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

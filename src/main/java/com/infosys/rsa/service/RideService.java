@@ -46,6 +46,10 @@ public class RideService {
 
         Ride ride = new Ride();
         ride.setDriver(driver);
+        // Store city-level route (for display and search)
+        ride.setCitySource(request.getCitySource());
+        ride.setCityDestination(request.getCityDestination());
+        // Store specific locations (for actual pickup/dropoff)
         ride.setSource(request.getSource());
         ride.setDestination(request.getDestination());
         ride.setDate(request.getDate());

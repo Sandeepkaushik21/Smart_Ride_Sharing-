@@ -44,14 +44,21 @@ public class BookingService {
         User passenger = userRepository.findById(passengerId)
                 .orElseThrow(() -> new RuntimeException("Passenger not found"));
 
-        // Calculate fare for passenger
-        String pickupLocation = request.getPickupLocation() != null ? request.getPickupLocation() : ride.getSource();
-        String dropoffLocation = request.getDropoffLocation() != null ? request.getDropoffLocation() : ride.getDestination();
+        // Calculate fare based ONLY on passenger's pickup and dropoff locations (step 2 locations)
+        // Not proportional to ride distance - direct calculation from passenger's specific route
+        String pickupLocation = request.getPickupLocation();
+        String dropoffLocation = request.getDropoffLocation();
         
+        if (pickupLocation == null || pickupLocation.trim().isEmpty()) {
+            throw new RuntimeException("Pickup location is required");
+        }
+        if (dropoffLocation == null || dropoffLocation.trim().isEmpty()) {
+            throw new RuntimeException("Dropoff location is required");
+        }
+        
+        // Calculate distance and fare directly from passenger's pickup to dropoff
         double passengerDistance = fareCalculationService.calculateDistance(pickupLocation, dropoffLocation);
-        double totalFare = ride.getEstimatedFare();
-        double totalDistance = ride.getTotalDistance();
-        double farePerSeat = fareCalculationService.calculateProportionalFare(totalFare, totalDistance, passengerDistance);
+        double farePerSeat = fareCalculationService.calculateFare(passengerDistance);
         double totalFareAmount = farePerSeat * numberOfSeats;
 
         Booking booking = new Booking();
@@ -62,25 +69,17 @@ public class BookingService {
         booking.setDistanceCovered(passengerDistance);
         booking.setFareAmount(totalFareAmount);
         booking.setNumberOfSeats(numberOfSeats);
-        booking.setStatus(Booking.BookingStatus.CONFIRMED);
+        // Booking starts as PENDING until payment is verified
+        booking.setStatus(Booking.BookingStatus.PENDING);
 
-        // Update ride available seats
-        ride.setAvailableSeats(ride.getAvailableSeats() - numberOfSeats);
-        rideRepository.save(ride);
+        // Don't update available seats yet - will be updated after payment confirmation
+        // ride.setAvailableSeats(ride.getAvailableSeats() - numberOfSeats);
+        // rideRepository.save(ride);
 
         Booking savedBooking = bookingRepository.save(booking);
 
-        // Send confirmation emails when booking is accepted
-        // Notify passenger that their booking was accepted
-        emailService.sendBookingConfirmation(passenger.getEmail(), passenger.getName(),
-                ride.getSource(), ride.getDestination(), 
-                ride.getDate().toString(), ride.getTime().toString());
-        
-        // Notify driver that someone booked their ride
-        emailService.sendRideBookingNotification(ride.getDriver().getEmail(), 
-                ride.getDriver().getName(), passenger.getName(),
-                ride.getSource(), ride.getDestination(), 
-                ride.getDate().toString(), ride.getTime().toString());
+        // Don't send emails yet - will be sent after payment confirmation
+        // Email will be sent in RazorpayPaymentService after payment verification
 
         return savedBooking;
     }

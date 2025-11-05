@@ -28,6 +28,14 @@ public class Ride {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "roles", "tempPassword"})
     private User driver;
 
+    // City-level source and destination (for display and search) - e.g., "Chennai", "Bengaluru"
+    @Column(name = "city_source", nullable = false)
+    private String citySource;
+
+    @Column(name = "city_destination", nullable = false)
+    private String cityDestination;
+
+    // Specific pickup and dropoff locations (for actual operations) - e.g., "Anna Nagar, Chennai", "Koramangala, Bengaluru"
     @Column(nullable = false)
     private String source;
 

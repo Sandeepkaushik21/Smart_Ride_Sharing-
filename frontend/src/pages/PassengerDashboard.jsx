@@ -4,8 +4,10 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import BackButton from '../components/BackButton';
 import CityAutocomplete from '../components/CityAutocomplete';
+import RazorpayPaymentModal from '../components/RazorpayPaymentModal';
 import { rideService } from '../services/rideService';
 import { bookingService } from '../services/bookingService';
+import { paymentService } from '../services/paymentService';
 import { showConfirm, showSuccess, showError } from '../utils/swal';
 
 const PassengerDashboard = () => {
@@ -147,6 +149,10 @@ const PassengerDashboard = () => {
     const [showBookingModal, setShowBookingModal] = useState({});
     const [bookingLoading, setBookingLoading] = useState({});
     const [photoViewer, setPhotoViewer] = useState({ open: false, photos: [], currentIndex: 0 });
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [pendingBooking, setPendingBooking] = useState(null);
+    const [paymentOrderData, setPaymentOrderData] = useState(null);
+    const [paymentProcessing, setPaymentProcessing] = useState(false);
 
     const openPhotoViewer = useCallback((photos, index = 0) => {
         setPhotoViewer({ open: true, photos: photos, currentIndex: index });
@@ -235,7 +241,13 @@ const PassengerDashboard = () => {
         if (e && e.preventDefault) e.preventDefault();
         setLoading(true);
         try {
-            const data = await rideService.searchRides(searchForm);
+            // Search by cities (not specific locations)
+            const searchData = {
+                source: fromCity,
+                destination: toCity,
+                date: searchForm.date
+            };
+            const data = await rideService.searchRides(searchData);
 
             // Debug raw response to help diagnose missing driver info
             console.debug('[PassengerDashboard] raw search response:', data);
@@ -293,48 +305,113 @@ const PassengerDashboard = () => {
     const handleConfirmBooking = async (rideId) => {
         const ride = rides.find(r => r.id === rideId);
         const numberOfSeats = selectedSeats[rideId] || 1;
-        const farePerSeat = ride?.estimatedFare || 0;
-        const totalFare = farePerSeat * numberOfSeats;
+
+        // Validate that pickup and dropoff locations are selected (from step 2)
+        if (!searchForm.source || !searchForm.destination) {
+            await showError('Please select pickup and dropoff locations first');
+            return;
+        }
 
         if (numberOfSeats > ride.availableSeats) {
             await showError(`Only ${ride.availableSeats} seat(s) available`);
             return;
         }
 
+        // Note: Fare will be calculated on backend based on pickup/dropoff locations
+        // We'll show an estimated message here
         const confirm = await showConfirm(
-            `Confirm booking ${numberOfSeats} seat(s) from ${ride?.source} to ${ride?.destination} for ₹${totalFare.toFixed(2)}?`,
-            'Yes, Book Ride',
+            `Proceed to payment for ${numberOfSeats} seat(s)?\n\n` +
+            `From: ${searchForm.source}\n` +
+            `To: ${searchForm.destination}\n\n`,
+            'Yes, Proceed to Payment',
             'Cancel'
         );
 
         if (!confirm.isConfirmed) return;
 
-        try {
-            // Show inline loading immediately
-            setBookingLoading(prev => ({ ...prev, [rideId]: true }));
+        setPaymentProcessing(true);
+        setShowBookingModal({ ...showBookingModal, [rideId]: false });
 
-            await bookingService.createBooking({
+        try {
+            // First create booking with PENDING status
+            const booking = await bookingService.createBooking({
                 rideId,
                 pickupLocation: searchForm.source,
                 dropoffLocation: searchForm.destination,
                 numberOfSeats: numberOfSeats,
             });
 
+            // Store booking details
+            // Note: totalFare comes from booking response since it's calculated on backend based on pickup/dropoff
+            const bookingFareAmount = booking.fareAmount || 0;
+            setPendingBooking({
+                rideId,
+                ride,
+                numberOfSeats,
+                totalFare: bookingFareAmount,
+                bookingId: booking.id,
+                pickupLocation: searchForm.source,
+                dropoffLocation: searchForm.destination,
+            });
+
+            // Create Razorpay order with the fare amount from booking (in rupees)
+            console.log('Creating order for booking:', booking.id, 'Amount:', bookingFareAmount);
+            const orderResponse = await paymentService.createOrder({
+                amount: bookingFareAmount, // Amount in rupees (will be converted to paise in backend)
+                bookingId: booking.id,
+                currency: 'INR'
+            });
+
+            console.log('Order created successfully:', orderResponse);
+
+            // Set order data for payment modal
+            // Note: orderResponse.amount is already in paise from Razorpay
+            setPaymentOrderData({
+                orderId: orderResponse.orderId,
+                amount: orderResponse.amount, // Amount in paise (from Razorpay response)
+                currency: orderResponse.currency || 'INR',
+                keyId: orderResponse.keyId,
+                bookingId: booking.id
+            });
+
+            setShowPaymentModal(true);
+        } catch (error) {
+            console.error('Error creating booking or order:', error);
+            await showError(error.message || 'Error creating booking. Please try again.');
+        } finally {
+            setPaymentProcessing(false);
+        }
+    };
+
+    const handlePaymentSuccess = async (paymentData) => {
+        if (!pendingBooking) return;
+
+        setPaymentProcessing(true);
+        setShowPaymentModal(false);
+
+        try {
+            // Verify payment with backend
+            await paymentService.verifyPayment({
+                bookingId: pendingBooking.bookingId,
+                razorpayOrderId: paymentData.razorpayOrderId,
+                razorpayPaymentId: paymentData.razorpayPaymentId,
+                razorpaySignature: paymentData.razorpaySignature,
+            });
+
             // Update UI optimistically for faster response
-            setShowBookingModal({ ...showBookingModal, [rideId]: false });
-            setSelectedSeats({ ...selectedSeats, [rideId]: 1 });
+            setSelectedSeats({ ...selectedSeats, [pendingBooking.rideId]: 1 });
 
             // Optimistically update rides list (reduce available seats)
             setRides((prevRides) =>
                 prevRides.map((r) =>
-                    r.id === rideId
-                        ? { ...r, availableSeats: r.availableSeats - numberOfSeats }
+                    r.id === pendingBooking.rideId
+                        ? { ...r, availableSeats: r.availableSeats - pendingBooking.numberOfSeats }
                         : r
                 )
             );
 
             // Non-blocking success toast (don't await)
-            showSuccess('Ride booked successfully!');
+            showSuccess('Payment successful! Ride booked successfully!');
 
             // Switch to bookings tab immediately
             setActiveTab('bookings');
@@ -351,12 +428,21 @@ const PassengerDashboard = () => {
                 console.error('Error refreshing data:', err);
             });
         } catch (error) {
-            console.error('Booking error (passenger):', error, error.original || error);
-            await showError(error.message || 'Error booking ride');
+            console.error('Payment verification error:', error, error.original || error);
+            await showError(error.message || 'Payment verification failed. Please contact support.');
+            // Booking is still created but payment failed - user can retry
+        } finally {
+            setPaymentProcessing(false);
+            setPendingBooking(null);
+            setPaymentOrderData(null);
         }
-        finally {
-            setBookingLoading(prev => ({ ...prev, [rideId]: false }));
-        }
+    };
+
+    const handlePaymentFailure = (error) => {
+        setShowPaymentModal(false);
+        setPendingBooking(null);
+        setPaymentOrderData(null);
+        showError(error?.message || 'Payment was cancelled or failed. Please try again.');
     };
 
     const handleCancelBooking = async (bookingId) => {
@@ -567,32 +653,35 @@ const PassengerDashboard = () => {
                             </div>
                         )}
 
-                        {/* Step 3: Date and Search */}
+                        {/* Step 3: Review and Date Selection */}
                         {wizardStep === 3 && (
                             <form onSubmit={handleSearch} className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2">From *</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={searchForm.source}
-                                            onChange={(e) => setSearchForm({ ...searchForm, source: e.target.value })}
-                                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg"
-                                        />
+                                {/* Review Selected Locations */}
+                                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
+                                    <h3 className="text-sm font-semibold text-blue-800 mb-3">Review Your Route</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-blue-700 mb-1">From City</label>
+                                            <div className="text-sm font-medium text-gray-900">{fromCity}</div>
+                                            <label className="block text-xs font-semibold text-blue-700 mb-1 mt-2">Pickup Location</label>
+                                            <div className="text-sm text-gray-700">{searchForm.source || 'Not selected'}</div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-blue-700 mb-1">To City</label>
+                                            <div className="text-sm font-medium text-gray-900">{toCity}</div>
+                                            <label className="block text-xs font-semibold text-blue-700 mb-1 mt-2">Dropoff Location</label>
+                                            <div className="text-sm text-gray-700">{searchForm.destination || 'Not selected'}</div>
+                                        </div>
                                     </div>
+                                    <p className="text-xs text-blue-600 mt-3">
+                                        ℹ️ Fare will be calculated based on your pickup and dropoff locations
+                                    </p>
+                                </div>
+
+                                {/* Date Selection */}
+                                <div className="grid grid-cols-1 gap-4">
                                     <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2">To *</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={searchForm.destination}
-                                            onChange={(e) => setSearchForm({ ...searchForm, destination: e.target.value })}
-                                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Date *</label>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Travel Date *</label>
                                         <input
                                             type="date"
                                             required
@@ -607,7 +696,7 @@ const PassengerDashboard = () => {
                                     <button type="button" onClick={goPrev} className="px-6 py-2 bg-gray-200 rounded-lg">Back</button>
                                     <button
                                         type="submit"
-                                        disabled={loading}
+                                        disabled={loading || !searchForm.source || !searchForm.destination}
                                         className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 font-semibold shadow-lg transform hover:scale-105 transition-all flex items-center justify-center space-x-2"
                                     >
                                         {loading ? (
@@ -1125,6 +1214,21 @@ const PassengerDashboard = () => {
                     )}
                 </div>
             </div>
+            )}
+
+            {/* Razorpay Payment Modal */}
+            {pendingBooking && paymentOrderData && (
+                <RazorpayPaymentModal
+                    isOpen={showPaymentModal}
+                    onClose={() => {
+                        setShowPaymentModal(false);
+                        setPendingBooking(null);
+                        setPaymentOrderData(null);
+                    }}
+                    orderData={paymentOrderData}
+                    onPaymentSuccess={handlePaymentSuccess}
+                    onPaymentFailure={handlePaymentFailure}
+                />
             )}
 
             <Footer />

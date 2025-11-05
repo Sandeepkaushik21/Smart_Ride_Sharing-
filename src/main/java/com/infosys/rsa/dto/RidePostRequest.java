@@ -11,10 +11,18 @@ import java.util.List;
 
 @Data
 public class RidePostRequest {
-    @NotBlank(message = "Source is required")
+    // City-level source and destination (for display and search)
+    @NotBlank(message = "Source city is required")
+    private String citySource;
+
+    @NotBlank(message = "Destination city is required")
+    private String cityDestination;
+
+    // Specific pickup and dropoff locations (for actual operations)
+    @NotBlank(message = "Source location is required")
     private String source;
 
-    @NotBlank(message = "Destination is required")
+    @NotBlank(message = "Destination location is required")
     private String destination;
 
     @NotNull(message = "Date is required")

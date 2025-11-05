@@ -21,9 +21,7 @@ public class FareCalculationService {
     @Value("${app.locationiq.base:https://us1.locationiq.com/v1}")
     private String locationIqBase;
 
-    /**
-     * Calculate fare based on distance
-     */
+
     public double calculateFare(double distanceInKm) {
         if (distanceInKm <= 0) {
             return BASE_FARE;
@@ -31,14 +29,7 @@ public class FareCalculationService {
         return BASE_FARE + (RATE_PER_KM * distanceInKm);
     }
 
-    /**
-     * Calculate distance between two places using LocationIQ Directions API.
-     * Falls back to Haversine (straight-line) when directions are unavailable.
-     * If LocationIQ key is not configured or geocoding fails, falls back to the
-     * previous simple hash-based dummy distance (keeps minimum 0 km).
-     */
     public double calculateDistance(String source, String destination) {
-        // If key not provided, fallback to previous dummy behaviour (but without forced min 10 km)
         if (locationIqKey == null || locationIqKey.trim().isEmpty()) {
             return calculateDistanceFallback(source, destination);
         }
@@ -49,7 +40,6 @@ public class FareCalculationService {
             double[] destLatLon = geocodePlace(destination);
 
             if (srcLatLon == null || destLatLon == null) {
-                // geocoding failed for one or both -> fallback
                 return calculateDistanceFallback(source, destination);
             }
 
@@ -58,10 +48,7 @@ public class FareCalculationService {
             double destLat = destLatLon[0];
             double destLon = destLatLon[1];
 
-            // 2) Try Directions/Route API to get driving distance (meters)
             try {
-                // LocationIQ Directions endpoint (coordinates param)
-                // Example: https://us1.locationiq.com/v1/directions/driving?key=KEY&coordinates=lon1,lat1|lon2,lat2
                 String coordinates = String.format("%s,%s|%s,%s", srcLon, srcLat, destLon, destLat);
                 String url = String.format("%s/directions/driving?key=%s&coordinates=%s", locationIqBase, locationIqKey, coordinates);
 
@@ -69,7 +56,6 @@ public class FareCalculationService {
                 if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
                     JsonNode root = objectMapper.readTree(resp.getBody());
 
-                    // Try common response shapes: routes[0].distance (meters) or distance (meters)
                     if (root.has("routes") && root.path("routes").isArray() && root.path("routes").size() > 0) {
                         JsonNode r0 = root.path("routes").get(0);
                         if (r0.has("distance")) {
@@ -84,15 +70,11 @@ public class FareCalculationService {
                         double km = meters / 1000.0;
                         return Math.max(km, 0.0);
                     }
-
-                    // If directions did not return distance, fallback to haversine
                     return haversineDistanceKm(srcLat, srcLon, destLat, destLon);
                 } else {
-                    // non-200 -> fallback
                     return haversineDistanceKm(srcLat, srcLon, destLat, destLon);
                 }
             } catch (Exception ex) {
-                // Any error with directions -> fallback to haversine
                 return haversineDistanceKm(srcLat, srcLon, destLat, destLon);
             }
         } catch (Exception e) {
@@ -101,9 +83,6 @@ public class FareCalculationService {
         }
     }
 
-    /**
-     * Geocode a place using LocationIQ search.php endpoint. Returns {lat, lon} or null.
-     */
     private double[] geocodePlace(String place) {
         if (place == null || place.trim().isEmpty()) return null;
         try {
