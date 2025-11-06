@@ -197,7 +197,9 @@ const AdminDashboard = () => {
         } catch (error) {
             // Revert optimistic update on error
             fetchData();
-            await showError(`Error deleting ${userType.toLowerCase()}`);
+            const errorMessage = error?.response?.data?.message || error?.message || 'Unknown error occurred';
+            console.error('Delete user error:', error);
+            await showError(`Error deleting ${userType.toLowerCase()}: ${errorMessage}`);
         }
     };
 

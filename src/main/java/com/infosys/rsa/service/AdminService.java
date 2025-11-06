@@ -4,6 +4,8 @@ import com.infosys.rsa.model.User;
 import com.infosys.rsa.repository.UserRepository;
 import com.infosys.rsa.repository.RideRepository;
 import com.infosys.rsa.repository.BookingRepository;
+import com.infosys.rsa.repository.PaymentRepository;
+import com.infosys.rsa.repository.ReviewRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,12 @@ public class AdminService {
 
     @Autowired
     BookingRepository bookingRepository;
+
+    @Autowired
+    PaymentRepository paymentRepository;
+
+    @Autowired
+    ReviewRepository reviewRepository;
 
     @Autowired
     EmailService emailService;
@@ -57,20 +65,29 @@ public class AdminService {
     public Map<String, Object> getDashboardStats() {
         Map<String, Object> stats = new HashMap<>();
         
-        long totalUsers = userRepository.count();
+        // Count only approved drivers (not pending ones)
         long totalDrivers = userRepository.findAll().stream()
                 .filter(user -> user.getRoles().stream()
                         .anyMatch(role -> role.getName().name().equals("ROLE_DRIVER")))
+                .filter(user -> user.getIsApproved() != null && user.getIsApproved()) // Only approved drivers
                 .count();
+        
+        // Count all passengers (passengers don't need approval)
         long totalPassengers = userRepository.findAll().stream()
                 .filter(user -> user.getRoles().stream()
                         .anyMatch(role -> role.getName().name().equals("ROLE_PASSENGER")))
                 .count();
+        
+        // Total users = approved drivers + all passengers (excluding pending drivers)
+        long totalUsers = totalDrivers + totalPassengers;
+        
+        // Count pending drivers (not yet reviewed)
         long pendingDrivers = userRepository.findAll().stream()
                 .filter(user -> user.getRoles().stream()
                         .anyMatch(role -> role.getName().name().equals("ROLE_DRIVER")))
                 .filter(user -> user.getIsApproved() == null) // Only drivers not yet reviewed
                 .count();
+        
         long totalRides = rideRepository.count();
         long totalBookings = bookingRepository.count();
 
@@ -160,19 +177,66 @@ public class AdminService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Delete all bookings associated with this user
+        // Step 1: Delete ALL reviews associated with this user (as reviewer or reviewed)
+        // This must be done early to break foreign key constraints
+        List<com.infosys.rsa.model.Review> reviewerReviews = reviewRepository.findByReviewerId(userId);
+        reviewerReviews.forEach(reviewRepository::delete);
+        
+        List<com.infosys.rsa.model.Review> reviewedReviews = reviewRepository.findAllByReviewedId(userId);
+        reviewedReviews.forEach(reviewRepository::delete);
+
+        // Step 2: Delete ALL payments associated with this user (as passenger or driver)
+        // This must be done to break foreign key constraints
+        List<com.infosys.rsa.model.Payment> passengerPayments = paymentRepository.findByPassengerIdOrderByCreatedAtDesc(userId);
+        passengerPayments.forEach(paymentRepository::delete);
+        
+        List<com.infosys.rsa.model.Payment> driverPayments = paymentRepository.findByDriverIdOrderByCreatedAtDesc(userId);
+        driverPayments.forEach(paymentRepository::delete);
+
+        // Step 3: If user is a driver, delete their rides and associated bookings (including cancelled rides)
         if (user.getRoles().stream().anyMatch(role -> role.getName().name().equals("ROLE_DRIVER"))) {
-            // If driver, delete their rides and bookings
-            rideRepository.findByDriverId(userId).forEach(ride -> {
-                bookingRepository.findByRideId(ride.getId()).forEach(bookingRepository::delete);
+            List<com.infosys.rsa.model.Ride> driverRides = rideRepository.findAllByDriverId(userId);
+            for (com.infosys.rsa.model.Ride ride : driverRides) {
+                // Get all bookings for this ride
+                List<com.infosys.rsa.model.Booking> rideBookings = bookingRepository.findByRideId(ride.getId());
+                for (com.infosys.rsa.model.Booking booking : rideBookings) {
+                    // Delete reviews for this booking first (reviews reference bookings)
+                    List<com.infosys.rsa.model.Review> bookingReviews = reviewRepository.findByBookingId(booking.getId());
+                    bookingReviews.forEach(reviewRepository::delete);
+                    
+                    // Delete all payments for this booking (in case any were missed)
+                    List<com.infosys.rsa.model.Payment> bookingPayments = paymentRepository.findByBookingId(booking.getId());
+                    bookingPayments.forEach(paymentRepository::delete);
+                    
+                    // Then delete the booking
+                    bookingRepository.delete(booking);
+                }
+                // Finally delete the ride
                 rideRepository.delete(ride);
-            });
+            }
         }
 
-        // Delete bookings where user is passenger
-        bookingRepository.findByPassengerId(userId).forEach(bookingRepository::delete);
+        // Step 4: Delete bookings where user is passenger (including cancelled bookings)
+        // First, delete all reviews and payments for these bookings to avoid foreign key constraints
+        List<com.infosys.rsa.model.Booking> passengerBookings = bookingRepository.findAllByPassengerId(userId);
+        for (com.infosys.rsa.model.Booking booking : passengerBookings) {
+            // Delete reviews for this booking first (reviews reference bookings)
+            List<com.infosys.rsa.model.Review> bookingReviews = reviewRepository.findByBookingId(booking.getId());
+            bookingReviews.forEach(reviewRepository::delete);
+            
+            // Delete all payments associated with this booking
+            List<com.infosys.rsa.model.Payment> bookingPayments = paymentRepository.findByBookingId(booking.getId());
+            bookingPayments.forEach(paymentRepository::delete);
+            
+            // Then delete the booking
+            bookingRepository.delete(booking);
+        }
 
-        // Finally delete the user
+        // Step 5: Clear user roles relationship (many-to-many)
+        user.getRoles().clear();
+        userRepository.save(user);
+
+        // Step 6: Finally delete the user
         userRepository.delete(user);
     }
 }
