@@ -343,21 +343,26 @@ const PassengerDashboard = () => {
 
             // Store booking details
             // Note: totalFare comes from booking response since it's calculated on backend based on pickup/dropoff
-            const bookingFareAmount = booking.fareAmount || 0;
+            // Ensure fare is a numeric rupee value (frontend/backend use rupees for Booking.fareAmount)
+            const bookingFareAmountRaw = booking.fareAmount ?? 0;
+            const bookingFareAmount = Number(bookingFareAmountRaw);
+            const bookingFareAmountRu = Number.isFinite(bookingFareAmount) ? bookingFareAmount : 0;
+
             setPendingBooking({
                 rideId,
                 ride,
                 numberOfSeats,
-                totalFare: bookingFareAmount,
+                totalFare: bookingFareAmountRu, // in rupees
                 bookingId: booking.id,
                 pickupLocation: searchForm.source,
                 dropoffLocation: searchForm.destination,
             });
 
             // Create Razorpay order with the fare amount from booking (in rupees)
-            console.log('Creating order for booking:', booking.id, 'Amount:', bookingFareAmount);
+            console.log('Creating order for booking:', booking.id, 'Amount (rupees):', bookingFareAmountRu);
             const orderResponse = await paymentService.createOrder({
-                amount: bookingFareAmount, // Amount in rupees (will be converted to paise in backend)
+                // Backend expects amount in rupees (Double). Keep that contract.
+                amount: bookingFareAmountRu,
                 bookingId: booking.id,
                 currency: 'INR'
             });
@@ -366,21 +371,28 @@ const PassengerDashboard = () => {
 
             // Set order data for payment modal
             // Note: orderResponse.amount is already in paise from Razorpay
+            const amountPaiseFromOrder = Number(orderResponse.amount ?? NaN);
+            const amountRupeesFromOrder = Number(orderResponse.amountInRupees ?? NaN);
+            const fallbackPaise = Math.round(bookingFareAmountRu * 100);
+
+            // Use Razorpay paise for the actual amount used during checkout if available,
+            // but ALWAYS use the backend-provided rupee amount for display if available
             setPaymentOrderData({
                 orderId: orderResponse.orderId,
-                amount: orderResponse.amount, // Amount in paise (from Razorpay response)
+                amount: Number.isFinite(amountPaiseFromOrder) ? amountPaiseFromOrder : fallbackPaise,
+                amountInRupees: Number.isFinite(amountRupeesFromOrder) ? amountRupeesFromOrder : bookingFareAmountRu,
                 currency: orderResponse.currency || 'INR',
                 keyId: orderResponse.keyId,
                 bookingId: booking.id
             });
 
-            setShowPaymentModal(true);
-        } catch (error) {
-            console.error('Error creating booking or order:', error);
-            await showError(error.message || 'Error creating booking. Please try again.');
-        } finally {
-            setPaymentProcessing(false);
-        }
+             setShowPaymentModal(true);
+         } catch (error) {
+             console.error('Error creating booking or order:', error);
+             await showError(error.message || 'Error creating booking. Please try again.');
+         } finally {
+             setPaymentProcessing(false);
+         }
     };
 
     const handlePaymentSuccess = async (paymentData) => {
