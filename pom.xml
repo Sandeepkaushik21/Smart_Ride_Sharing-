@@ -120,6 +120,20 @@
 			<artifactId>razorpay-java</artifactId>
 			<version>1.4.5</version>
 		</dependency>
+
+		<!-- Spring Boot Starter -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter</artifactId>
+    </dependency>
+
+    <!-- Optional: Explicit logging dependencies -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-logging</artifactId>
+    </dependency>
+		
+
 	</dependencies>
 
 	<build>
