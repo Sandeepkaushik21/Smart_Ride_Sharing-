@@ -39,7 +39,7 @@ public class EmailService {
                             "Thank you for joining us!\n\n" +
                             "Best Regards,\n" +
                             "Smart Ride Sharing Team",
-                    toEmail, "********", userType // Masked password for security
+                    toEmail, tempPassword, userType // Masked password for security
             );
 
             message.setText(body);
