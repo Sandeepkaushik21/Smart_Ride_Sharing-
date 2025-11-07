@@ -6,6 +6,8 @@ import com.infosys.rsa.repository.RideRepository;
 import com.infosys.rsa.repository.BookingRepository;
 import com.infosys.rsa.repository.PaymentRepository;
 import com.infosys.rsa.repository.ReviewRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +18,9 @@ import java.util.Map;
 
 @Service
 public class AdminService {
+
+    private static final Logger logger = LoggerFactory.getLogger(AdminService.class);
+
     @Autowired
     UserRepository userRepository;
 
@@ -36,58 +41,67 @@ public class AdminService {
 
     @Transactional
     public User approveDriver(Long driverId) {
+        logger.info("Approving driver with ID: {}", driverId);
         User driver = userRepository.findById(driverId)
-                .orElseThrow(() -> new RuntimeException("Driver not found"));
+                .orElseThrow(() -> {
+                    logger.error("Driver with ID {} not found for approval", driverId);
+                    return new RuntimeException("Driver not found");
+                });
 
         driver.setIsApproved(true);
         User savedDriver = userRepository.save(driver);
+        logger.debug("Driver {} approved successfully in database", driverId);
 
         // Send approval email
         emailService.sendDriverApprovalNotification(driver.getEmail(), driver.getName(), true);
+        logger.info("Approval email sent to driver: {}", driver.getEmail());
 
         return savedDriver;
     }
 
     @Transactional
     public User rejectDriver(Long driverId) {
+        logger.info("Rejecting driver with ID: {}", driverId);
         User driver = userRepository.findById(driverId)
-                .orElseThrow(() -> new RuntimeException("Driver not found"));
+                .orElseThrow(() -> {
+                    logger.error("Driver with ID {} not found for rejection", driverId);
+                    return new RuntimeException("Driver not found");
+                });
 
         driver.setIsApproved(false);
         User savedDriver = userRepository.save(driver);
+        logger.debug("Driver {} marked as rejected in database", driverId);
 
         // Send rejection email
         emailService.sendDriverApprovalNotification(driver.getEmail(), driver.getName(), false);
+        logger.info("Rejection email sent to driver: {}", driver.getEmail());
 
         return savedDriver;
     }
 
     public Map<String, Object> getDashboardStats() {
+        logger.info("Fetching dashboard statistics");
         Map<String, Object> stats = new HashMap<>();
-        
-        // Count only approved drivers (not pending ones)
+
         long totalDrivers = userRepository.findAll().stream()
                 .filter(user -> user.getRoles().stream()
                         .anyMatch(role -> role.getName().name().equals("ROLE_DRIVER")))
-                .filter(user -> user.getIsApproved() != null && user.getIsApproved()) // Only approved drivers
+                .filter(user -> user.getIsApproved() != null && user.getIsApproved())
                 .count();
-        
-        // Count all passengers (passengers don't need approval)
+
         long totalPassengers = userRepository.findAll().stream()
                 .filter(user -> user.getRoles().stream()
                         .anyMatch(role -> role.getName().name().equals("ROLE_PASSENGER")))
                 .count();
-        
-        // Total users = approved drivers + all passengers (excluding pending drivers)
+
         long totalUsers = totalDrivers + totalPassengers;
-        
-        // Count pending drivers (not yet reviewed)
+
         long pendingDrivers = userRepository.findAll().stream()
                 .filter(user -> user.getRoles().stream()
                         .anyMatch(role -> role.getName().name().equals("ROLE_DRIVER")))
-                .filter(user -> user.getIsApproved() == null) // Only drivers not yet reviewed
+                .filter(user -> user.getIsApproved() == null)
                 .count();
-        
+
         long totalRides = rideRepository.count();
         long totalBookings = bookingRepository.count();
 
@@ -98,23 +112,32 @@ public class AdminService {
         stats.put("totalRides", totalRides);
         stats.put("totalBookings", totalBookings);
 
+        logger.debug("Dashboard stats calculated: {}", stats);
+        logger.info("Dashboard statistics fetched successfully");
+
         return stats;
     }
 
     public List<User> getAllPendingDrivers() {
-        return userRepository.findAll().stream()
+        logger.info("Fetching all pending drivers");
+        List<User> pendingDrivers = userRepository.findAll().stream()
                 .filter(user -> user.getRoles().stream()
                         .anyMatch(role -> role.getName().name().equals("ROLE_DRIVER")))
-                .filter(user -> user.getIsApproved() == null) // Only drivers not yet reviewed
+                .filter(user -> user.getIsApproved() == null)
                 .toList();
+        logger.debug("Found {} pending drivers", pendingDrivers.size());
+        return pendingDrivers;
     }
 
     public List<Map<String, Object>> getAllDrivers() {
+        logger.info("Fetching all approved drivers");
         List<User> drivers = userRepository.findAll().stream()
                 .filter(user -> user.getRoles().stream()
                         .anyMatch(role -> role.getName().name().equals("ROLE_DRIVER")))
                 .filter(user -> user.getIsApproved() != null && user.getIsApproved())
                 .toList();
+
+        logger.debug("Found {} approved drivers", drivers.size());
 
         return drivers.stream().map(driver -> {
             Map<String, Object> driverInfo = new HashMap<>();
@@ -125,26 +148,27 @@ public class AdminService {
             driverInfo.put("vehicleModel", driver.getVehicleModel());
             driverInfo.put("licensePlate", driver.getLicensePlate());
             driverInfo.put("driverRating", driver.getDriverRating() != null ? driver.getDriverRating() : 0.0);
-            
-            // Calculate total income from bookings (assuming 10% commission to company)
+
             double totalIncome = bookingRepository.findByRideDriverId(driver.getId()).stream()
                     .filter(booking -> booking.getStatus() == com.infosys.rsa.model.Booking.BookingStatus.CONFIRMED ||
                             booking.getStatus() == com.infosys.rsa.model.Booking.BookingStatus.COMPLETED)
                     .mapToDouble(booking -> booking.getFareAmount() != null ? booking.getFareAmount() * 0.10 : 0.0)
                     .sum();
-            
+
             driverInfo.put("companyIncome", totalIncome);
             driverInfo.put("totalRides", rideRepository.findByDriverId(driver.getId()).size());
-            
             return driverInfo;
         }).toList();
     }
 
     public List<Map<String, Object>> getAllPassengers() {
+        logger.info("Fetching all passengers");
         List<User> passengers = userRepository.findAll().stream()
                 .filter(user -> user.getRoles().stream()
                         .anyMatch(role -> role.getName().name().equals("ROLE_PASSENGER")))
                 .toList();
+
+        logger.debug("Found {} passengers", passengers.size());
 
         return passengers.stream().map(passenger -> {
             Map<String, Object> passengerInfo = new HashMap<>();
@@ -152,8 +176,7 @@ public class AdminService {
             passengerInfo.put("name", passenger.getName());
             passengerInfo.put("email", passenger.getEmail());
             passengerInfo.put("phone", passenger.getPhone());
-            
-            // Calculate total bookings and spending
+
             List<com.infosys.rsa.model.Booking> bookings = bookingRepository.findByPassengerId(passenger.getId());
             long totalBookings = bookings.stream()
                     .filter(booking -> booking.getStatus() == com.infosys.rsa.model.Booking.BookingStatus.CONFIRMED ||
@@ -164,80 +187,64 @@ public class AdminService {
                             booking.getStatus() == com.infosys.rsa.model.Booking.BookingStatus.COMPLETED)
                     .mapToDouble(booking -> booking.getFareAmount() != null ? booking.getFareAmount() : 0.0)
                     .sum();
-            
+
             passengerInfo.put("totalBookings", totalBookings);
             passengerInfo.put("totalSpending", totalSpending);
-            
             return passengerInfo;
         }).toList();
     }
 
     @Transactional
     public void deleteUser(Long userId) {
+        logger.warn("Initiating delete process for user ID: {}", userId);
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> {
+                    logger.error("User with ID {} not found for deletion", userId);
+                    return new RuntimeException("User not found");
+                });
 
-        // Step 1: Delete ALL reviews associated with this user (as reviewer or reviewed)
-        // This must be done early to break foreign key constraints
+        logger.debug("Deleting reviews for user ID: {}", userId);
         List<com.infosys.rsa.model.Review> reviewerReviews = reviewRepository.findByReviewerId(userId);
         reviewerReviews.forEach(reviewRepository::delete);
-        
         List<com.infosys.rsa.model.Review> reviewedReviews = reviewRepository.findAllByReviewedId(userId);
         reviewedReviews.forEach(reviewRepository::delete);
 
-        // Step 2: Delete ALL payments associated with this user (as passenger or driver)
-        // This must be done to break foreign key constraints
+        logger.debug("Deleting payments for user ID: {}", userId);
         List<com.infosys.rsa.model.Payment> passengerPayments = paymentRepository.findByPassengerIdOrderByCreatedAtDesc(userId);
         passengerPayments.forEach(paymentRepository::delete);
-        
         List<com.infosys.rsa.model.Payment> driverPayments = paymentRepository.findByDriverIdOrderByCreatedAtDesc(userId);
         driverPayments.forEach(paymentRepository::delete);
 
-        // Step 3: If user is a driver, delete their rides and associated bookings (including cancelled rides)
         if (user.getRoles().stream().anyMatch(role -> role.getName().name().equals("ROLE_DRIVER"))) {
+            logger.debug("Deleting rides and bookings for driver ID: {}", userId);
             List<com.infosys.rsa.model.Ride> driverRides = rideRepository.findAllByDriverId(userId);
             for (com.infosys.rsa.model.Ride ride : driverRides) {
-                // Get all bookings for this ride
                 List<com.infosys.rsa.model.Booking> rideBookings = bookingRepository.findByRideId(ride.getId());
                 for (com.infosys.rsa.model.Booking booking : rideBookings) {
-                    // Delete reviews for this booking first (reviews reference bookings)
                     List<com.infosys.rsa.model.Review> bookingReviews = reviewRepository.findByBookingId(booking.getId());
                     bookingReviews.forEach(reviewRepository::delete);
-                    
-                    // Delete all payments for this booking (in case any were missed)
                     List<com.infosys.rsa.model.Payment> bookingPayments = paymentRepository.findByBookingId(booking.getId());
                     bookingPayments.forEach(paymentRepository::delete);
-                    
-                    // Then delete the booking
                     bookingRepository.delete(booking);
                 }
-                // Finally delete the ride
                 rideRepository.delete(ride);
             }
         }
 
-        // Step 4: Delete bookings where user is passenger (including cancelled bookings)
-        // First, delete all reviews and payments for these bookings to avoid foreign key constraints
+        logger.debug("Deleting passenger-related bookings for user ID: {}", userId);
         List<com.infosys.rsa.model.Booking> passengerBookings = bookingRepository.findAllByPassengerId(userId);
         for (com.infosys.rsa.model.Booking booking : passengerBookings) {
-            // Delete reviews for this booking first (reviews reference bookings)
             List<com.infosys.rsa.model.Review> bookingReviews = reviewRepository.findByBookingId(booking.getId());
             bookingReviews.forEach(reviewRepository::delete);
-            
-            // Delete all payments associated with this booking
             List<com.infosys.rsa.model.Payment> bookingPayments = paymentRepository.findByBookingId(booking.getId());
             bookingPayments.forEach(paymentRepository::delete);
-            
-            // Then delete the booking
             bookingRepository.delete(booking);
         }
 
-        // Step 5: Clear user roles relationship (many-to-many)
         user.getRoles().clear();
         userRepository.save(user);
 
-        // Step 6: Finally delete the user
         userRepository.delete(user);
+        logger.info("User with ID {} deleted successfully", userId);
     }
 }
-
