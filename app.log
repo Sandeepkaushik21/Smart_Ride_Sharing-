@@ -781,3 +781,109 @@
 2025-11-07 16:55:39 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
 2025-11-07 16:55:39 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
 2025-11-07 16:55:39 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
+2025-11-07 16:55:42 [main] INFO  c.infosys.rsa.RideSharingApplication - Starting RideSharingApplication using Java 21.0.8 with PID 19016 (C:\infosys_internship\RSA_Infosys_Project\target\classes started by explo in C:\infosys_internship\RSA_Infosys_Project)
+2025-11-07 16:55:42 [main] INFO  c.infosys.rsa.RideSharingApplication - No active profile set, falling back to 1 default profile: "default"
+2025-11-07 16:55:45 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-11-07 16:55:45 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 370 ms. Found 6 JPA repository interfaces.
+2025-11-07 16:55:47 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2025-11-07 16:55:47 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-11-07 16:55:47 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.48]
+2025-11-07 16:55:48 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-11-07 16:55:48 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 4955 ms
+2025-11-07 16:55:48 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2025-11-07 16:55:49 [main] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@49cc9b2a
+2025-11-07 16:55:49 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2025-11-07 16:55:49 [main] INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-11-07 16:55:49 [main] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.6.33.Final
+2025-11-07 16:55:49 [main] INFO  o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2025-11-07 16:55:50 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-11-07 16:55:50 [main] WARN  org.hibernate.orm.deprecation - HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-11-07 16:55:50 [main] INFO  o.hibernate.orm.connections.pooling - HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 8.0.43
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-11-07 16:55:52 [main] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-11-07 16:55:53 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-11-07 16:55:54 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-11-07 16:55:56 [main] INFO  o.s.s.c.a.a.c.InitializeAuthenticationProviderBeanManagerConfigurer$InitializeAuthenticationProviderManagerConfigurer - Global AuthenticationManager configured with AuthenticationProvider bean with name authenticationProvider
+2025-11-07 16:55:56 [main] WARN  o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer - Global AuthenticationManager configured with an AuthenticationProvider bean. UserDetailsService beans will not be used by Spring Security for automatically configuring username/password login. Consider removing the AuthenticationProvider bean. Alternatively, consider using the UserDetailsService in a manually instantiated DaoAuthenticationProvider. If the current configuration is intentional, to turn off this warning, increase the logging level of 'org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer' to ERROR
+2025-11-07 16:55:56 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-11-07 16:55:58 [main] WARN  o.s.b.a.t.ThymeleafAutoConfiguration$DefaultTemplateResolverConfiguration - Cannot find template location: classpath:/templates/ (please add some templates, check your Thymeleaf configuration, or set spring.thymeleaf.check-template-location=false)
+2025-11-07 16:55:58 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2025-11-07 16:55:58 [main] INFO  c.infosys.rsa.RideSharingApplication - Started RideSharingApplication in 16.929 seconds (process running for 17.961)
+2025-11-07 16:57:30 [http-nio-8080-exec-1] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-11-07 16:57:30 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2025-11-07 16:57:30 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 6 ms
+2025-11-07 16:57:31 [http-nio-8080-exec-2] INFO  com.infosys.rsa.service.AuthService - Attempting to register new user with email: 325103311L03@gvpce.ac.in
+2025-11-07 16:57:31 [http-nio-8080-exec-2] INFO  com.infosys.rsa.service.AuthService - Assigning role 'DRIVER' to user 325103311L03@gvpce.ac.in
+2025-11-07 16:57:31 [http-nio-8080-exec-2] INFO  com.infosys.rsa.service.AuthService - User 325103311L03@gvpce.ac.in registered successfully with role DRIVER
+2025-11-07 16:57:31 [http-nio-8080-exec-2] INFO  c.infosys.rsa.service.EmailService - Preparing to send temporary credentials email to: 325103311L03@gvpce.ac.in
+2025-11-07 16:57:37 [http-nio-8080-exec-2] INFO  c.infosys.rsa.service.EmailService - Temporary credentials email successfully sent to 325103311L03@gvpce.ac.in
+2025-11-07 16:57:37 [http-nio-8080-exec-2] INFO  com.infosys.rsa.service.AuthService - Temporary credentials email sent to 325103311L03@gvpce.ac.in
+2025-11-07 16:57:38 [http-nio-8080-exec-2] INFO  com.infosys.rsa.service.AuthService - Registration process completed for user 325103311L03@gvpce.ac.in
+2025-11-07 17:00:52 [http-nio-8080-exec-5] INFO  com.infosys.rsa.service.AuthService - User attempting to log in with email: admin@rideshare.com
+2025-11-07 17:00:52 [http-nio-8080-exec-5] INFO  com.infosys.rsa.service.AuthService - JWT token generated successfully for admin@rideshare.com
+2025-11-07 17:00:52 [http-nio-8080-exec-5] INFO  com.infosys.rsa.service.AuthService - User admin@rideshare.com logged in successfully with roles: [ROLE_ADMIN]
+2025-11-07 17:00:54 [http-nio-8080-exec-8] INFO  c.i.rsa.controller.AdminController - AdminController | Fetching all passengers
+2025-11-07 17:00:54 [http-nio-8080-exec-5] INFO  c.i.rsa.controller.AdminController - AdminController | Fetching dashboard statistics
+2025-11-07 17:00:54 [http-nio-8080-exec-4] INFO  c.i.rsa.controller.AdminController - AdminController | Fetching all approved drivers
+2025-11-07 17:00:54 [http-nio-8080-exec-2] INFO  c.i.rsa.controller.AdminController - AdminController | Fetching all pending driver accounts
+2025-11-07 17:00:54 [http-nio-8080-exec-8] INFO  c.infosys.rsa.service.AdminService - Fetching all passengers
+2025-11-07 17:00:54 [http-nio-8080-exec-5] INFO  c.infosys.rsa.service.AdminService - Fetching dashboard statistics
+2025-11-07 17:00:54 [http-nio-8080-exec-4] INFO  c.infosys.rsa.service.AdminService - Fetching all approved drivers
+2025-11-07 17:00:54 [http-nio-8080-exec-2] INFO  c.infosys.rsa.service.AdminService - Fetching all pending drivers
+2025-11-07 17:00:54 [http-nio-8080-exec-2] INFO  c.i.rsa.controller.AdminController - Pending drivers count: 1
+2025-11-07 17:00:54 [http-nio-8080-exec-4] INFO  c.i.rsa.controller.AdminController - Total approved drivers found: 0
+2025-11-07 17:00:54 [http-nio-8080-exec-5] INFO  c.infosys.rsa.service.AdminService - Dashboard statistics fetched successfully
+2025-11-07 17:00:54 [http-nio-8080-exec-7] INFO  c.i.rsa.controller.AdminController - AdminController | Fetching all approved drivers
+2025-11-07 17:00:54 [http-nio-8080-exec-7] INFO  c.infosys.rsa.service.AdminService - Fetching all approved drivers
+2025-11-07 17:00:54 [http-nio-8080-exec-8] INFO  c.i.rsa.controller.AdminController - Total passengers found: 3
+2025-11-07 17:00:54 [http-nio-8080-exec-7] INFO  c.i.rsa.controller.AdminController - Total approved drivers found: 0
+2025-11-07 17:00:54 [http-nio-8080-exec-1] INFO  c.i.rsa.controller.AdminController - AdminController | Fetching dashboard statistics
+2025-11-07 17:00:54 [http-nio-8080-exec-1] INFO  c.infosys.rsa.service.AdminService - Fetching dashboard statistics
+2025-11-07 17:00:54 [http-nio-8080-exec-6] INFO  c.i.rsa.controller.AdminController - AdminController | Fetching all pending driver accounts
+2025-11-07 17:00:54 [http-nio-8080-exec-6] INFO  c.infosys.rsa.service.AdminService - Fetching all pending drivers
+2025-11-07 17:00:54 [http-nio-8080-exec-10] INFO  c.i.rsa.controller.AdminController - AdminController | Fetching all passengers
+2025-11-07 17:00:54 [http-nio-8080-exec-10] INFO  c.infosys.rsa.service.AdminService - Fetching all passengers
+2025-11-07 17:00:54 [http-nio-8080-exec-6] INFO  c.i.rsa.controller.AdminController - Pending drivers count: 1
+2025-11-07 17:00:54 [http-nio-8080-exec-1] INFO  c.infosys.rsa.service.AdminService - Dashboard statistics fetched successfully
+2025-11-07 17:00:54 [http-nio-8080-exec-10] INFO  c.i.rsa.controller.AdminController - Total passengers found: 3
+2025-11-07 17:01:30 [http-nio-8080-exec-3] INFO  com.infosys.rsa.service.AuthService - User attempting to log in with email: 325103311L03@gvpce.ac.in
+2025-11-07 17:01:30 [http-nio-8080-exec-3] INFO  com.infosys.rsa.service.AuthService - JWT token generated successfully for 325103311L03@gvpce.ac.in
+2025-11-07 17:01:30 [http-nio-8080-exec-3] INFO  com.infosys.rsa.service.AuthService - User 325103311L03@gvpce.ac.in logged in successfully with roles: [ROLE_DRIVER]
+2025-11-07 17:01:44 [http-nio-8080-exec-5] INFO  com.infosys.rsa.service.AuthService - User ID 8 attempting to change password
+2025-11-07 17:01:44 [http-nio-8080-exec-5] INFO  com.infosys.rsa.service.AuthService - Password changed successfully for user ID 8
+2025-11-07 17:01:46 [http-nio-8080-exec-1] INFO  com.infosys.rsa.service.RideService - Fetching rides for driver ID: 8
+2025-11-07 17:01:46 [http-nio-8080-exec-10] INFO  c.infosys.rsa.service.BookingService - Fetching bookings for driver ID: 8
+2025-11-07 17:01:46 [http-nio-8080-exec-10] INFO  c.infosys.rsa.service.BookingService - Fetching bookings for driver ID: 8
+2025-11-07 17:01:46 [http-nio-8080-exec-9] INFO  com.infosys.rsa.service.RideService - Fetching rides for driver ID: 8
+2025-11-07 17:02:34 [http-nio-8080-exec-5] INFO  com.infosys.rsa.service.RideService - Fetching rides for driver ID: 8
+2025-11-07 17:02:34 [http-nio-8080-exec-4] INFO  c.infosys.rsa.service.BookingService - Fetching bookings for driver ID: 8
+2025-11-07 17:02:34 [http-nio-8080-exec-2] INFO  c.infosys.rsa.service.BookingService - Fetching bookings for driver ID: 8
+2025-11-07 17:02:34 [http-nio-8080-exec-7] INFO  com.infosys.rsa.service.RideService - Fetching rides for driver ID: 8
+2025-11-07 17:02:38 [http-nio-8080-exec-9] INFO  com.infosys.rsa.service.UserService - Fetching user details for userId: 8
+2025-11-07 17:02:38 [http-nio-8080-exec-10] INFO  com.infosys.rsa.service.UserService - Fetching user details for userId: 8
+2025-11-07 17:02:46 [http-nio-8080-exec-1] INFO  c.i.rsa.controller.AdminController - AdminController | Approving driver with ID: 8
+2025-11-07 17:02:46 [http-nio-8080-exec-1] INFO  c.infosys.rsa.service.AdminService - Approving driver with ID: 8
+2025-11-07 17:02:46 [http-nio-8080-exec-1] INFO  c.infosys.rsa.service.EmailService - Sending driver approval notification (status: APPROVED) to 325103311L03@gvpce.ac.in
+2025-11-07 17:02:51 [http-nio-8080-exec-1] INFO  c.infosys.rsa.service.EmailService - Driver approval notification (status: APPROVED) sent successfully to 325103311L03@gvpce.ac.in
+2025-11-07 17:02:51 [http-nio-8080-exec-1] INFO  c.infosys.rsa.service.AdminService - Approval email sent to driver: 325103311L03@gvpce.ac.in
+2025-11-07 17:02:51 [http-nio-8080-exec-1] INFO  c.i.rsa.controller.AdminController - Driver ID 8 approved successfully
+2025-11-07 17:02:59 [http-nio-8080-exec-2] INFO  c.i.rsa.controller.AdminController - AdminController | Fetching all pending driver accounts
+2025-11-07 17:02:59 [http-nio-8080-exec-8] INFO  c.i.rsa.controller.AdminController - AdminController | Fetching all approved drivers
+2025-11-07 17:02:59 [http-nio-8080-exec-2] INFO  c.infosys.rsa.service.AdminService - Fetching all pending drivers
+2025-11-07 17:02:59 [http-nio-8080-exec-8] INFO  c.infosys.rsa.service.AdminService - Fetching all approved drivers
+2025-11-07 17:02:59 [http-nio-8080-exec-6] INFO  c.i.rsa.controller.AdminController - AdminController | Fetching dashboard statistics
+2025-11-07 17:02:59 [http-nio-8080-exec-6] INFO  c.infosys.rsa.service.AdminService - Fetching dashboard statistics
+2025-11-07 17:02:59 [http-nio-8080-exec-2] INFO  c.i.rsa.controller.AdminController - Pending drivers count: 0
+2025-11-07 17:02:59 [http-nio-8080-exec-8] INFO  c.i.rsa.controller.AdminController - Total approved drivers found: 1
+2025-11-07 17:02:59 [http-nio-8080-exec-6] INFO  c.infosys.rsa.service.AdminService - Dashboard statistics fetched successfully
+2025-11-07 17:14:07 [SpringApplicationShutdownHook] INFO  o.s.b.w.e.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2025-11-07 17:14:07 [tomcat-shutdown] INFO  o.s.b.w.e.tomcat.GracefulShutdown - Graceful shutdown complete
+2025-11-07 17:14:07 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-11-07 17:14:07 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2025-11-07 17:14:07 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
