@@ -90,3 +90,8 @@
 2025-11-07 15:58:16 [http-nio-8080-exec-5] INFO  c.infosys.rsa.service.AdminService - Fetching dashboard statistics
 2025-11-07 15:58:16 [http-nio-8080-exec-5] INFO  c.infosys.rsa.service.AdminService - Dashboard statistics fetched successfully
 2025-11-07 15:58:16 [http-nio-8080-exec-6] INFO  c.infosys.rsa.service.AdminService - Fetching all passengers
+2025-11-07 16:04:45 [SpringApplicationShutdownHook] INFO  o.s.b.w.e.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2025-11-07 16:04:45 [tomcat-shutdown] INFO  o.s.b.w.e.tomcat.GracefulShutdown - Graceful shutdown complete
+2025-11-07 16:04:45 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-11-07 16:04:45 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2025-11-07 16:04:45 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
