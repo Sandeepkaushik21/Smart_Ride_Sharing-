@@ -4,6 +4,8 @@ import com.infosys.rsa.model.Role;
 import com.infosys.rsa.model.User;
 import com.infosys.rsa.repository.RoleRepository;
 import com.infosys.rsa.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -14,6 +16,9 @@ import java.util.Set;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
+
+    private static final Logger logger = LoggerFactory.getLogger(DataInitializer.class);
+
     @Autowired
     RoleRepository roleRepository;
 
@@ -25,8 +30,12 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        logger.info("Running DataInitializer...");
+
         // Create roles if they don't exist
         if (roleRepository.count() == 0) {
+            logger.info("No roles found in database. Creating default roles...");
+
             Role adminRole = new Role();
             adminRole.setName(Role.ERole.ROLE_ADMIN);
             roleRepository.save(adminRole);
@@ -39,21 +48,24 @@ public class DataInitializer implements CommandLineRunner {
             passengerRole.setName(Role.ERole.ROLE_PASSENGER);
             roleRepository.save(passengerRole);
 
-            System.out.println("Default roles created successfully!");
+            logger.info("Default roles created successfully: ADMIN, DRIVER, PASSENGER");
+        } else {
+            logger.info("Roles already exist. Skipping role creation.");
         }
 
         // Create default admin user if it doesn't exist
         String adminEmail = "admin@rideshare.com";
         if (!userRepository.existsByEmail(adminEmail)) {
+            logger.info("No admin user found. Creating default admin with email: {}", adminEmail);
+
             User adminUser = new User();
             adminUser.setEmail(adminEmail);
             adminUser.setName("Administrator");
             adminUser.setPassword(passwordEncoder.encode("adminpass"));
             adminUser.setIsActive(true);
-            adminUser.setIsApproved(true); // Admin is auto-approved
-            adminUser.setIsFirstLogin(false); // No temp password for admin
+            adminUser.setIsApproved(true);
+            adminUser.setIsFirstLogin(false);
 
-            // Set ADMIN role
             Role adminRole = roleRepository.findByName(Role.ERole.ROLE_ADMIN)
                     .orElseThrow(() -> new RuntimeException("Admin role not found!"));
             Set<Role> roles = new HashSet<>();
@@ -61,10 +73,11 @@ public class DataInitializer implements CommandLineRunner {
             adminUser.setRoles(roles);
 
             userRepository.save(adminUser);
-            System.out.println("Default admin user initialized successfully!");
+            logger.info("Default admin user initialized successfully with email: {}", adminEmail);
         } else {
-            System.out.println("Admin user already exists.");
+            logger.info("Admin user already exists in database.");
         }
+
+        logger.info("DataInitializer execution completed.");
     }
 }
-
