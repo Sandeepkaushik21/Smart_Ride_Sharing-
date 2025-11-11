@@ -69,3 +69,14 @@ export const closeLoading = () => {
   Swal.close();
 };
 
+export const showSuccessAuto = (message, ms = 3000) => {
+  return Swal.fire({
+    icon: 'success',
+    title: 'Success!',
+    text: message,
+    timer: ms,
+    showConfirmButton: false,
+    timerProgressBar: true,
+    willClose: () => { },
+  });
+};

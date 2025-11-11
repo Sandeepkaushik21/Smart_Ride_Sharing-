@@ -18,6 +18,8 @@ public class RideResponse {
     private Integer totalSeats;
     private Double estimatedFare;
     private String vehiclePhotosJson;
+    private String pickupLocationsJson; // JSON array of 4 pickup locations
+    private String dropLocationsJson; // JSON array of 4 drop locations
     private Boolean hasAC;
     private String vehicleType;
     private String vehicleModel;
@@ -58,6 +60,8 @@ public class RideResponse {
         this.totalSeats = r.getTotalSeats();
         this.estimatedFare = r.getEstimatedFare();
         this.vehiclePhotosJson = r.getVehiclePhotosJson();
+        this.pickupLocationsJson = r.getPickupLocationsJson();
+        this.dropLocationsJson = r.getDropLocationsJson();
         this.hasAC = r.getHasAC();
         this.vehicleType = r.getVehicleType();
         this.vehicleModel = r.getVehicleModel();

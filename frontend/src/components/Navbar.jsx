@@ -2,15 +2,24 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, LogOut, Home, User } from 'lucide-react';
 import { useState } from 'react';
 import { authService } from '../services/authService';
+import { showConfirm } from '../utils/swal';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const isAuthenticated = authService.isAuthenticated();
 
-  const handleLogout = () => {
-    authService.logout();
-    navigate('/');
+  const handleLogout = async () => {
+    const confirm = await showConfirm(
+      'Are you sure you want to logout?',
+      'Yes, Logout',
+      'Cancel'
+    );
+
+    if (confirm.isConfirmed) {
+      authService.logout();
+      navigate('/');
+    }
   };
 
   return (
@@ -81,9 +90,9 @@ const Navbar = () => {
                   Profile
                 </Link>
                 <button
-                  onClick={() => {
-                    handleLogout();
+                  onClick={async () => {
                     setIsOpen(false);
+                    await handleLogout();
                   }}
                   className="block w-full text-left px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
                 >

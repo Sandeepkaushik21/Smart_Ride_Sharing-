@@ -25,6 +25,16 @@ public class RidePostRequest {
     @NotBlank(message = "Destination location is required")
     private String destination;
 
+    // Driver selected pickup locations (4 areas in source city)
+    @NotNull(message = "Pickup locations are required")
+    @Size(min = 4, max = 4, message = "Please select exactly 4 pickup locations")
+    private List<String> pickupLocations;
+
+    // Driver selected drop locations (4 areas in destination city)
+    @NotNull(message = "Drop locations are required")
+    @Size(min = 4, max = 4, message = "Please select exactly 4 drop locations")
+    private List<String> dropLocations;
+
     @NotNull(message = "Date is required")
     private LocalDate date;
 
