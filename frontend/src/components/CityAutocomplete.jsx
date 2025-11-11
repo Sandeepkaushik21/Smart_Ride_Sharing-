@@ -69,10 +69,19 @@ const CityAutocomplete = ({ value, onChange, placeholder, className, mode = 'pla
     setIsLoading(true);
 
     try {
-      const effectiveQuery = withinCity ? `${withinCity} ${query}` : query;
-      const data = mode === 'city'
-        ? await locationService.getCitySuggestions(effectiveQuery, abortControllerRef.current.signal)
-        : await locationService.getPlaceSuggestions(effectiveQuery, abortControllerRef.current.signal);
+      let data = [];
+      if (mode === 'city') {
+        const effectiveQuery = withinCity ? `${withinCity} ${query}` : query;
+        data = await locationService.getCitySuggestions(effectiveQuery, abortControllerRef.current.signal);
+      } else {
+        // Place mode
+        if (withinCity) {
+          // Strictly constrain suggestions within the selected city
+          data = await locationService.getPlaceSuggestionsInCity(query, withinCity, abortControllerRef.current.signal);
+        } else {
+          data = await locationService.getPlaceSuggestions(query, abortControllerRef.current.signal);
+        }
+      }
       
       // Store in cache
       if (!disableCache && data && data.length > 0) {

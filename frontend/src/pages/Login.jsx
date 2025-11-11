@@ -5,7 +5,7 @@ import { authService } from '../services/authService';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import BackButton from '../components/BackButton';
-import { showSuccess, showInfo } from '../utils/swal';
+import { showSuccessAuto, showInfo } from '../utils/swal';
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -28,23 +28,21 @@ const Login = () => {
         return;
       }
       
-      // Only show success alert, no error alerts
-      await showSuccess('Login successful!');
-      
-      // Navigate based on role - replace current history entry
+      // Show 3-second auto-closing success alert and then redirect
+      // Determine redirect path based on role
+      let path = '/';
       if (response.roles) {
         if (response.roles.includes('ROLE_ADMIN')) {
-          navigate('/admin/dashboard', { replace: true });
+          path = '/admin/dashboard';
         } else if (response.roles.includes('ROLE_DRIVER')) {
-          navigate('/driver/dashboard', { replace: true });
+          path = '/driver/dashboard';
         } else if (response.roles.includes('ROLE_PASSENGER')) {
-          navigate('/passenger/dashboard', { replace: true });
-        } else {
-          navigate('/', { replace: true });
+          path = '/passenger/dashboard';
         }
-      } else {
-        navigate('/', { replace: true });
       }
+
+      await showSuccessAuto('Login successful!', 3000);
+      navigate(path, { replace: true });
     } catch (err) {
       console.error('Login error:', err);
       const errorMessage = err.message || err.response?.data?.message || 'Invalid email or password. Please check your credentials.';
@@ -153,4 +151,3 @@ const Login = () => {
 };
 
 export default Login;
-

@@ -65,6 +65,82 @@ export const locationService = {
   },
 
   /**
+   * Get place suggestions strictly within a given city using LocationIQ bounding box
+   * Falls back to generic suggestions if city lookup fails.
+   * @param {string} query
+   * @param {string} cityName
+   * @param {AbortSignal} signal
+   * @returns {Promise<string[]>}
+   */
+  getPlaceSuggestionsInCity: async (query, cityName, signal) => {
+    if (!query || query.length < 2) return [];
+    if (!LOCATIONIQ_API_KEY) return [];
+
+    try {
+      // 1) Resolve city to get its bounding box
+      const cityUrl = new URL(`${LOCATIONIQ_BASE_URL}/search.php`);
+      cityUrl.searchParams.set('key', LOCATIONIQ_API_KEY);
+      cityUrl.searchParams.set('q', cityName);
+      cityUrl.searchParams.set('format', 'json');
+      cityUrl.searchParams.set('limit', '1');
+      cityUrl.searchParams.set('addressdetails', '1');
+      cityUrl.searchParams.set('countrycodes', 'in');
+
+      const cityResp = await fetch(cityUrl.toString(), { signal });
+      if (!cityResp.ok) {
+        return await locationService.getPlaceSuggestions(`${cityName} ${query}`, signal);
+      }
+      const cityResults = await cityResp.json();
+      if (!Array.isArray(cityResults) || cityResults.length === 0) {
+        return await locationService.getPlaceSuggestions(`${cityName} ${query}`, signal);
+      }
+
+      const city = cityResults[0];
+      let viewboxParam = null;
+      if (city.boundingbox && city.boundingbox.length === 4) {
+        const south = city.boundingbox[0];
+        const north = city.boundingbox[1];
+        const west = city.boundingbox[2];
+        const east = city.boundingbox[3];
+        viewboxParam = `${west},${north},${east},${south}`;
+      }
+
+      // 2) Search for query bounded to the city's viewbox
+      const url = new URL(`${LOCATIONIQ_BASE_URL}/search.php`);
+      url.searchParams.set('key', LOCATIONIQ_API_KEY);
+      url.searchParams.set('q', query);
+      url.searchParams.set('format', 'json');
+      url.searchParams.set('limit', '8');
+      url.searchParams.set('addressdetails', '1');
+      url.searchParams.set('countrycodes', 'in');
+      if (viewboxParam) {
+        url.searchParams.set('viewbox', viewboxParam);
+        url.searchParams.set('bounded', '1');
+      } else {
+        // No bounding box; prefix the query with the city as a weaker constraint
+        url.searchParams.set('q', `${cityName} ${query}`);
+      }
+
+      const resp = await fetch(url.toString(), { signal });
+      if (!resp.ok) return [];
+      const results = await resp.json();
+      if (!Array.isArray(results)) return [];
+
+      const labels = [];
+      for (const r of results) {
+        let name = null;
+        if (r.namedetails && r.namedetails.name) name = r.namedetails.name;
+        else if (r.display_name) name = r.display_name.split(',')[0];
+        if (name) labels.push(name.trim());
+      }
+      return Array.from(new Set(labels)).slice(0, 8);
+    } catch (err) {
+      if (err.name === 'AbortError') throw err;
+      return [];
+    }
+  },
+
+  /**
    * Get Indian city suggestions (cities/towns/villages) for first-step selection
    * @param {string} query
    * @returns {Promise<string[]>}

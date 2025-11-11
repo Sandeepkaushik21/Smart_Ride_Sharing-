@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import BackButton from '../components/BackButton';
 import CityAutocomplete from '../components/CityAutocomplete';
+import LocationAutocompleteWithDriverOptions from '../components/LocationAutocompleteWithDriverOptions';
 import RazorpayPaymentModal from '../components/RazorpayPaymentModal';
 import { rideService } from '../services/rideService';
 import { bookingService } from '../services/bookingService';
@@ -69,22 +70,72 @@ const PassengerDashboard = () => {
     const [wizardStep, setWizardStep] = useState(1);
     const [fromCity, setFromCity] = useState('');
     const [toCity, setToCity] = useState('');
-
-    const goNext = useCallback(() => {
-        // Step 1 -> 2: Copy City names to searchForm (for display in step 2/3)
+    
+    const goNext = useCallback(async () => {
+        // Step 1 -> 2: Fetch available rides to get driver pickup and drop locations
         if (wizardStep === 1) {
-            setSearchForm(prev => ({ ...prev, source: fromCity, destination: toCity }));
+            setSearchForm(prev => ({ ...prev, source: '', destination: '' })); // Reset locations
             setWizardStep(2);
-            // Step 2 -> 3: Check if locations are selected
-        } else if (wizardStep === 2) {
-            if (searchForm.source && searchForm.destination) {
-                // Pre-fill date with today's date if not set
-                if (!searchForm.date) {
-                    const today = new Date().toISOString().split('T')[0];
-                    setSearchForm(prev => ({ ...prev, date: today }));
-                }
-                setWizardStep(3);
+            // Fetch rides to get driver pickup and drop locations (use today's date to get current rides)
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const searchData = {
+                    source: fromCity,
+                    destination: toCity,
+                    date: today // Use today's date to get available rides
+                };
+                const data = await rideService.searchRides(searchData);
+                const list = Array.isArray(data) ? data : (data && Array.isArray(data.content) ? data.content : []);
+                
+                // Extract and aggregate pickup locations from all rides
+                const allPickupLocations = new Set();
+                const allDropLocations = new Set();
+                list.forEach(ride => {
+                    if (ride.pickupLocationsJson) {
+                        try {
+                            const locations = JSON.parse(ride.pickupLocationsJson);
+                            locations.forEach(loc => {
+                                if (loc && loc.trim()) {
+                                    allPickupLocations.add(loc.trim());
+                                }
+                            });
+                        } catch (e) {
+                            console.error('Error parsing pickup locations:', e);
+                        }
+                    }
+                    if (ride.dropLocationsJson) {
+                        try {
+                            const locations = JSON.parse(ride.dropLocationsJson);
+                            locations.forEach(loc => {
+                                if (loc && loc.trim()) {
+                                    allDropLocations.add(loc.trim());
+                                }
+                            });
+                        } catch (e) {
+                            console.error('Error parsing drop locations:', e);
+                        }
+                    }
+                });
+                setDriverPickupLocations(Array.from(allPickupLocations));
+                setDriverDropLocations(Array.from(allDropLocations));
+                setAvailableRides(list);
+            } catch (error) {
+                console.error('Error fetching rides for locations:', error);
+                // Continue anyway, user can still type to search
             }
+            // Step 2 -> 3: Pre-fill date and move to final step
+        } else if (wizardStep === 2) {
+            // Validate that both pickup and drop locations are selected
+            if (!searchForm.source || !searchForm.destination) {
+                await showError('Please select both pickup and drop locations');
+                return;
+            }
+            // Pre-fill date with today's date if not set
+            if (!searchForm.date) {
+                const today = new Date().toISOString().split('T')[0];
+                setSearchForm(prev => ({ ...prev, date: today }));
+            }
+            setWizardStep(3);
         }
     }, [wizardStep, fromCity, toCity, searchForm.source, searchForm.destination, searchForm.date]);
 
@@ -148,6 +199,14 @@ const PassengerDashboard = () => {
     const [selectedSeats, setSelectedSeats] = useState({});
     const [showBookingModal, setShowBookingModal] = useState({});
     const [bookingLoading, setBookingLoading] = useState({});
+    const [selectedPickupLocation, setSelectedPickupLocation] = useState({}); // per ride
+    const [selectedDropLocation, setSelectedDropLocation] = useState({}); // per ride
+    const [availableRides, setAvailableRides] = useState([]); // Rides for current search to get pickup locations
+    // Pagination for Available Rides (results tab)
+    const [resultsPage, setResultsPage] = useState(0); // zero-based
+    const [resultsSize, setResultsSize] = useState(5);
+    const [driverPickupLocations, setDriverPickupLocations] = useState([]); // Aggregated pickup locations from all drivers
+    const [driverDropLocations, setDriverDropLocations] = useState([]); // Aggregated drop locations from all drivers
     const [photoViewer, setPhotoViewer] = useState({ open: false, photos: [], currentIndex: 0 });
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [pendingBooking, setPendingBooking] = useState(null);
@@ -289,6 +348,41 @@ const PassengerDashboard = () => {
             console.debug('[PassengerDashboard] normalized rides:', normalized);
 
             setRides(normalized);
+            setAvailableRides(normalized);
+            setResultsPage(0); // reset results pagination on every new search
+            
+            // Extract and aggregate pickup and drop locations from all rides
+            const allPickupLocations = new Set();
+            const allDropLocations = new Set();
+            normalized.forEach(ride => {
+                if (ride.pickupLocationsJson) {
+                    try {
+                        const locations = JSON.parse(ride.pickupLocationsJson);
+                        locations.forEach(loc => {
+                            if (loc && loc.trim()) {
+                                allPickupLocations.add(loc.trim());
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Error parsing pickup locations:', e);
+                    }
+                }
+                if (ride.dropLocationsJson) {
+                    try {
+                        const locations = JSON.parse(ride.dropLocationsJson);
+                        locations.forEach(loc => {
+                            if (loc && loc.trim()) {
+                                allDropLocations.add(loc.trim());
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Error parsing drop locations:', e);
+                    }
+                }
+            });
+            setDriverPickupLocations(Array.from(allPickupLocations));
+            setDriverDropLocations(Array.from(allDropLocations));
+            
             setActiveTab('results');
         } catch (error) {
             console.error('[PassengerDashboard] search error:', error);
@@ -299,6 +393,9 @@ const PassengerDashboard = () => {
     };
 
     const handleBook = async (rideId) => {
+        const ride = rides.find(r => r.id === rideId);
+        if (!ride) return;
+        
         setShowBookingModal({ ...showBookingModal, [rideId]: true });
     };
 
@@ -306,9 +403,13 @@ const PassengerDashboard = () => {
         const ride = rides.find(r => r.id === rideId);
         const numberOfSeats = selectedSeats[rideId] || 1;
 
-        // Validate that pickup and dropoff locations are selected (from step 2)
-        if (!searchForm.source || !searchForm.destination) {
-            await showError('Please select pickup and dropoff locations first');
+        // Use locations from searchForm (selected in step 2 of wizard) with fallback to ride source/destination
+        const pickupLocation = searchForm.source || ride.source || '';
+        const dropoffLocation = searchForm.destination || ride.destination || '';
+
+        // Validate that pickup and dropoff locations are available
+        if (!pickupLocation || !dropoffLocation) {
+            await showError('Pickup and dropoff locations are required. Please go back and select them in the search form.');
             return;
         }
 
@@ -321,8 +422,8 @@ const PassengerDashboard = () => {
         // We'll show an estimated message here
         const confirm = await showConfirm(
             `Proceed to payment for ${numberOfSeats} seat(s)?\n\n` +
-            `From: ${searchForm.source}\n` +
-            `To: ${searchForm.destination}\n\n`,
+            `From: ${pickupLocation}\n` +
+            `To: ${dropoffLocation}\n\n`,
             'Yes, Proceed to Payment',
             'Cancel'
         );
@@ -336,8 +437,8 @@ const PassengerDashboard = () => {
             // First create booking with PENDING status
             const booking = await bookingService.createBooking({
                 rideId,
-                pickupLocation: searchForm.source,
-                dropoffLocation: searchForm.destination,
+                pickupLocation: pickupLocation,
+                dropoffLocation: dropoffLocation,
                 numberOfSeats: numberOfSeats,
             });
 
@@ -354,8 +455,8 @@ const PassengerDashboard = () => {
                 numberOfSeats,
                 totalFare: bookingFareAmountRu, // in rupees
                 bookingId: booking.id,
-                pickupLocation: searchForm.source,
-                dropoffLocation: searchForm.destination,
+                pickupLocation: pickupLocation,
+                dropoffLocation: dropoffLocation,
             });
 
             // Create Razorpay order with the fare amount from booking (in rupees)
@@ -625,38 +726,73 @@ const PassengerDashboard = () => {
                             </div>
                         )}
 
-                        {/* Step 2: Pick From/To locations (realtime autocomplete within selected cities) */}
+                        {/* Step 2: Select Pickup and Drop Locations from Driver's Choices */}
                         {wizardStep === 2 && (
                             <div className="space-y-6">
-                                <div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-600 mb-1">From (any place in {fromCity})</label>
-                                            <CityAutocomplete
-                                                value={searchForm.source}
-                                                onChange={(value) => setSearchForm({ ...searchForm, source: value })}
-                                                placeholder={`Search a place in ${fromCity}`}
-                                                withinCity={fromCity}
-                                                disableCache={true}
-                                            />
+                                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
+                                    <h3 className="text-sm font-semibold text-blue-800 mb-2">Select Your Pickup and Drop Locations</h3>
+                                    <p className="text-xs text-blue-700">
+                                        Select your pickup location in {fromCity} and drop location in {toCity}. 
+                                        {driverPickupLocations.length > 0 || driverDropLocations.length > 0 ? (
+                                            <span> Drivers have selected preferred locations (marked with ★). You can also type to search for other locations.</span>
+                                        ) : (
+                                            <span> Search for any location within the selected cities.</span>
+                                        )}
+                                    </p>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">From City</label>
+                                        <div className="text-sm font-medium text-gray-900 px-4 py-3 bg-gray-50 rounded-lg border-2 border-gray-200">
+                                            {fromCity}
                                         </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-600 mb-1">To (any place in {toCity})</label>
-                                            <CityAutocomplete
-                                                value={searchForm.destination}
-                                                onChange={(value) => setSearchForm({ ...searchForm, destination: value })}
-                                                placeholder={`Search a place in ${toCity}`}
-                                                withinCity={toCity}
-                                                disableCache={true}
-                                            />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">To City</label>
+                                        <div className="text-sm font-medium text-gray-900 px-4 py-3 bg-gray-50 rounded-lg border-2 border-gray-200">
+                                            {toCity}
                                         </div>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Pickup Location in {fromCity} *</label>
+                                        <LocationAutocompleteWithDriverOptions
+                                            value={searchForm.source}
+                                            onChange={(value) => setSearchForm({ ...searchForm, source: value })}
+                                            placeholder={`Search a place in ${fromCity}${driverPickupLocations.length > 0 ? ' or select from driver choices' : ''}`}
+                                            withinCity={fromCity}
+                                            driverLocations={driverPickupLocations}
+                                            disableCache={true}
+                                        />
+                                        {driverPickupLocations.length > 0 && (
+                                            <p className="text-xs text-purple-600 mt-2">
+                                                ★ {driverPickupLocations.length} driver-selected pickup locations available
+                                            </p>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Drop Location in {toCity} *</label>
+                                        <LocationAutocompleteWithDriverOptions
+                                            value={searchForm.destination}
+                                            onChange={(value) => setSearchForm({ ...searchForm, destination: value })}
+                                            placeholder={`Search a place in ${toCity}${driverDropLocations.length > 0 ? ' or select from driver choices' : ''}`}
+                                            withinCity={toCity}
+                                            driverLocations={driverDropLocations}
+                                            disableCache={true}
+                                        />
+                                        {driverDropLocations.length > 0 && (
+                                            <p className="text-xs text-purple-600 mt-2">
+                                                ★ {driverDropLocations.length} driver-selected drop locations available
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="flex justify-between">
                                     <button type="button" onClick={goPrev} className="px-6 py-2 bg-gray-200 rounded-lg">Back</button>
                                     <button
-                                        disabled={!searchForm.source || !searchForm.destination}
                                         onClick={goNext}
+                                        disabled={!searchForm.source || !searchForm.destination}
                                         className="px-6 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
                                     >
                                         Next
@@ -681,12 +817,12 @@ const PassengerDashboard = () => {
                                         <div>
                                             <label className="block text-xs font-semibold text-blue-700 mb-1">To City</label>
                                             <div className="text-sm font-medium text-gray-900">{toCity}</div>
-                                            <label className="block text-xs font-semibold text-blue-700 mb-1 mt-2">Dropoff Location</label>
+                                            <label className="block text-xs font-semibold text-blue-700 mb-1 mt-2">Drop Location</label>
                                             <div className="text-sm text-gray-700">{searchForm.destination || 'Not selected'}</div>
                                         </div>
                                     </div>
                                     <p className="text-xs text-blue-600 mt-3">
-                                        ℹ️ Fare will be calculated based on your pickup and dropoff locations
+                                        ℹ️ Fare will be calculated based on your selected pickup and drop locations.
                                     </p>
                                 </div>
 
@@ -708,7 +844,7 @@ const PassengerDashboard = () => {
                                     <button type="button" onClick={goPrev} className="px-6 py-2 bg-gray-200 rounded-lg">Back</button>
                                     <button
                                         type="submit"
-                                        disabled={loading || !searchForm.source || !searchForm.destination}
+                                        disabled={loading}
                                         className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 font-semibold shadow-lg transform hover:scale-105 transition-all flex items-center justify-center space-x-2"
                                     >
                                         {loading ? (
@@ -745,7 +881,13 @@ const PassengerDashboard = () => {
                                     <p className="text-gray-500 text-xs mt-2">Try adjusting your search criteria</p>
                                 </div>
                             ) : (
-                                rides.map((ride) => (
+                                (() => {
+                                    const totalPages = Math.max(1, Math.ceil(rides.length / resultsSize));
+                                    const start = resultsPage * resultsSize;
+                                    const displayed = rides.slice(start, start + resultsSize);
+                                    return (
+                                        <>
+                                            {displayed.map((ride) => (
                                     <div key={ride.id} className="p-6 hover:bg-gradient-to-r hover:from-purple-50 hover:to-blue-50 transition-all">
                                         <div className="flex justify-between items-start">
                                             <div className="flex-1">
@@ -878,30 +1020,32 @@ const PassengerDashboard = () => {
                                                     <div className="text-xl font-bold text-green-600">₹{ride.estimatedFare?.toFixed(2) || 'N/A'}</div>
                                                 </div>
                                                 {showBookingModal[ride.id] ? (
-                                                    <div className="bg-white border-2 border-purple-300 rounded-lg p-4 shadow-lg min-w-[200px]">
-                                                        <label className="block text-xs font-semibold text-gray-700 mb-2">
-                                                            Number of Seats (Max: {ride.availableSeats})
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            min={1}
-                                                            max={ride.availableSeats}
-                                                            value={selectedSeats[ride.id] || 1}
-                                                            onChange={(e) => {
-                                                                const val = parseInt(e.target.value) || 1;
-                                                                const maxVal = Math.min(val, ride.availableSeats);
-                                                                setSelectedSeats({ ...selectedSeats, [ride.id]: Math.max(1, maxVal) });
-                                                            }}
-                                                            className="w-full px-2 py-1 border-2 border-gray-300 rounded-lg mb-2"
-                                                        />
-                                                        <div className="text-xs text-gray-600 mb-2">
-                                                            Total: ₹{((ride.estimatedFare || 0) * (selectedSeats[ride.id] || 1)).toFixed(2)}
+                                                    <div className="bg-white border-2 border-purple-300 rounded-lg p-4 shadow-lg min-w-[300px] max-w-[400px]">
+                                                        <div className="mb-4">
+                                                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                                Number of Seats (Max: {ride.availableSeats})
+                                                            </label>
+                                                            <input
+                                                                type="number"
+                                                                min={1}
+                                                                max={ride.availableSeats}
+                                                                value={selectedSeats[ride.id] || 1}
+                                                                onChange={(e) => {
+                                                                    const val = parseInt(e.target.value) || 1;
+                                                                    const maxVal = Math.min(val, ride.availableSeats);
+                                                                    setSelectedSeats({ ...selectedSeats, [ride.id]: Math.max(1, maxVal) });
+                                                                }}
+                                                                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                                                            />
+                                                        </div>
+                                                        <div className="text-xs text-gray-600 mb-3">
+                                                            Estimated Total: ₹{((ride.estimatedFare || 0) * (selectedSeats[ride.id] || 1)).toFixed(2)}
                                                         </div>
                                                         <div className="flex space-x-2">
                                                             <button
                                                                 onClick={() => handleConfirmBooking(ride.id)}
                                                                 disabled={!!bookingLoading[ride.id]}
-                                                                className={`px-4 py-2 rounded-lg text-white text-sm font-semibold ${bookingLoading[ride.id] ? 'bg-green-400 cursor-not-allowed' : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'}`}
+                                                                className={`flex-1 px-4 py-2 rounded-lg text-white text-sm font-semibold ${bookingLoading[ride.id] ? 'bg-green-400 cursor-not-allowed' : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'}`}
                                                             >
                                                                 {bookingLoading[ride.id] ? 'Booking…' : 'Confirm'}
                                                             </button>
@@ -932,10 +1076,42 @@ const PassengerDashboard = () => {
                                                         {ride.availableSeats === 0 ? 'Full' : bookingLoading[ride.id] ? 'Processing…' : 'Book Now'}
                                                     </button>
                                                 )}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))
+                                            ))}
+                                            {/* Pagination controls */}
+                                            <div className="flex items-center justify-between px-6 py-4 border-t">
+                                                <button
+                                                    onClick={() => setResultsPage((p) => Math.max(0, p - 1))}
+                                                    disabled={resultsPage === 0}
+                                                    className={`px-4 py-2 rounded-lg ${resultsPage === 0 ? 'bg-gray-200 text-gray-500' : 'bg-white border hover:bg-gray-100'}`}
+                                                >
+                                                    Prev
+                                                </button>
+                                                <div className="text-sm text-gray-600">
+                                                    Page {resultsPage + 1} of {totalPages} — {rides.length} rides
+                                                </div>
+                                                <div className="flex items-center space-x-2">
+                                                    <button
+                                                        onClick={() => setResultsPage((p) => Math.min(totalPages - 1, p + 1))}
+                                                        disabled={resultsPage + 1 >= totalPages}
+                                                        className={`px-4 py-2 rounded-lg ${resultsPage + 1 >= totalPages ? 'bg-gray-200 text-gray-500' : 'bg-white border hover:bg-gray-100'}`}
+                                                    >
+                                                        Next
+                                                    </button>
+                                                    <select
+                                                        value={resultsSize}
+                                                        onChange={(e) => { setResultsPage(0); setResultsSize(parseInt(e.target.value, 10)); }}
+                                                        className="ml-2 px-2 py-1 border rounded-md bg-white text-sm"
+                                                    >
+                                                        {[5,10,20].map(s => (<option key={s} value={s}>{s} / page</option>))}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </>
+                                    );
+                                })()
                             )}
                         </div>
                     </div>

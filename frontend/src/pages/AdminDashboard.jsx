@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Users, Car, CheckCircle, XCircle, TrendingUp, DollarSign, Shield, Activity, Trash2, LayoutGrid, Settings, Menu } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import BackButton from '../components/BackButton';
 import { adminService } from '../services/adminService';
+import { authService } from '../services/authService';
 import { showConfirm, showSuccess, showError } from '../utils/swal';
 
 const AdminDashboard = () => {
+    const navigate = useNavigate();
     const [stats, setStats] = useState(null);
     const [pendingDrivers, setPendingDrivers] = useState([]);
     const [allDrivers, setAllDrivers] = useState([]);
@@ -203,6 +206,19 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleLogout = async () => {
+        const confirm = await showConfirm(
+            'Are you sure you want to logout?',
+            'Yes, Logout',
+            'Cancel'
+        );
+
+        if (confirm.isConfirmed) {
+            authService.logout();
+            navigate('/');
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -235,7 +251,7 @@ const AdminDashboard = () => {
                         <SidebarItem icon={<XCircle className="h-4 w-4" />} label={`Pending (${pendingDrivers.length})`} active={activeTab==='pending'} onClick={() => setActiveTab('pending')} />
                         <div className="pt-2 mt-2 border-t"></div>
                         <SidebarItem icon={<Settings className="h-4 w-4" />} label="Settings" active={activeTab==='settings'} onClick={() => setActiveTab('settings')} />
-                        <SidebarItem icon={<Shield className="h-4 w-4" />} label="Logout" active={false} onClick={() => {}} />
+                        <SidebarItem icon={<Shield className="h-4 w-4" />} label="Logout" active={false} onClick={handleLogout} />
                     </nav>
                     <div className="p-4 text-xs text-gray-500">© {new Date().getFullYear()} RSA Admin</div>
                 </aside>
@@ -261,7 +277,7 @@ const AdminDashboard = () => {
                                 <SidebarItem icon={<XCircle className="h-4 w-4" />} label={`Pending (${pendingDrivers.length})`} active={activeTab==='pending'} onClick={() => { setActiveTab('pending'); setSidebarOpen(false); }} />
                                 <div className="pt-2 mt-2 border-t"></div>
                                 <SidebarItem icon={<Settings className="h-4 w-4" />} label="Settings" active={activeTab==='settings'} onClick={() => { setActiveTab('settings'); setSidebarOpen(false); }} />
-                                <SidebarItem icon={<Shield className="h-4 w-4" />} label="Logout" active={false} onClick={() => { setSidebarOpen(false); }} />
+                                <SidebarItem icon={<Shield className="h-4 w-4" />} label="Logout" active={false} onClick={async () => { setSidebarOpen(false); await handleLogout(); }} />
                             </nav>
                         </aside>
                     </div>

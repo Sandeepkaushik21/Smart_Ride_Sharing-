@@ -80,6 +80,14 @@ public class Ride {
     @Column(name = "vehicle_photos", columnDefinition = "LONGTEXT")
     private String vehiclePhotosJson; // JSON array string
 
+    // Pickup locations (stored as JSON array - driver selected 4 areas in source city)
+    @Column(name = "pickup_locations", columnDefinition = "LONGTEXT")
+    private String pickupLocationsJson; // JSON array string of 4 pickup location areas
+
+    // Drop locations (stored as JSON array - driver selected 4 areas in destination city)
+    @Column(name = "drop_locations", columnDefinition = "LONGTEXT")
+    private String dropLocationsJson; // JSON array string of 4 drop location areas
+
     // Vehicle condition details
     @Column(name = "has_ac")
     private Boolean hasAC;
@@ -122,6 +130,32 @@ public class Ride {
         try {
             ObjectMapper mapper = new ObjectMapper();
             return mapper.readValue(vehiclePhotosJson, new TypeReference<List<String>>() {});
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
+    }
+
+    // Helper method to get pickup locations as List
+    public List<String> getPickupLocationsList() {
+        if (pickupLocationsJson == null || pickupLocationsJson.isEmpty()) {
+            return new ArrayList<>();
+        }
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            return mapper.readValue(pickupLocationsJson, new TypeReference<List<String>>() {});
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
+    }
+
+    // Helper method to get drop locations as List
+    public List<String> getDropLocationsList() {
+        if (dropLocationsJson == null || dropLocationsJson.isEmpty()) {
+            return new ArrayList<>();
+        }
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            return mapper.readValue(dropLocationsJson, new TypeReference<List<String>>() {});
         } catch (Exception e) {
             return new ArrayList<>();
         }
