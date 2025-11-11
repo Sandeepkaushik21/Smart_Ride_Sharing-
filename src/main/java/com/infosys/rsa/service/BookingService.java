@@ -1,6 +1,7 @@
 package com.infosys.rsa.service;
 
 import com.infosys.rsa.dto.BookingRequest;
+import com.infosys.rsa.exception.*;
 import com.infosys.rsa.model.Booking;
 import com.infosys.rsa.model.Ride;
 import com.infosys.rsa.model.User;
@@ -21,28 +22,30 @@ public class BookingService {
     private static final Logger logger = LoggerFactory.getLogger(BookingService.class);
 
     @Autowired
-    BookingRepository bookingRepository;
+    private BookingRepository bookingRepository;
 
     @Autowired
-    RideRepository rideRepository;
+    private RideRepository rideRepository;
 
     @Autowired
-    UserRepository userRepository;
+    private UserRepository userRepository;
 
     @Autowired
-    FareCalculationService fareCalculationService;
+    private FareCalculationService fareCalculationService;
 
     @Autowired
-    EmailService emailService;
+    private EmailService emailService;
 
+    // ---------------- CREATE BOOKING ----------------
     @Transactional
     public Booking createBooking(Long passengerId, BookingRequest request) {
         logger.info("Attempting to create booking for passenger ID: {} and ride ID: {}", passengerId, request.getRideId());
 
+        // Ride validation
         Ride ride = rideRepository.findById(request.getRideId())
                 .orElseThrow(() -> {
                     logger.error("Ride not found with ID: {}", request.getRideId());
-                    return new RuntimeException("Ride not found");
+                    return new RideNotFoundException("Ride not found with ID: " + request.getRideId());
                 });
 
         int numberOfSeats = request.getNumberOfSeats() != null ? request.getNumberOfSeats() : 1;
@@ -50,32 +53,43 @@ public class BookingService {
 
         if (ride.getAvailableSeats() < numberOfSeats) {
             logger.error("Not enough seats for booking. Requested: {}, Available: {}", numberOfSeats, ride.getAvailableSeats());
-            throw new RuntimeException("Not enough seats available. Only " + ride.getAvailableSeats() + " seat(s) remaining.");
+            throw new InsufficientSeatsException("Not enough seats available. Only " + ride.getAvailableSeats() + " seat(s) remaining.");
         }
 
+        // Passenger validation
         User passenger = userRepository.findById(passengerId)
                 .orElseThrow(() -> {
                     logger.error("Passenger not found with ID: {}", passengerId);
-                    return new RuntimeException("Passenger not found");
+                    return new PassengerNotFoundException("Passenger not found with ID: " + passengerId);
                 });
 
+        // Location validation
         String pickupLocation = request.getPickupLocation();
         String dropoffLocation = request.getDropoffLocation();
 
         if (pickupLocation == null || pickupLocation.trim().isEmpty()) {
             logger.error("Pickup location missing for passenger ID: {}", passengerId);
-            throw new RuntimeException("Pickup location is required");
+            throw new InvalidLocationException("Pickup location is required.");
         }
         if (dropoffLocation == null || dropoffLocation.trim().isEmpty()) {
             logger.error("Dropoff location missing for passenger ID: {}", passengerId);
-            throw new RuntimeException("Dropoff location is required");
+            throw new InvalidLocationException("Dropoff location is required.");
         }
 
+        // Prevent duplicate bookings for same ride
+        boolean alreadyBooked = bookingRepository.existsByRideIdAndPassengerId(request.getRideId(), passengerId);
+        if (alreadyBooked) {
+            logger.warn("Duplicate booking attempt detected for passenger ID: {} and ride ID: {}", passengerId, request.getRideId());
+            throw new DuplicateBookingException("You have already booked this ride.");
+        }
+
+        // Fare calculation
         double passengerDistance = fareCalculationService.calculateDistance(pickupLocation, dropoffLocation);
         double farePerSeat = fareCalculationService.calculateFare(passengerDistance);
         double totalFareAmount = farePerSeat * numberOfSeats;
         logger.debug("Fare calculated: Distance = {}, Fare per seat = {}, Total = {}", passengerDistance, farePerSeat, totalFareAmount);
 
+        // Booking creation
         Booking booking = new Booking();
         booking.setRide(ride);
         booking.setPassenger(passenger);
@@ -92,6 +106,7 @@ public class BookingService {
         return savedBooking;
     }
 
+    // ---------------- GET BOOKINGS ----------------
     public List<Booking> getBookingsByPassenger(Long passengerId) {
         logger.info("Fetching bookings for passenger ID: {}", passengerId);
         List<Booking> bookings = bookingRepository.findByPassengerId(passengerId);
@@ -118,12 +133,13 @@ public class BookingService {
         Booking booking = bookingRepository.findByIdWithRide(bookingId)
                 .orElseThrow(() -> {
                     logger.error("Booking not found with ID: {}", bookingId);
-                    return new RuntimeException("Booking not found");
+                    return new RideNotFoundException("Booking not found with ID: " + bookingId);
                 });
         logger.debug("Booking found: {}", booking.getId());
         return booking;
     }
 
+    // ---------------- CANCEL BOOKING ----------------
     @Transactional
     public Booking cancelBooking(Long passengerId, Long bookingId) {
         logger.warn("Attempting to cancel booking ID: {} for passenger ID: {}", bookingId, passengerId);
@@ -131,22 +147,22 @@ public class BookingService {
         Booking booking = bookingRepository.findByIdWithRide(bookingId)
                 .orElseThrow(() -> {
                     logger.error("Booking not found with ID: {}", bookingId);
-                    return new RuntimeException("Booking not found");
+                    return new RideNotFoundException("Booking not found with ID: " + bookingId);
                 });
 
         if (!booking.getPassenger().getId().equals(passengerId)) {
             logger.error("Unauthorized cancellation attempt by passenger ID: {}", passengerId);
-            throw new RuntimeException("You can only cancel your own bookings");
+            throw new PassengerNotFoundException("You can only cancel your own bookings.");
         }
 
         if (booking.getStatus() == Booking.BookingStatus.CANCELLED) {
             logger.warn("Booking ID: {} is already cancelled", bookingId);
-            throw new RuntimeException("Booking is already cancelled");
+            throw new DuplicateBookingException("Booking is already cancelled.");
         }
 
         if (booking.getStatus() == Booking.BookingStatus.COMPLETED) {
             logger.error("Cannot cancel completed booking ID: {}", bookingId);
-            throw new RuntimeException("Cannot cancel a completed booking");
+            throw new InvalidLocationException("Cannot cancel a completed booking.");
         }
 
         Ride ride = booking.getRide();
@@ -161,6 +177,7 @@ public class BookingService {
         return updatedBooking;
     }
 
+    // ---------------- CANCEL RIDE ----------------
     @Transactional
     public Ride cancelRideForDriver(Long driverId, Long rideId) {
         logger.warn("Driver ID: {} attempting to cancel ride ID: {}", driverId, rideId);
@@ -168,22 +185,22 @@ public class BookingService {
         Ride ride = rideRepository.findById(rideId)
                 .orElseThrow(() -> {
                     logger.error("Ride not found with ID: {}", rideId);
-                    return new RuntimeException("Ride not found");
+                    return new RideNotFoundException("Ride not found with ID: " + rideId);
                 });
 
         if (!ride.getDriver().getId().equals(driverId)) {
             logger.error("Unauthorized ride cancellation attempt by driver ID: {}", driverId);
-            throw new RuntimeException("You can only cancel your own rides");
+            throw new PassengerNotFoundException("You can only cancel your own rides.");
         }
 
         if (ride.getStatus() == Ride.RideStatus.CANCELLED) {
             logger.warn("Ride ID: {} is already cancelled", rideId);
-            throw new RuntimeException("Ride is already cancelled");
+            throw new DuplicateBookingException("Ride is already cancelled.");
         }
 
         if (ride.getStatus() == Ride.RideStatus.COMPLETED) {
             logger.error("Cannot cancel completed ride ID: {}", rideId);
-            throw new RuntimeException("Cannot cancel a completed ride");
+            throw new InvalidLocationException("Cannot cancel a completed ride.");
         }
 
         List<Booking> bookings = bookingRepository.findByRideId(rideId);

@@ -354,3 +354,540 @@
 2025-11-11 15:53:21 [http-nio-8080-exec-4] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
 2025-11-11 15:53:21 [http-nio-8080-exec-4] INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
 2025-11-11 15:53:21 [http-nio-8080-exec-4] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 6 ms
+2025-11-11 16:21:36 [main] INFO  c.infosys.rsa.RideSharingApplication - Starting RideSharingApplication using Java 25 with PID 16412 (C:\Users\sande\Desktop\SEM-5\projects\RSA_Infosys\target\classes started by sande in C:\Users\sande\Desktop\SEM-5\projects\RSA_Infosys)
+2025-11-11 16:21:36 [main] INFO  c.infosys.rsa.RideSharingApplication - No active profile set, falling back to 1 default profile: "default"
+2025-11-11 16:21:37 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-11-11 16:21:38 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 319 ms. Found 6 JPA repository interfaces.
+2025-11-11 16:21:39 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2025-11-11 16:21:39 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-11-11 16:21:39 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.48]
+2025-11-11 16:21:39 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-11-11 16:21:39 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 3615 ms
+2025-11-11 16:21:39 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2025-11-11 16:21:40 [main] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@289f15e9
+2025-11-11 16:21:40 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2025-11-11 16:21:40 [main] INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-11-11 16:21:41 [main] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.6.33.Final
+2025-11-11 16:21:41 [main] INFO  o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2025-11-11 16:21:41 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-11-11 16:21:42 [main] WARN  org.hibernate.orm.deprecation - HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-11-11 16:21:42 [main] INFO  o.hibernate.orm.connections.pooling - HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 8.0.43
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-11-11 16:21:44 [main] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-11-11 16:21:44 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-11-11 16:21:45 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-11-11 16:21:47 [main] INFO  o.s.s.c.a.a.c.InitializeAuthenticationProviderBeanManagerConfigurer$InitializeAuthenticationProviderManagerConfigurer - Global AuthenticationManager configured with AuthenticationProvider bean with name authenticationProvider
+2025-11-11 16:21:47 [main] WARN  o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer - Global AuthenticationManager configured with an AuthenticationProvider bean. UserDetailsService beans will not be used by Spring Security for automatically configuring username/password login. Consider removing the AuthenticationProvider bean. Alternatively, consider using the UserDetailsService in a manually instantiated DaoAuthenticationProvider. If the current configuration is intentional, to turn off this warning, increase the logging level of 'org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer' to ERROR
+2025-11-11 16:21:47 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-11-11 16:21:48 [main] WARN  o.s.b.a.t.ThymeleafAutoConfiguration$DefaultTemplateResolverConfiguration - Cannot find template location: classpath:/templates/ (please add some templates, check your Thymeleaf configuration, or set spring.thymeleaf.check-template-location=false)
+2025-11-11 16:21:49 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2025-11-11 16:21:49 [main] INFO  c.infosys.rsa.RideSharingApplication - Started RideSharingApplication in 14.128 seconds (process running for 15.093)
+2025-11-11 16:21:49 [main] INFO  c.infosys.rsa.config.DataInitializer - Running DataInitializer...
+2025-11-11 16:21:49 [main] INFO  c.infosys.rsa.config.DataInitializer - Roles already exist. Skipping role creation.
+2025-11-11 16:21:49 [main] INFO  c.infosys.rsa.config.DataInitializer - Admin user already exists in database.
+2025-11-11 16:21:49 [main] INFO  c.infosys.rsa.config.DataInitializer - DataInitializer execution completed.
+2025-11-11 16:21:54 [http-nio-8080-exec-1] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-11-11 16:21:54 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2025-11-11 16:21:54 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 3 ms
+2025-11-11 16:21:54 [http-nio-8080-exec-2] INFO  c.i.rsa.controller.AuthController - Entering login() for email: sandeepkaushik.rq10@gmail.com
+2025-11-11 16:21:54 [http-nio-8080-exec-2] INFO  com.infosys.rsa.service.AuthService - User attempting to log in with email: sandeepkaushik.rq10@gmail.com
+2025-11-11 16:21:55 [http-nio-8080-exec-2] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.rq10@gmail.com
+2025-11-11 16:21:55 [http-nio-8080-exec-2] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.rq10@gmail.com, active=true, firstLogin=false
+2025-11-11 16:21:55 [http-nio-8080-exec-2] INFO  com.infosys.rsa.service.AuthService - JWT token generated successfully for sandeepkaushik.rq10@gmail.com
+2025-11-11 16:21:55 [http-nio-8080-exec-2] INFO  com.infosys.rsa.service.AuthService - User sandeepkaushik.rq10@gmail.com logged in successfully with roles: [ROLE_DRIVER]
+2025-11-11 16:21:55 [http-nio-8080-exec-2] INFO  c.i.rsa.controller.AuthController - User login successful for email: sandeepkaushik.rq10@gmail.com
+2025-11-11 16:21:58 [http-nio-8080-exec-5] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.rq10@gmail.com
+2025-11-11 16:21:58 [http-nio-8080-exec-6] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.rq10@gmail.com
+2025-11-11 16:21:58 [http-nio-8080-exec-5] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.rq10@gmail.com, active=true, firstLogin=false
+2025-11-11 16:21:58 [http-nio-8080-exec-6] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.rq10@gmail.com, active=true, firstLogin=false
+2025-11-11 16:21:58 [http-nio-8080-exec-5] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.rq10@gmail.com
+2025-11-11 16:21:58 [http-nio-8080-exec-6] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.rq10@gmail.com
+2025-11-11 16:21:58 [http-nio-8080-exec-6] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.rq10@gmail.com, active=true, firstLogin=false
+2025-11-11 16:21:58 [http-nio-8080-exec-5] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.rq10@gmail.com, active=true, firstLogin=false
+2025-11-11 16:21:59 [http-nio-8080-exec-5] INFO  c.i.rsa.controller.RideController - Entering getMyRides()
+2025-11-11 16:21:59 [http-nio-8080-exec-6] INFO  c.i.rsa.controller.BookingController - Entering getDriverBookings()
+2025-11-11 16:21:59 [http-nio-8080-exec-6] INFO  c.infosys.rsa.service.BookingService - Fetching bookings for driver ID: 6
+2025-11-11 16:21:59 [http-nio-8080-exec-6] INFO  c.i.rsa.controller.BookingController - Found 4 bookings for driver ID: 6
+2025-11-11 16:21:59 [http-nio-8080-exec-8] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.rq10@gmail.com
+2025-11-11 16:21:59 [http-nio-8080-exec-8] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.rq10@gmail.com, active=true, firstLogin=false
+2025-11-11 16:21:59 [http-nio-8080-exec-8] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.rq10@gmail.com
+2025-11-11 16:21:59 [http-nio-8080-exec-8] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.rq10@gmail.com, active=true, firstLogin=false
+2025-11-11 16:21:59 [http-nio-8080-exec-5] INFO  c.i.rsa.controller.RideController - Fetched 7 rides for driver ID: 6
+2025-11-11 16:21:59 [http-nio-8080-exec-8] INFO  c.i.rsa.controller.BookingController - Entering getDriverBookings()
+2025-11-11 16:21:59 [http-nio-8080-exec-8] INFO  c.infosys.rsa.service.BookingService - Fetching bookings for driver ID: 6
+2025-11-11 16:21:59 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.rq10@gmail.com
+2025-11-11 16:21:59 [http-nio-8080-exec-8] INFO  c.i.rsa.controller.BookingController - Found 4 bookings for driver ID: 6
+2025-11-11 16:21:59 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.rq10@gmail.com, active=true, firstLogin=false
+2025-11-11 16:21:59 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.rq10@gmail.com
+2025-11-11 16:21:59 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.rq10@gmail.com, active=true, firstLogin=false
+2025-11-11 16:21:59 [http-nio-8080-exec-9] INFO  c.i.rsa.controller.RideController - Entering getMyRides()
+2025-11-11 16:21:59 [http-nio-8080-exec-9] INFO  c.i.rsa.controller.RideController - Fetched 7 rides for driver ID: 6
+2025-11-11 16:22:03 [http-nio-8080-exec-10] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.rq10@gmail.com
+2025-11-11 16:22:03 [http-nio-8080-exec-10] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.rq10@gmail.com, active=true, firstLogin=false
+2025-11-11 16:22:03 [http-nio-8080-exec-10] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.rq10@gmail.com
+2025-11-11 16:22:03 [http-nio-8080-exec-10] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.rq10@gmail.com, active=true, firstLogin=false
+2025-11-11 16:22:03 [http-nio-8080-exec-10] INFO  c.i.rsa.controller.BookingController - Entering getDriverBookings()
+2025-11-11 16:22:03 [http-nio-8080-exec-10] INFO  c.infosys.rsa.service.BookingService - Fetching bookings for driver ID: 6
+2025-11-11 16:22:03 [http-nio-8080-exec-10] INFO  c.i.rsa.controller.BookingController - Found 4 bookings for driver ID: 6
+2025-11-11 18:52:28 [main] INFO  c.infosys.rsa.RideSharingApplication - Starting RideSharingApplication using Java 25 with PID 15004 (C:\Users\sande\Desktop\SEM-5\projects\RSA_Infosys\target\classes started by sande in C:\Users\sande\Desktop\SEM-5\projects\RSA_Infosys)
+2025-11-11 18:52:28 [main] INFO  c.infosys.rsa.RideSharingApplication - No active profile set, falling back to 1 default profile: "default"
+2025-11-11 18:52:29 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-11-11 18:52:29 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 292 ms. Found 6 JPA repository interfaces.
+2025-11-11 18:52:30 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2025-11-11 18:52:30 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-11-11 18:52:30 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.48]
+2025-11-11 18:52:30 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-11-11 18:52:30 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 2276 ms
+2025-11-11 18:52:30 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2025-11-11 18:52:30 [main] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@1edfedf1
+2025-11-11 18:52:30 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2025-11-11 18:52:31 [main] INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-11-11 18:52:31 [main] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.6.33.Final
+2025-11-11 18:52:31 [main] INFO  o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2025-11-11 18:52:31 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-11-11 18:52:31 [main] WARN  org.hibernate.orm.deprecation - HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-11-11 18:52:31 [main] INFO  o.hibernate.orm.connections.pooling - HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 8.0.43
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-11-11 18:52:32 [main] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-11-11 18:52:32 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-11-11 18:52:33 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-11-11 18:52:33 [main] INFO  o.s.s.c.a.a.c.InitializeAuthenticationProviderBeanManagerConfigurer$InitializeAuthenticationProviderManagerConfigurer - Global AuthenticationManager configured with AuthenticationProvider bean with name authenticationProvider
+2025-11-11 18:52:33 [main] WARN  o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer - Global AuthenticationManager configured with an AuthenticationProvider bean. UserDetailsService beans will not be used by Spring Security for automatically configuring username/password login. Consider removing the AuthenticationProvider bean. Alternatively, consider using the UserDetailsService in a manually instantiated DaoAuthenticationProvider. If the current configuration is intentional, to turn off this warning, increase the logging level of 'org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer' to ERROR
+2025-11-11 18:52:33 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-11-11 18:52:34 [main] WARN  o.s.b.a.t.ThymeleafAutoConfiguration$DefaultTemplateResolverConfiguration - Cannot find template location: classpath:/templates/ (please add some templates, check your Thymeleaf configuration, or set spring.thymeleaf.check-template-location=false)
+2025-11-11 18:52:34 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2025-11-11 18:52:34 [main] INFO  c.infosys.rsa.RideSharingApplication - Started RideSharingApplication in 6.836 seconds (process running for 7.178)
+2025-11-11 18:52:34 [main] INFO  c.infosys.rsa.config.DataInitializer - Running DataInitializer...
+2025-11-11 18:52:34 [main] INFO  c.infosys.rsa.config.DataInitializer - Roles already exist. Skipping role creation.
+2025-11-11 18:52:34 [main] INFO  c.infosys.rsa.config.DataInitializer - Admin user already exists in database.
+2025-11-11 18:52:34 [main] INFO  c.infosys.rsa.config.DataInitializer - DataInitializer execution completed.
+2025-11-11 19:03:37 [SpringApplicationShutdownHook] INFO  o.s.b.w.e.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2025-11-11 19:03:37 [tomcat-shutdown] INFO  o.s.b.w.e.tomcat.GracefulShutdown - Graceful shutdown complete
+2025-11-11 19:03:37 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-11-11 19:03:37 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2025-11-11 19:03:37 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
+2025-11-11 19:03:51 [main] INFO  c.infosys.rsa.RideSharingApplication - Starting RideSharingApplication using Java 25 with PID 21044 (C:\Users\sande\Desktop\SEM-5\projects\RSA_Infosys\target\classes started by sande in C:\Users\sande\Desktop\SEM-5\projects\RSA_Infosys)
+2025-11-11 19:03:51 [main] INFO  c.infosys.rsa.RideSharingApplication - No active profile set, falling back to 1 default profile: "default"
+2025-11-11 19:03:51 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-11-11 19:03:52 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 127 ms. Found 6 JPA repository interfaces.
+2025-11-11 19:03:52 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2025-11-11 19:03:52 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-11-11 19:03:52 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.48]
+2025-11-11 19:03:52 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-11-11 19:03:52 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 1269 ms
+2025-11-11 19:03:52 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2025-11-11 19:03:52 [main] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@2e0ad709
+2025-11-11 19:03:52 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2025-11-11 19:03:52 [main] INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-11-11 19:03:52 [main] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.6.33.Final
+2025-11-11 19:03:52 [main] INFO  o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2025-11-11 19:03:53 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-11-11 19:03:53 [main] WARN  org.hibernate.orm.deprecation - HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-11-11 19:03:53 [main] INFO  o.hibernate.orm.connections.pooling - HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 8.0.43
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-11-11 19:03:54 [main] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-11-11 19:03:54 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-11-11 19:03:54 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-11-11 19:03:55 [main] INFO  o.s.s.c.a.a.c.InitializeAuthenticationProviderBeanManagerConfigurer$InitializeAuthenticationProviderManagerConfigurer - Global AuthenticationManager configured with AuthenticationProvider bean with name authenticationProvider
+2025-11-11 19:03:55 [main] WARN  o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer - Global AuthenticationManager configured with an AuthenticationProvider bean. UserDetailsService beans will not be used by Spring Security for automatically configuring username/password login. Consider removing the AuthenticationProvider bean. Alternatively, consider using the UserDetailsService in a manually instantiated DaoAuthenticationProvider. If the current configuration is intentional, to turn off this warning, increase the logging level of 'org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer' to ERROR
+2025-11-11 19:03:55 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-11-11 19:03:55 [main] WARN  o.s.b.a.t.ThymeleafAutoConfiguration$DefaultTemplateResolverConfiguration - Cannot find template location: classpath:/templates/ (please add some templates, check your Thymeleaf configuration, or set spring.thymeleaf.check-template-location=false)
+2025-11-11 19:03:55 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2025-11-11 19:03:55 [main] INFO  c.infosys.rsa.RideSharingApplication - Started RideSharingApplication in 4.78 seconds (process running for 5.102)
+2025-11-11 19:03:55 [main] INFO  c.infosys.rsa.config.DataInitializer - Running DataInitializer...
+2025-11-11 19:03:55 [main] INFO  c.infosys.rsa.config.DataInitializer - Roles already exist. Skipping role creation.
+2025-11-11 19:03:55 [main] INFO  c.infosys.rsa.config.DataInitializer - Admin user already exists in database.
+2025-11-11 19:03:55 [main] INFO  c.infosys.rsa.config.DataInitializer - DataInitializer execution completed.
+2025-11-11 19:04:42 [http-nio-8080-exec-1] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-11-11 19:04:42 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2025-11-11 19:04:42 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2025-11-11 19:04:42 [http-nio-8080-exec-3] INFO  c.i.rsa.controller.AuthController - Entering login() for email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:04:42 [http-nio-8080-exec-3] INFO  com.infosys.rsa.service.AuthService - User attempting to log in with email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:04:43 [http-nio-8080-exec-3] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:04:43 [http-nio-8080-exec-3] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:04:43 [http-nio-8080-exec-3] INFO  com.infosys.rsa.service.AuthService - JWT token generated successfully for sandeepkaushik.r21@gmail.com
+2025-11-11 19:04:43 [http-nio-8080-exec-3] INFO  com.infosys.rsa.service.AuthService - User sandeepkaushik.r21@gmail.com logged in successfully with roles: [ROLE_PASSENGER]
+2025-11-11 19:04:43 [http-nio-8080-exec-3] INFO  c.i.rsa.controller.AuthController - User login successful for email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:04:46 [http-nio-8080-exec-5] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:04:46 [http-nio-8080-exec-5] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:04:46 [http-nio-8080-exec-5] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:04:46 [http-nio-8080-exec-5] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:04:46 [http-nio-8080-exec-5] INFO  c.i.rsa.controller.BookingController - Entering getMyBookings()
+2025-11-11 19:04:46 [http-nio-8080-exec-5] INFO  c.infosys.rsa.service.BookingService - Fetching bookings for passenger ID: 7
+2025-11-11 19:04:46 [http-nio-8080-exec-5] INFO  c.i.rsa.controller.BookingController - Found 4 bookings for passenger ID: 7
+2025-11-11 19:04:46 [http-nio-8080-exec-6] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:04:46 [http-nio-8080-exec-6] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:04:46 [http-nio-8080-exec-6] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:04:46 [http-nio-8080-exec-6] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:04:46 [http-nio-8080-exec-6] INFO  c.i.rsa.controller.BookingController - Entering getMyBookings()
+2025-11-11 19:04:46 [http-nio-8080-exec-6] INFO  c.infosys.rsa.service.BookingService - Fetching bookings for passenger ID: 7
+2025-11-11 19:04:46 [http-nio-8080-exec-6] INFO  c.i.rsa.controller.BookingController - Found 4 bookings for passenger ID: 7
+2025-11-11 19:05:16 [http-nio-8080-exec-9] INFO  c.i.rsa.controller.AuthController - Entering login() for email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:05:16 [http-nio-8080-exec-9] INFO  com.infosys.rsa.service.AuthService - User attempting to log in with email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:05:16 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:05:16 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:05:16 [http-nio-8080-exec-9] INFO  com.infosys.rsa.service.AuthService - JWT token generated successfully for sandeepkaushik.r21@gmail.com
+2025-11-11 19:05:16 [http-nio-8080-exec-9] INFO  com.infosys.rsa.service.AuthService - User sandeepkaushik.r21@gmail.com logged in successfully with roles: [ROLE_PASSENGER]
+2025-11-11 19:05:16 [http-nio-8080-exec-9] INFO  c.i.rsa.controller.AuthController - User login successful for email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:05:19 [http-nio-8080-exec-1] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:05:19 [http-nio-8080-exec-1] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:05:19 [http-nio-8080-exec-1] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:05:19 [http-nio-8080-exec-1] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:05:19 [http-nio-8080-exec-1] INFO  c.i.rsa.controller.BookingController - Entering getMyBookings()
+2025-11-11 19:05:19 [http-nio-8080-exec-1] INFO  c.infosys.rsa.service.BookingService - Fetching bookings for passenger ID: 7
+2025-11-11 19:05:19 [http-nio-8080-exec-1] INFO  c.i.rsa.controller.BookingController - Found 4 bookings for passenger ID: 7
+2025-11-11 19:05:19 [http-nio-8080-exec-3] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:05:19 [http-nio-8080-exec-3] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:05:19 [http-nio-8080-exec-3] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:05:19 [http-nio-8080-exec-3] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:05:19 [http-nio-8080-exec-3] INFO  c.i.rsa.controller.BookingController - Entering getMyBookings()
+2025-11-11 19:05:19 [http-nio-8080-exec-3] INFO  c.infosys.rsa.service.BookingService - Fetching bookings for passenger ID: 7
+2025-11-11 19:05:19 [http-nio-8080-exec-3] INFO  c.i.rsa.controller.BookingController - Found 4 bookings for passenger ID: 7
+2025-11-11 19:05:29 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:05:29 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:05:29 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:05:29 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:05:29 [http-nio-8080-exec-4] INFO  c.i.rsa.controller.RideController - Entering searchRides() with request: source=Chennai, destination=Bengaluru, date=2025-11-11
+2025-11-11 19:05:29 [http-nio-8080-exec-4] INFO  c.i.rsa.controller.RideController - Search returned 2 rides
+2025-11-11 19:05:41 [http-nio-8080-exec-6] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:05:41 [http-nio-8080-exec-6] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:05:41 [http-nio-8080-exec-6] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:05:41 [http-nio-8080-exec-6] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:05:41 [http-nio-8080-exec-6] INFO  c.i.rsa.controller.RideController - Entering searchRides() with request: source=Chennai, destination=Bengaluru, date=2025-11-15
+2025-11-11 19:05:41 [http-nio-8080-exec-6] INFO  c.i.rsa.controller.RideController - Search returned 2 rides
+2025-11-11 19:05:53 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:05:53 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:05:53 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:05:53 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:05:53 [http-nio-8080-exec-9] INFO  c.i.rsa.controller.BookingController - Entering createBooking() for rideId: 30
+2025-11-11 19:05:53 [http-nio-8080-exec-9] INFO  c.infosys.rsa.service.BookingService - Attempting to create booking for passenger ID: 7 and ride ID: 30
+2025-11-11 19:05:53 [http-nio-8080-exec-9] WARN  c.infosys.rsa.service.BookingService - Duplicate booking attempt detected for passenger ID: 7 and ride ID: 30
+2025-11-11 19:05:53 [http-nio-8080-exec-9] ERROR c.i.rsa.controller.BookingController - Error creating booking for rideId 30: You have already booked this ride.
+com.infosys.rsa.exception.DuplicateBookingException: You have already booked this ride.
+	at com.infosys.rsa.service.BookingService.createBooking(BookingService.java:83)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:360)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:728)
+	at com.infosys.rsa.service.BookingService$$SpringCGLIB$$0.createBooking(<generated>)
+	at com.infosys.rsa.controller.BookingController.createBooking(BookingController.java:37)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:360)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.security.authorization.method.AuthorizationManagerBeforeMethodInterceptor.proceed(AuthorizationManagerBeforeMethodInterceptor.java:268)
+	at org.springframework.security.authorization.method.AuthorizationManagerBeforeMethodInterceptor.attemptAuthorization(AuthorizationManagerBeforeMethodInterceptor.java:263)
+	at org.springframework.security.authorization.method.AuthorizationManagerBeforeMethodInterceptor.invoke(AuthorizationManagerBeforeMethodInterceptor.java:196)
+	at org.springframework.security.config.annotation.method.configuration.DeferringMethodInterceptor.invoke(DeferringMethodInterceptor.java:44)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:728)
+	at com.infosys.rsa.controller.BookingController$$SpringCGLIB$$0.createBooking(<generated>)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:258)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:191)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:991)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:896)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:193)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:110)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108)
+	at org.springframework.security.web.FilterChainProxy.lambda$doFilterInternal$3(FilterChainProxy.java:231)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:365)
+	at org.springframework.security.web.access.intercept.AuthorizationFilter.doFilter(AuthorizationFilter.java:101)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:125)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:119)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:131)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:85)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:100)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:179)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at com.infosys.rsa.config.JwtAuthenticationFilter.doFilterInternal(JwtAuthenticationFilter.java:42)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:107)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:93)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.web.filter.CorsFilter.doFilterInternal(CorsFilter.java:91)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.header.HeaderWriterFilter.doHeadersAfter(HeaderWriterFilter.java:90)
+	at org.springframework.security.web.header.HeaderWriterFilter.doFilterInternal(HeaderWriterFilter.java:75)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:82)
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:69)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:62)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:233)
+	at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:191)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.filter.ServletRequestPathFilter.doFilter(ServletRequestPathFilter.java:52)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74)
+	at org.springframework.security.config.annotation.web.configuration.WebSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebSecurityConfiguration.java:319)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.servlet.handler.HandlerMappingIntrospector.lambda$createCacheFilter$4(HandlerMappingIntrospector.java:267)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74)
+	at org.springframework.security.config.annotation.web.configuration.WebMvcSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebMvcSecurityConfiguration.java:240)
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:362)
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:278)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:165)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:88)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:482)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:113)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:83)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:72)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:342)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:399)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1774)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:973)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:491)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+2025-11-11 19:13:46 [http-nio-8080-exec-4] INFO  c.i.rsa.controller.AuthController - Entering login() for email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:13:46 [http-nio-8080-exec-4] INFO  com.infosys.rsa.service.AuthService - User attempting to log in with email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:13:46 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:13:46 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:13:46 [http-nio-8080-exec-4] INFO  com.infosys.rsa.service.AuthService - JWT token generated successfully for sandeepkaushik.r21@gmail.com
+2025-11-11 19:13:46 [http-nio-8080-exec-4] INFO  com.infosys.rsa.service.AuthService - User sandeepkaushik.r21@gmail.com logged in successfully with roles: [ROLE_PASSENGER]
+2025-11-11 19:13:46 [http-nio-8080-exec-4] INFO  c.i.rsa.controller.AuthController - User login successful for email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:13:49 [http-nio-8080-exec-7] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:13:49 [http-nio-8080-exec-7] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:13:49 [http-nio-8080-exec-7] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:13:49 [http-nio-8080-exec-7] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:13:49 [http-nio-8080-exec-7] INFO  c.i.rsa.controller.BookingController - Entering getMyBookings()
+2025-11-11 19:13:49 [http-nio-8080-exec-7] INFO  c.infosys.rsa.service.BookingService - Fetching bookings for passenger ID: 7
+2025-11-11 19:13:49 [http-nio-8080-exec-7] INFO  c.i.rsa.controller.BookingController - Found 4 bookings for passenger ID: 7
+2025-11-11 19:13:49 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:13:49 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:13:49 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:13:49 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:13:49 [http-nio-8080-exec-9] INFO  c.i.rsa.controller.BookingController - Entering getMyBookings()
+2025-11-11 19:13:49 [http-nio-8080-exec-9] INFO  c.infosys.rsa.service.BookingService - Fetching bookings for passenger ID: 7
+2025-11-11 19:13:49 [http-nio-8080-exec-9] INFO  c.i.rsa.controller.BookingController - Found 4 bookings for passenger ID: 7
+2025-11-11 19:13:58 [http-nio-8080-exec-1] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:13:58 [http-nio-8080-exec-1] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:13:58 [http-nio-8080-exec-1] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:13:58 [http-nio-8080-exec-1] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:13:58 [http-nio-8080-exec-1] INFO  c.i.rsa.controller.RideController - Entering searchRides() with request: source=Chennai, destination=Bengaluru, date=2025-11-11
+2025-11-11 19:13:59 [http-nio-8080-exec-1] INFO  c.i.rsa.controller.RideController - Search returned 2 rides
+2025-11-11 19:14:07 [http-nio-8080-exec-3] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:14:07 [http-nio-8080-exec-3] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:14:07 [http-nio-8080-exec-3] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:14:07 [http-nio-8080-exec-3] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:14:07 [http-nio-8080-exec-3] INFO  c.i.rsa.controller.RideController - Entering searchRides() with request: source=Chennai, destination=Bengaluru, date=2025-11-15
+2025-11-11 19:14:07 [http-nio-8080-exec-3] INFO  c.i.rsa.controller.RideController - Search returned 2 rides
+2025-11-11 19:14:13 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:14:13 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:14:13 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-11 19:14:13 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-11 19:14:13 [http-nio-8080-exec-4] INFO  c.i.rsa.controller.BookingController - Entering createBooking() for rideId: 30
+2025-11-11 19:14:13 [http-nio-8080-exec-4] INFO  c.infosys.rsa.service.BookingService - Attempting to create booking for passenger ID: 7 and ride ID: 30
+2025-11-11 19:14:13 [http-nio-8080-exec-4] WARN  c.infosys.rsa.service.BookingService - Duplicate booking attempt detected for passenger ID: 7 and ride ID: 30
+2025-11-11 19:14:13 [http-nio-8080-exec-4] ERROR c.i.rsa.controller.BookingController - Error creating booking for rideId 30: You have already booked this ride.
+com.infosys.rsa.exception.DuplicateBookingException: You have already booked this ride.
+	at com.infosys.rsa.service.BookingService.createBooking(BookingService.java:83)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:360)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:728)
+	at com.infosys.rsa.service.BookingService$$SpringCGLIB$$0.createBooking(<generated>)
+	at com.infosys.rsa.controller.BookingController.createBooking(BookingController.java:37)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:360)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.security.authorization.method.AuthorizationManagerBeforeMethodInterceptor.proceed(AuthorizationManagerBeforeMethodInterceptor.java:268)
+	at org.springframework.security.authorization.method.AuthorizationManagerBeforeMethodInterceptor.attemptAuthorization(AuthorizationManagerBeforeMethodInterceptor.java:263)
+	at org.springframework.security.authorization.method.AuthorizationManagerBeforeMethodInterceptor.invoke(AuthorizationManagerBeforeMethodInterceptor.java:196)
+	at org.springframework.security.config.annotation.method.configuration.DeferringMethodInterceptor.invoke(DeferringMethodInterceptor.java:44)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:728)
+	at com.infosys.rsa.controller.BookingController$$SpringCGLIB$$0.createBooking(<generated>)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:258)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:191)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:991)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:896)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:193)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:110)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108)
+	at org.springframework.security.web.FilterChainProxy.lambda$doFilterInternal$3(FilterChainProxy.java:231)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:365)
+	at org.springframework.security.web.access.intercept.AuthorizationFilter.doFilter(AuthorizationFilter.java:101)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:125)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:119)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:131)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:85)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:100)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:179)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at com.infosys.rsa.config.JwtAuthenticationFilter.doFilterInternal(JwtAuthenticationFilter.java:42)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:107)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:93)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.web.filter.CorsFilter.doFilterInternal(CorsFilter.java:91)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.header.HeaderWriterFilter.doHeadersAfter(HeaderWriterFilter.java:90)
+	at org.springframework.security.web.header.HeaderWriterFilter.doFilterInternal(HeaderWriterFilter.java:75)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:82)
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:69)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:62)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+	at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:233)
+	at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:191)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.filter.ServletRequestPathFilter.doFilter(ServletRequestPathFilter.java:52)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74)
+	at org.springframework.security.config.annotation.web.configuration.WebSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebSecurityConfiguration.java:319)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.servlet.handler.HandlerMappingIntrospector.lambda$createCacheFilter$4(HandlerMappingIntrospector.java:267)
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+	at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74)
+	at org.springframework.security.config.annotation.web.configuration.WebMvcSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebMvcSecurityConfiguration.java:240)
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:362)
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:278)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:165)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:88)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:482)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:113)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:83)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:72)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:342)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:399)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1774)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:973)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:491)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+2025-11-11 19:18:20 [SpringApplicationShutdownHook] INFO  o.s.b.w.e.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2025-11-11 19:18:20 [tomcat-shutdown] INFO  o.s.b.w.e.tomcat.GracefulShutdown - Graceful shutdown complete
+2025-11-11 19:18:20 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-11-11 19:18:20 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2025-11-11 19:18:20 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
