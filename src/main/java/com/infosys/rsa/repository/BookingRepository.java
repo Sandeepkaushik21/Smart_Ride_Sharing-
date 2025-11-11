@@ -23,4 +23,6 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     
     @Query("SELECT b FROM Booking b LEFT JOIN FETCH b.ride LEFT JOIN FETCH b.passenger WHERE b.id = :id")
     java.util.Optional<Booking> findByIdWithRide(@Param("id") Long id);
+
+    boolean existsByRideIdAndPassengerId(Long rideId, Long passengerId);
 }

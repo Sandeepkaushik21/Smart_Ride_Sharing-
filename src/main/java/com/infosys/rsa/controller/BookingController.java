@@ -24,36 +24,36 @@ public class BookingController {
     private static final Logger logger = LoggerFactory.getLogger(BookingController.class);
 
     @Autowired
-    BookingService bookingService;
+    private BookingService bookingService;
 
+    // ---------------- CREATE BOOKING ----------------
     @PostMapping("/book")
     @PreAuthorize("hasRole('PASSENGER')")
     public ResponseEntity<?> createBooking(@Valid @RequestBody BookingRequest request,
                                            Authentication authentication) {
         logger.info("Entering createBooking() for rideId: {}", request.getRideId());
-        try {
-            UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
-            logger.debug("Passenger ID: {} requested booking", userPrincipal.getId());
-            Booking booking = bookingService.createBooking(userPrincipal.getId(), request);
-            logger.info("Booking created successfully with ID: {}", booking.getId());
-            return ResponseEntity.ok(booking);
-        } catch (RuntimeException e) {
-            logger.error("Error creating booking for rideId {}: {}", request.getRideId(), e.getMessage(), e);
-            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
-        }
+        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+        logger.debug("Passenger ID: {} requested booking", userPrincipal.getId());
+
+        Booking booking = bookingService.createBooking(userPrincipal.getId(), request);
+        logger.info("Booking created successfully with ID: {}", booking.getId());
+        return ResponseEntity.ok(booking);
     }
 
+    // ---------------- MY BOOKINGS ----------------
     @GetMapping("/my-bookings")
     @PreAuthorize("hasRole('PASSENGER')")
     public ResponseEntity<?> getMyBookings(Authentication authentication) {
         logger.info("Entering getMyBookings()");
         UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
         logger.debug("Fetching bookings for passenger ID: {}", userPrincipal.getId());
+
         List<Booking> bookings = bookingService.getBookingsByPassenger(userPrincipal.getId());
         logger.info("Found {} bookings for passenger ID: {}", bookings.size(), userPrincipal.getId());
         return ResponseEntity.ok(bookings);
     }
 
+    // ---------------- BOOKINGS BY RIDE ----------------
     @GetMapping("/ride/{rideId}")
     @PreAuthorize("hasAnyRole('DRIVER', 'ADMIN')")
     public ResponseEntity<?> getBookingsByRide(@PathVariable Long rideId) {
@@ -63,63 +63,47 @@ public class BookingController {
         return ResponseEntity.ok(bookings);
     }
 
+    // ---------------- DRIVER BOOKINGS ----------------
     @GetMapping("/driver-bookings")
     @PreAuthorize("hasRole('DRIVER')")
     public ResponseEntity<?> getDriverBookings(Authentication authentication) {
         logger.info("Entering getDriverBookings()");
         UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
         logger.debug("Fetching bookings for driver ID: {}", userPrincipal.getId());
+
         List<Booking> bookings = bookingService.getBookingsByDriver(userPrincipal.getId());
         logger.info("Found {} bookings for driver ID: {}", bookings.size(), userPrincipal.getId());
         return ResponseEntity.ok(bookings);
     }
 
+    // ---------------- GET BOOKING BY ID ----------------
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('PASSENGER', 'DRIVER', 'ADMIN')")
     public ResponseEntity<?> getBookingById(@PathVariable Long id) {
         logger.info("Entering getBookingById() for bookingId: {}", id);
-        try {
-            Booking booking = bookingService.getBookingById(id);
-            logger.info("Booking found for ID: {}", id);
-            return ResponseEntity.ok(booking);
-        } catch (RuntimeException e) {
-            logger.error("Error fetching booking by ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
-        }
+        Booking booking = bookingService.getBookingById(id);
+        logger.info("Booking found for ID: {}", id);
+        return ResponseEntity.ok(booking);
     }
 
+    // ---------------- CANCEL BOOKING ----------------
     @PatchMapping("/{id}/cancel")
     @PreAuthorize("hasRole('PASSENGER')")
     public ResponseEntity<?> cancelBooking(@PathVariable Long id, Authentication authentication) {
         logger.info("Entering cancelBooking() for bookingId: {}", id);
-        try {
-            UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
-            logger.debug("Passenger ID: {} attempting to cancel booking", userPrincipal.getId());
-            Booking booking = bookingService.cancelBooking(userPrincipal.getId(), id);
-            logger.info("Booking with ID: {} cancelled successfully", id);
+        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+        logger.debug("Passenger ID: {} attempting to cancel booking", userPrincipal.getId());
 
-            List<Booking> myBookings = bookingService.getBookingsByPassenger(userPrincipal.getId());
-            Ride updatedRide = booking.getRide();
+        Booking cancelledBooking = bookingService.cancelBooking(userPrincipal.getId(), id);
+        List<Booking> myBookings = bookingService.getBookingsByPassenger(userPrincipal.getId());
+        Ride updatedRide = cancelledBooking.getRide();
 
-            CancelBookingResponse resp = new CancelBookingResponse(booking, myBookings, updatedRide);
-            logger.debug("Returning CancelBookingResponse for bookingId: {}", id);
-            return ResponseEntity.ok(resp);
-        } catch (RuntimeException e) {
-            logger.error("Error cancelling booking ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
-        }
+        CancelBookingResponse resp = new CancelBookingResponse(cancelledBooking, myBookings, updatedRide);
+        logger.info("Booking with ID: {} cancelled successfully", id);
+        return ResponseEntity.ok(resp);
     }
 
-    private static class ErrorResponse {
-        private String message;
-        public ErrorResponse(String message) {
-            this.message = message;
-        }
-        public String getMessage() {
-            return message;
-        }
-    }
-
+    // ✅ Response wrapper for cancel API
     private static class CancelBookingResponse {
         private Booking cancelledBooking;
         private List<Booking> myBookings;
