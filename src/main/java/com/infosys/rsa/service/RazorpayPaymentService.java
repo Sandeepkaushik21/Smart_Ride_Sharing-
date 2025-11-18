@@ -70,9 +70,20 @@ public class RazorpayPaymentService {
 
             // Look up booking and prefer its fareAmount
             Optional<Booking> bookingOptForAmount = bookingRepository.findById(request.getBookingId());
+            if (bookingOptForAmount.isEmpty()) {
+                throw new RuntimeException("Booking not found with ID: " + request.getBookingId());
+            }
+            
+            Booking booking = bookingOptForAmount.get();
+            
+            // Validate booking status - only ACCEPTED bookings can proceed to payment
+            if (booking.getStatus() != Booking.BookingStatus.ACCEPTED) {
+                throw new RuntimeException("Payment can only be processed for accepted bookings. Current status: " + booking.getStatus());
+            }
+            
             double amountRupeesToUse = 0.0;
-            if (bookingOptForAmount.isPresent() && bookingOptForAmount.get().getFareAmount() != null) {
-                amountRupeesToUse = bookingOptForAmount.get().getFareAmount();
+            if (booking.getFareAmount() != null) {
+                amountRupeesToUse = booking.getFareAmount();
                 System.out.println("Using booking.fareAmount for Razorpay order: " + amountRupeesToUse + " INR (BookingId: " + request.getBookingId() + ")");
             } else if (request.getAmount() != null) {
                 amountRupeesToUse = request.getAmount();
@@ -95,10 +106,8 @@ public class RazorpayPaymentService {
             Order order = razorpay.orders.create(orderRequest);
 
             // Create payment record with PENDING status
-            Optional<Booking> bookingOpt = bookingRepository.findById(request.getBookingId());
             Payment payment = null;
-            if (bookingOpt.isPresent()) {
-                Booking booking = bookingOpt.get();
+            if (booking != null) {
                 payment = new Payment();
                 payment.setBooking(booking);
                 payment.setPassenger(booking.getPassenger());
@@ -193,13 +202,18 @@ public class RazorpayPaymentService {
 
         Payment payment = paymentOpt.get();
 
+        // Validate booking status before processing payment
+        Booking booking = payment.getBooking();
+        if (booking.getStatus() != Booking.BookingStatus.ACCEPTED) {
+            throw new RuntimeException("Payment can only be processed for accepted bookings. Current status: " + booking.getStatus());
+        }
+
         // Update payment status
         payment.setRazorpayPaymentId(paymentId);
         payment.setRazorpaySignature(signature);
         payment.setStatus(Payment.PaymentStatus.SUCCESS);
 
         // Update booking status to CONFIRMED and update ride seats
-        Booking booking = payment.getBooking();
         booking.setStatus(Booking.BookingStatus.CONFIRMED);
         
         // Update ride available seats

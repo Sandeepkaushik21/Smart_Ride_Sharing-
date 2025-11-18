@@ -184,4 +184,189 @@ public class EmailService {
             logger.error("Failed to send driver approval notification to {}: {}", toEmail, e.getMessage());
         }
     }
+
+    public void sendDriverAcceptanceNotification(String toEmail, String passengerName, String driverName, 
+                                                   String source, String destination, String date, String time, 
+                                                   Double fareAmount) {
+        logger.info("Sending driver acceptance notification to passenger: {} ({})", passengerName, toEmail);
+
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(toEmail);
+            message.setSubject("Ride Booking Accepted - Please Complete Payment");
+
+            String body = String.format(
+                    "Dear %s,\n\n" +
+                            "Great news! The driver has accepted your ride booking request.\n\n" +
+                            "Booking Details:\n" +
+                            "Driver: %s\n" +
+                            "From: %s\n" +
+                            "To: %s\n" +
+                            "Date: %s\n" +
+                            "Time: %s\n" +
+                            "Fare Amount: ₹%.2f\n\n" +
+                            "Please complete the payment to confirm your booking.\n\n" +
+                            "Thank you for using Smart Ride Sharing!\n\n" +
+                            "Best Regards,\n" +
+                            "Smart Ride Sharing Team",
+                    passengerName, driverName, source, destination, date, time, fareAmount != null ? fareAmount : 0.0
+            );
+
+            message.setText(body);
+            mailSender.send(message);
+            logger.info("Driver acceptance notification sent successfully to {}", toEmail);
+        } catch (Exception e) {
+            logger.error("Failed to send driver acceptance notification to {}: {}", toEmail, e.getMessage());
+        }
+    }
+
+    public void sendRideCancellationNotification(String toEmail, String passengerName, String driverName,
+                                                  String source, String destination, String date, String time,
+                                                  String reason) {
+        logger.info("Sending ride cancellation notification to passenger: {} ({})", passengerName, toEmail);
+
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(toEmail);
+            message.setSubject("Ride Cancellation Notice");
+
+            String body = String.format(
+                    "Dear %s,\n\n" +
+                            "We regret to inform you that your ride has been cancelled by the driver.\n\n" +
+                            "Ride Details:\n" +
+                            "Driver: %s\n" +
+                            "From: %s\n" +
+                            "To: %s\n" +
+                            "Date: %s\n" +
+                            "Time: %s\n" +
+                            (reason != null && !reason.trim().isEmpty() ? "Reason: %s\n\n" : "\n") +
+                            "If you have already made a payment, you will receive a full refund.\n\n" +
+                            "We apologize for any inconvenience caused.\n\n" +
+                            "Thank you for using Smart Ride Sharing!\n\n" +
+                            "Best Regards,\n" +
+                            "Smart Ride Sharing Team",
+                    passengerName, driverName, source, destination, date, time,
+                    reason != null && !reason.trim().isEmpty() ? reason : ""
+            );
+
+            message.setText(body);
+            mailSender.send(message);
+            logger.info("Ride cancellation notification sent successfully to {}", toEmail);
+        } catch (Exception e) {
+            logger.error("Failed to send ride cancellation notification to {}: {}", toEmail, e.getMessage());
+        }
+    }
+
+    public void sendBookingCancellationNotification(String toEmail, String driverName, String passengerName,
+                                                     String source, String destination, String date, String time) {
+        logger.info("Sending booking cancellation notification to driver: {} ({})", driverName, toEmail);
+
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(toEmail);
+            message.setSubject("Booking Cancellation Notice");
+
+            String body = String.format(
+                    "Dear %s,\n\n" +
+                            "A passenger has cancelled their booking on your ride.\n\n" +
+                            "Booking Details:\n" +
+                            "Passenger: %s\n" +
+                            "From: %s\n" +
+                            "To: %s\n" +
+                            "Date: %s\n" +
+                            "Time: %s\n\n" +
+                            "The seats have been restored to your ride availability.\n\n" +
+                            "Thank you for using Smart Ride Sharing!\n\n" +
+                            "Best Regards,\n" +
+                            "Smart Ride Sharing Team",
+                    driverName, passengerName, source, destination, date, time
+            );
+
+            message.setText(body);
+            mailSender.send(message);
+            logger.info("Booking cancellation notification sent successfully to driver {}", toEmail);
+        } catch (Exception e) {
+            logger.error("Failed to send booking cancellation notification to {}: {}", toEmail, e.getMessage());
+        }
+    }
+
+    public void sendRideRescheduleNotification(String toEmail, String passengerName, String driverName,
+                                                String source, String destination, String oldDate, String oldTime,
+                                                String newDate, String newTime, String reason) {
+        logger.info("Sending ride reschedule notification to passenger: {} ({})", passengerName, toEmail);
+
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(toEmail);
+            message.setSubject("Ride Rescheduled - Important Update");
+
+            String body = String.format(
+                    "Dear %s,\n\n" +
+                            "The driver has rescheduled your ride. Please note the updated details below.\n\n" +
+                            "Ride Details:\n" +
+                            "Driver: %s\n" +
+                            "From: %s\n" +
+                            "To: %s\n\n" +
+                            "Previous Schedule:\n" +
+                            "Date: %s\n" +
+                            "Time: %s\n\n" +
+                            "New Schedule:\n" +
+                            "Date: %s\n" +
+                            "Time: %s\n" +
+                            (reason != null && !reason.trim().isEmpty() ? "\nReason: %s\n" : "\n") +
+                            "Please make a note of the new schedule. If you are unable to make it, you can cancel your booking.\n\n" +
+                            "Thank you for using Smart Ride Sharing!\n\n" +
+                            "Best Regards,\n" +
+                            "Smart Ride Sharing Team",
+                    passengerName, driverName, source, destination,
+                    oldDate, oldTime, newDate, newTime,
+                    reason != null && !reason.trim().isEmpty() ? reason : ""
+            );
+
+            message.setText(body);
+            mailSender.send(message);
+            logger.info("Ride reschedule notification sent successfully to {}", toEmail);
+        } catch (Exception e) {
+            logger.error("Failed to send ride reschedule notification to {}: {}", toEmail, e.getMessage());
+        }
+    }
+
+    public void sendRideReminderNotification(String toEmail, String passengerName, String driverName,
+                                              String source, String destination, String date, String time,
+                                              int hoursBefore) {
+        logger.info("Sending ride reminder notification to passenger: {} ({}) - {} hours before", passengerName, toEmail, hoursBefore);
+
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(toEmail);
+            message.setSubject(String.format("Ride Reminder - %d Hour(s) Before Departure", hoursBefore));
+
+            String body = String.format(
+                    "Dear %s,\n\n" +
+                            "This is a reminder about your upcoming ride.\n\n" +
+                            "Ride Details:\n" +
+                            "Driver: %s\n" +
+                            "From: %s\n" +
+                            "To: %s\n" +
+                            "Date: %s\n" +
+                            "Time: %s\n\n" +
+                            "Your ride is scheduled in %d hour(s). Please be ready at the pickup location.\n\n" +
+                            "Thank you for using Smart Ride Sharing!\n\n" +
+                            "Best Regards,\n" +
+                            "Smart Ride Sharing Team",
+                    passengerName, driverName, source, destination, date, time, hoursBefore
+            );
+
+            message.setText(body);
+            mailSender.send(message);
+            logger.info("Ride reminder notification sent successfully to {}", toEmail);
+        } catch (Exception e) {
+            logger.error("Failed to send ride reminder notification to {}: {}", toEmail, e.getMessage());
+        }
+    }
 }

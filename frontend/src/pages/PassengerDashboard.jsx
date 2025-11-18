@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Search, MapPin, Calendar, Clock, User, CheckCircle, Car, Navigation, Star, Ticket, Snowflake, ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react';
+import { Search, MapPin, Calendar, Clock, User, CheckCircle, Car, Navigation, Star, Ticket, Snowflake, ChevronLeft, ChevronRight, X, ZoomIn, History, Users, Loader } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import BackButton from '../components/BackButton';
 import CityAutocomplete from '../components/CityAutocomplete';
-import LocationAutocompleteWithDriverOptions from '../components/LocationAutocompleteWithDriverOptions';
 import RazorpayPaymentModal from '../components/RazorpayPaymentModal';
 import { rideService } from '../services/rideService';
 import { bookingService } from '../services/bookingService';
@@ -63,6 +62,8 @@ const PassengerDashboard = () => {
     const [bookingsPage, setBookingsPage] = useState(0);
     const [bookingsSize] = useState(1); // fixed at 1 per user request
     const [bookingsTotalPages, setBookingsTotalPages] = useState(0);
+    // Ride history
+    const [rideHistory, setRideHistory] = useState([]);
 
     // =========================================================================
     // ✨ MISSING WIZARD STATE & LOGIC INJECTION START ✨
@@ -76,52 +77,133 @@ const PassengerDashboard = () => {
         if (wizardStep === 1) {
             setSearchForm(prev => ({ ...prev, source: '', destination: '' })); // Reset locations
             setWizardStep(2);
-            // Fetch rides to get driver pickup and drop locations (use today's date to get current rides)
+            setLoading(true);
+            // Fetch rides to get driver pickup and drop locations
+            // Try multiple dates to find available rides (today, tomorrow, next 7 days)
             try {
-                const today = new Date().toISOString().split('T')[0];
-                const searchData = {
-                    source: fromCity,
-                    destination: toCity,
-                    date: today // Use today's date to get available rides
-                };
-                const data = await rideService.searchRides(searchData);
-                const list = Array.isArray(data) ? data : (data && Array.isArray(data.content) ? data.content : []);
+                const allRides = [];
+                const datesToTry = [];
+                const today = new Date();
+                
+                // Try today and next 7 days
+                for (let i = 0; i < 8; i++) {
+                    const date = new Date(today);
+                    date.setDate(today.getDate() + i);
+                    datesToTry.push(date.toISOString().split('T')[0]);
+                }
+                
+                // Search for rides across multiple dates
+                for (const dateStr of datesToTry) {
+                    try {
+                        const searchData = {
+                            source: fromCity,
+                            destination: toCity,
+                            date: dateStr
+                        };
+                        console.log('[PassengerDashboard] Searching rides for:', searchData);
+                        const data = await rideService.searchRides(searchData);
+                        const list = Array.isArray(data) ? data : (data && Array.isArray(data.content) ? data.content : []);
+                        console.log(`[PassengerDashboard] Found ${list.length} rides for date ${dateStr}`);
+                        allRides.push(...list);
+                    } catch (err) {
+                        console.error(`Error searching rides for date ${dateStr}:`, err);
+                    }
+                }
+                
+                console.log(`[PassengerDashboard] Total rides found: ${allRides.length}`);
                 
                 // Extract and aggregate pickup locations from all rides
                 const allPickupLocations = new Set();
                 const allDropLocations = new Set();
-                list.forEach(ride => {
-                    if (ride.pickupLocationsJson) {
+                
+                allRides.forEach((ride, index) => {
+                    console.log(`[PassengerDashboard] Processing ride ${index + 1}:`, {
+                        id: ride.id,
+                        source: ride.source,
+                        destination: ride.destination,
+                        hasPickupJson: !!(ride.pickupLocationsJson || ride.pickupLocations),
+                        hasDropJson: !!(ride.dropLocationsJson || ride.dropLocations),
+                        pickupJson: ride.pickupLocationsJson || ride.pickupLocations,
+                        dropJson: ride.dropLocationsJson || ride.dropLocations
+                    });
+                    
+                    // Handle pickup locations - try both camelCase and snake_case field names
+                    let pickupLocationsData = ride.pickupLocationsJson || ride.pickupLocations;
+                    if (pickupLocationsData) {
                         try {
-                            const locations = JSON.parse(ride.pickupLocationsJson);
-                            locations.forEach(loc => {
-                                if (loc && loc.trim()) {
-                                    allPickupLocations.add(loc.trim());
-                                }
-                            });
+                            let locations;
+                            // If it's already an array, use it directly
+                            if (Array.isArray(pickupLocationsData)) {
+                                locations = pickupLocationsData;
+                            } else if (typeof pickupLocationsData === 'string') {
+                                // Try to parse as JSON
+                                locations = JSON.parse(pickupLocationsData);
+                            } else {
+                                locations = [];
+                            }
+                            
+                            console.log(`[PassengerDashboard] Parsed pickup locations:`, locations);
+                            if (Array.isArray(locations)) {
+                                locations.forEach(loc => {
+                                    if (loc && typeof loc === 'string' && loc.trim()) {
+                                        allPickupLocations.add(loc.trim());
+                                    }
+                                });
+                            }
                         } catch (e) {
-                            console.error('Error parsing pickup locations:', e);
+                            console.error('Error parsing pickup locations:', e, 'Data:', pickupLocationsData);
                         }
                     }
-                    if (ride.dropLocationsJson) {
+                    
+                    // Handle drop locations - try both camelCase and snake_case field names
+                    let dropLocationsData = ride.dropLocationsJson || ride.dropLocations;
+                    if (dropLocationsData) {
                         try {
-                            const locations = JSON.parse(ride.dropLocationsJson);
-                            locations.forEach(loc => {
-                                if (loc && loc.trim()) {
-                                    allDropLocations.add(loc.trim());
-                                }
-                            });
+                            let locations;
+                            // If it's already an array, use it directly
+                            if (Array.isArray(dropLocationsData)) {
+                                locations = dropLocationsData;
+                            } else if (typeof dropLocationsData === 'string') {
+                                // Try to parse as JSON
+                                locations = JSON.parse(dropLocationsData);
+                            } else {
+                                locations = [];
+                            }
+                            
+                            console.log(`[PassengerDashboard] Parsed drop locations:`, locations);
+                            if (Array.isArray(locations)) {
+                                locations.forEach(loc => {
+                                    if (loc && typeof loc === 'string' && loc.trim()) {
+                                        allDropLocations.add(loc.trim());
+                                    }
+                                });
+                            }
                         } catch (e) {
-                            console.error('Error parsing drop locations:', e);
+                            console.error('Error parsing drop locations:', e, 'Data:', dropLocationsData);
                         }
                     }
                 });
-                setDriverPickupLocations(Array.from(allPickupLocations));
-                setDriverDropLocations(Array.from(allDropLocations));
-                setAvailableRides(list);
+                
+                const pickupArray = Array.from(allPickupLocations);
+                const dropArray = Array.from(allDropLocations);
+                
+                console.log(`[PassengerDashboard] Final aggregated locations:`, {
+                    pickupLocations: pickupArray,
+                    dropLocations: dropArray,
+                    pickupCount: pickupArray.length,
+                    dropCount: dropArray.length
+                });
+                
+                setDriverPickupLocations(pickupArray);
+                setDriverDropLocations(dropArray);
+                setAvailableRides(allRides);
             } catch (error) {
                 console.error('Error fetching rides for locations:', error);
-                // Continue anyway, user can still type to search
+                setDriverPickupLocations([]);
+                setDriverDropLocations([]);
+                // Continue anyway, user can still see the message
+            } finally {
+                setLoading(false);
             }
             // Step 2 -> 3: Pre-fill date and move to final step
         } else if (wizardStep === 2) {
@@ -212,6 +294,9 @@ const PassengerDashboard = () => {
     const [pendingBooking, setPendingBooking] = useState(null);
     const [paymentOrderData, setPaymentOrderData] = useState(null);
     const [paymentProcessing, setPaymentProcessing] = useState(false);
+    const [showLocationModal, setShowLocationModal] = useState({}); // per booking
+    const [locationSelections, setLocationSelections] = useState({}); // per booking: { pickup1, pickup2, drop }
+    const [updatingLocations, setUpdatingLocations] = useState({}); // per booking: track which booking is updating
 
     const openPhotoViewer = useCallback((photos, index = 0) => {
         setPhotoViewer({ open: true, photos: photos, currentIndex: index });
@@ -267,6 +352,13 @@ const PassengerDashboard = () => {
     useEffect(() => {
         // Load first page on mount
         fetchMyBookings(0, bookingsSize);
+        // Load ride history
+        bookingService.getRideHistory().then(data => {
+            setRideHistory(Array.isArray(data) ? data : []);
+        }).catch(err => {
+            console.error('Error fetching ride history:', err);
+            setRideHistory([]);
+        });
     }, []);
 
     // Keyboard navigation for photo viewer
@@ -421,20 +513,21 @@ const PassengerDashboard = () => {
         // Note: Fare will be calculated on backend based on pickup/dropoff locations
         // We'll show an estimated message here
         const confirm = await showConfirm(
-            `Proceed to payment for ${numberOfSeats} seat(s)?\n\n` +
+            `Create booking request for ${numberOfSeats} seat(s)?\n\n` +
             `From: ${pickupLocation}\n` +
-            `To: ${dropoffLocation}\n\n`,
-            'Yes, Proceed to Payment',
+            `To: ${dropoffLocation}\n\n` +
+            `The driver will need to accept your booking before you can proceed to payment.`,
+            'Yes, Create Booking',
             'Cancel'
         );
 
         if (!confirm.isConfirmed) return;
 
-        setPaymentProcessing(true);
+        setBookingLoading({ ...bookingLoading, [rideId]: true });
         setShowBookingModal({ ...showBookingModal, [rideId]: false });
 
         try {
-            // First create booking with PENDING status
+            // Create booking with PENDING status (waiting for driver approval)
             const booking = await bookingService.createBooking({
                 rideId,
                 pickupLocation: pickupLocation,
@@ -442,27 +535,44 @@ const PassengerDashboard = () => {
                 numberOfSeats: numberOfSeats,
             });
 
-            // Store booking details
-            // Note: totalFare comes from booking response since it's calculated on backend based on pickup/dropoff
-            // Ensure fare is a numeric rupee value (frontend/backend use rupees for Booking.fareAmount)
+            await showSuccess('Booking request created! Waiting for driver approval. You will receive an email notification once the driver accepts your booking.');
+            
+            // Refresh bookings to show the new pending booking
+            await fetchMyBookings();
+            setActiveTab('bookings');
+         } catch (error) {
+             console.error('Error creating booking:', error);
+             await showError(error.message || 'Error creating booking. Please try again.');
+         } finally {
+             setBookingLoading({ ...bookingLoading, [rideId]: false });
+         }
+    };
+
+    const handleProceedToPayment = async (booking) => {
+        if (booking.status !== 'ACCEPTED') {
+            await showError('This booking is not yet accepted by the driver.');
+            return;
+        }
+
+        setPaymentProcessing(true);
+        try {
             const bookingFareAmountRaw = booking.fareAmount ?? 0;
             const bookingFareAmount = Number(bookingFareAmountRaw);
             const bookingFareAmountRu = Number.isFinite(bookingFareAmount) ? bookingFareAmount : 0;
 
             setPendingBooking({
-                rideId,
-                ride,
-                numberOfSeats,
-                totalFare: bookingFareAmountRu, // in rupees
+                rideId: booking.ride?.id,
+                ride: booking.ride,
+                numberOfSeats: booking.numberOfSeats || 1,
+                totalFare: bookingFareAmountRu,
                 bookingId: booking.id,
-                pickupLocation: pickupLocation,
-                dropoffLocation: dropoffLocation,
+                pickupLocation: booking.pickupLocation,
+                dropoffLocation: booking.dropoffLocation,
             });
 
             // Create Razorpay order with the fare amount from booking (in rupees)
             console.log('Creating order for booking:', booking.id, 'Amount (rupees):', bookingFareAmountRu);
             const orderResponse = await paymentService.createOrder({
-                // Backend expects amount in rupees (Double). Keep that contract.
                 amount: bookingFareAmountRu,
                 bookingId: booking.id,
                 currency: 'INR'
@@ -471,13 +581,10 @@ const PassengerDashboard = () => {
             console.log('Order created successfully:', orderResponse);
 
             // Set order data for payment modal
-            // Note: orderResponse.amount is already in paise from Razorpay
             const amountPaiseFromOrder = Number(orderResponse.amount ?? NaN);
             const amountRupeesFromOrder = Number(orderResponse.amountInRupees ?? NaN);
             const fallbackPaise = Math.round(bookingFareAmountRu * 100);
 
-            // Use Razorpay paise for the actual amount used during checkout if available,
-            // but ALWAYS use the backend-provided rupee amount for display if available
             setPaymentOrderData({
                 orderId: orderResponse.orderId,
                 amount: Number.isFinite(amountPaiseFromOrder) ? amountPaiseFromOrder : fallbackPaise,
@@ -487,13 +594,13 @@ const PassengerDashboard = () => {
                 bookingId: booking.id
             });
 
-             setShowPaymentModal(true);
-         } catch (error) {
-             console.error('Error creating booking or order:', error);
-             await showError(error.message || 'Error creating booking. Please try again.');
-         } finally {
-             setPaymentProcessing(false);
-         }
+            setShowPaymentModal(true);
+        } catch (error) {
+            console.error('Error creating payment order:', error);
+            await showError(error.message || 'Error creating payment order. Please try again.');
+        } finally {
+            setPaymentProcessing(false);
+        }
     };
 
     const handlePaymentSuccess = async (paymentData) => {
@@ -567,6 +674,7 @@ const PassengerDashboard = () => {
 
         if (!confirm.isConfirmed) return;
 
+        setLoading(true);
         try {
             const resp = await bookingService.cancelBooking(bookingId);
             // If server returned consolidated response, update local state
@@ -586,6 +694,47 @@ const PassengerDashboard = () => {
         } catch (error) {
             console.error('Cancel booking error (passenger):', error, error.original || error);
             await showError(error.message || 'Error cancelling booking');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUpdateLocations = async (bookingId, booking) => {
+        const selections = locationSelections[bookingId] || {};
+        if (!selections.pickup1 || !selections.drop) {
+            await showError('Please select at least one pickup location and a drop location.');
+            return;
+        }
+
+        if (selections.pickup1 === selections.pickup2) {
+            await showError('Pickup location 1 and pickup location 2 must be different.');
+            return;
+        }
+
+        setUpdatingLocations(prev => ({ ...prev, [bookingId]: true }));
+        try {
+            const updatedBooking = await bookingService.updateBookingLocations(bookingId, {
+                pickupLocation1: selections.pickup1,
+                pickupLocation2: selections.pickup2 || null,
+                dropLocation: selections.drop
+            });
+
+            await showSuccess('Locations updated successfully!');
+            
+            // Update the booking in the local state
+            setBookings(prev => prev.map(b => 
+                b.id === bookingId 
+                    ? { ...b, ...updatedBooking, pickupLocation: selections.pickup1, pickupLocation2: selections.pickup2 || null, dropoffLocation: selections.drop }
+                    : b
+            ));
+            
+            // Refresh bookings to get the latest data
+            await fetchMyBookings();
+        } catch (error) {
+            console.error('Update locations error:', error);
+            await showError(error.message || 'Error updating locations');
+        } finally {
+            setUpdatingLocations(prev => ({ ...prev, [bookingId]: false }));
         }
     };
 
@@ -662,6 +811,17 @@ const PassengerDashboard = () => {
                         <CheckCircle className="inline h-5 w-5 mr-2" />
                         My Bookings ({filteredBookings.length})
                     </button>
+                    <button
+                        onClick={() => setActiveTab('history')}
+                        className={`flex-1 px-6 py-3 font-semibold rounded-lg transition-all ${
+                            activeTab === 'history'
+                                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg transform scale-105'
+                                : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                    >
+                        <History className="inline h-5 w-5 mr-2" />
+                        History ({rideHistory.length})
+                    </button>
                 </div>
 
                 {activeTab === 'search' && (
@@ -732,11 +892,9 @@ const PassengerDashboard = () => {
                                 <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
                                     <h3 className="text-sm font-semibold text-blue-800 mb-2">Select Your Pickup and Drop Locations</h3>
                                     <p className="text-xs text-blue-700">
-                                        Select your pickup location in {fromCity} and drop location in {toCity}. 
-                                        {driverPickupLocations.length > 0 || driverDropLocations.length > 0 ? (
-                                            <span> Drivers have selected preferred locations (marked with ★). You can also type to search for other locations.</span>
-                                        ) : (
-                                            <span> Search for any location within the selected cities.</span>
+                                        Select your pickup location in {fromCity} and drop location in {toCity} from the driver's available choices.
+                                        {driverPickupLocations.length === 0 && driverDropLocations.length === 0 && (
+                                            <span className="text-yellow-700 font-semibold"> No driver locations available. Please try different cities or check back later.</span>
                                         )}
                                     </p>
                                 </div>
@@ -757,43 +915,59 @@ const PassengerDashboard = () => {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-2">Pickup Location in {fromCity} *</label>
-                                        <LocationAutocompleteWithDriverOptions
-                                            value={searchForm.source}
-                                            onChange={(value) => setSearchForm({ ...searchForm, source: value })}
-                                            placeholder={`Search a place in ${fromCity}${driverPickupLocations.length > 0 ? ' or select from driver choices' : ''}`}
-                                            withinCity={fromCity}
-                                            driverLocations={driverPickupLocations}
-                                            disableCache={true}
-                                        />
+                                        {driverPickupLocations.length > 0 ? (
+                                            <select
+                                                value={searchForm.source}
+                                                onChange={(e) => setSearchForm({ ...searchForm, source: e.target.value })}
+                                                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-800"
+                                            >
+                                                <option value="">Select pickup location</option>
+                                                {driverPickupLocations.map((location, idx) => (
+                                                    <option key={idx} value={location}>{location}</option>
+                                                ))}
+                                            </select>
+                                        ) : (
+                                            <div className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-gray-100 text-gray-500 text-sm">
+                                                No pickup locations available from drivers
+                                            </div>
+                                        )}
                                         {driverPickupLocations.length > 0 && (
                                             <p className="text-xs text-purple-600 mt-2">
-                                                ★ {driverPickupLocations.length} driver-selected pickup locations available
+                                                ★ {driverPickupLocations.length} driver-selected pickup location{driverPickupLocations.length !== 1 ? 's' : ''} available
                                             </p>
                                         )}
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-2">Drop Location in {toCity} *</label>
-                                        <LocationAutocompleteWithDriverOptions
-                                            value={searchForm.destination}
-                                            onChange={(value) => setSearchForm({ ...searchForm, destination: value })}
-                                            placeholder={`Search a place in ${toCity}${driverDropLocations.length > 0 ? ' or select from driver choices' : ''}`}
-                                            withinCity={toCity}
-                                            driverLocations={driverDropLocations}
-                                            disableCache={true}
-                                        />
+                                        {driverDropLocations.length > 0 ? (
+                                            <select
+                                                value={searchForm.destination}
+                                                onChange={(e) => setSearchForm({ ...searchForm, destination: e.target.value })}
+                                                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-800"
+                                            >
+                                                <option value="">Select drop location</option>
+                                                {driverDropLocations.map((location, idx) => (
+                                                    <option key={idx} value={location}>{location}</option>
+                                                ))}
+                                            </select>
+                                        ) : (
+                                            <div className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-gray-100 text-gray-500 text-sm">
+                                                No drop locations available from drivers
+                                            </div>
+                                        )}
                                         {driverDropLocations.length > 0 && (
                                             <p className="text-xs text-purple-600 mt-2">
-                                                ★ {driverDropLocations.length} driver-selected drop locations available
+                                                ★ {driverDropLocations.length} driver-selected drop location{driverDropLocations.length !== 1 ? 's' : ''} available
                                             </p>
                                         )}
                                     </div>
                                 </div>
                                 <div className="flex justify-between">
-                                    <button type="button" onClick={goPrev} className="px-6 py-2 bg-gray-200 rounded-lg">Back</button>
+                                    <button type="button" onClick={goPrev} className="px-6 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">Back</button>
                                     <button
                                         onClick={goNext}
-                                        disabled={!searchForm.source || !searchForm.destination}
-                                        className="px-6 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
+                                        disabled={!searchForm.source || !searchForm.destination || driverPickupLocations.length === 0 || driverDropLocations.length === 0}
+                                        className="px-6 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-700 transition-colors"
                                     >
                                         Next
                                     </button>
@@ -1073,42 +1247,47 @@ const PassengerDashboard = () => {
                                                                 : 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700'
                                                         }`}
                                                     >
-                                                        {ride.availableSeats === 0 ? 'Full' : bookingLoading[ride.id] ? 'Processing…' : 'Book Now'}
+                                                        {ride.availableSeats === 0 ? 'Full' : bookingLoading[ride.id] ? (
+                                                            <>
+                                                                <Loader className="h-4 w-4 animate-spin inline mr-2" />
+                                                                Processing…
+                                                            </>
+                                                        ) : 'Book Now'}
                                                     </button>
                                                 )}
                                                 </div>
                                             </div>
                                         </div>
-                                            ))}
-                                            {/* Pagination controls */}
-                                            <div className="flex items-center justify-between px-6 py-4 border-t">
-                                                <button
-                                                    onClick={() => setResultsPage((p) => Math.max(0, p - 1))}
-                                                    disabled={resultsPage === 0}
-                                                    className={`px-4 py-2 rounded-lg ${resultsPage === 0 ? 'bg-gray-200 text-gray-500' : 'bg-white border hover:bg-gray-100'}`}
-                                                >
-                                                    Prev
-                                                </button>
-                                                <div className="text-sm text-gray-600">
-                                                    Page {resultsPage + 1} of {totalPages} — {rides.length} rides
-                                                </div>
-                                                <div className="flex items-center space-x-2">
-                                                    <button
-                                                        onClick={() => setResultsPage((p) => Math.min(totalPages - 1, p + 1))}
-                                                        disabled={resultsPage + 1 >= totalPages}
-                                                        className={`px-4 py-2 rounded-lg ${resultsPage + 1 >= totalPages ? 'bg-gray-200 text-gray-500' : 'bg-white border hover:bg-gray-100'}`}
-                                                    >
-                                                        Next
-                                                    </button>
-                                                    <select
-                                                        value={resultsSize}
-                                                        onChange={(e) => { setResultsPage(0); setResultsSize(parseInt(e.target.value, 10)); }}
-                                                        className="ml-2 px-2 py-1 border rounded-md bg-white text-sm"
-                                                    >
-                                                        {[5,10,20].map(s => (<option key={s} value={s}>{s} / page</option>))}
-                                                    </select>
-                                                </div>
-                                            </div>
+                                    ))}
+                                    {/* Pagination controls */}
+                                    <div className="flex items-center justify-between px-6 py-4 border-t">
+                                        <button
+                                            onClick={() => setResultsPage((p) => Math.max(0, p - 1))}
+                                            disabled={resultsPage === 0}
+                                            className={`px-4 py-2 rounded-lg ${resultsPage === 0 ? 'bg-gray-200 text-gray-500' : 'bg-white border hover:bg-gray-100'}`}
+                                        >
+                                            Prev
+                                        </button>
+                                        <div className="text-sm text-gray-600">
+                                            Page {resultsPage + 1} of {totalPages} — {displayed.length} rides
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <button
+                                                onClick={() => setResultsPage((p) => Math.min(totalPages - 1, p + 1))}
+                                                disabled={resultsPage + 1 >= totalPages}
+                                                className={`px-4 py-2 rounded-lg ${resultsPage + 1 >= totalPages ? 'bg-gray-200 text-gray-500' : 'bg-white border hover:bg-gray-100'}`}
+                                            >
+                                                Next
+                                            </button>
+                                            <select
+                                                value={resultsSize}
+                                                onChange={(e) => { setResultsPage(0); setResultsSize(parseInt(e.target.value, 10)); }}
+                                                className="ml-2 px-2 py-1 border rounded-md bg-white text-sm"
+                                            >
+                                                {[5,10,20].map(s => (<option key={s} value={s}>{s} / page</option>))}
+                                            </select>
+                                        </div>
+                                    </div>
                                         </>
                                     );
                                 })()
@@ -1148,19 +1327,30 @@ const PassengerDashboard = () => {
                                                     </div>
                                                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                                                         booking.status === 'CONFIRMED' ? 'bg-green-100 text-green-800' :
-                                                            booking.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                                                                'bg-red-100 text-red-800'
+                                                            booking.status === 'ACCEPTED' ? 'bg-blue-100 text-blue-800' :
+                                                                booking.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                                                                    'bg-red-100 text-red-800'
                                                     }`}>
                             {booking.status}
                           </span>
                                                 </div>
                                                 <div className="mb-3">
                                                     <div className="text-xs text-gray-600 mb-1">Route Details</div>
-                                                    <div className="flex items-center space-x-2 text-sm">
-                                                        <MapPin className="h-4 w-4 text-gray-500" />
-                                                        <span className="text-gray-700"><strong>From:</strong> {booking.pickupLocation || booking.ride?.source}</span>
-                                                        <span className="mx-2 text-gray-400">→</span>
-                                                        <span className="text-gray-700"><strong>To:</strong> {booking.dropoffLocation || booking.ride?.destination}</span>
+                                                    <div className="flex flex-col space-y-1 text-sm">
+                                                        <div className="flex items-center space-x-2">
+                                                            <MapPin className="h-4 w-4 text-gray-500" />
+                                                            <span className="text-gray-700"><strong>Pickup 1:</strong> {booking.pickupLocation || booking.ride?.source}</span>
+                                                        </div>
+                                                        {booking.pickupLocation2 && (
+                                                            <div className="flex items-center space-x-2 ml-6">
+                                                                <MapPin className="h-4 w-4 text-gray-500" />
+                                                                <span className="text-gray-700"><strong>Pickup 2:</strong> {booking.pickupLocation2}</span>
+                                                            </div>
+                                                        )}
+                                                        <div className="flex items-center space-x-2">
+                                                            <span className="mx-2 text-gray-400">→</span>
+                                                            <span className="text-gray-700"><strong>Drop:</strong> {booking.dropoffLocation || booking.ride?.destination}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
@@ -1258,16 +1448,163 @@ const PassengerDashboard = () => {
                                                         )}
                                                     </div>
                                                 )}
-                                                {booking.status !== 'CANCELLED' && booking.status !== 'COMPLETED' && (
-                                                    <div className="mt-4">
+                                                {booking.status === 'PENDING' && (
+                                                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                                        <p className="text-sm text-yellow-800 mb-2">
+                                                            <strong>Waiting for driver approval.</strong> You will receive an email notification once the driver accepts your booking.
+                                                        </p>
                                                         <button
                                                             onClick={() => handleCancelBooking(booking.id)}
                                                             className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm font-semibold shadow-md transform hover:scale-105 transition-all"
+                                                        >
+                                                            Cancel Booking Request
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                {booking.status === 'ACCEPTED' && (
+                                                    <div className="mt-4 flex space-x-2">
+                                                        <button
+                                                            onClick={() => handleProceedToPayment(booking)}
+                                                            disabled={paymentProcessing}
+                                                            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold shadow-md transform hover:scale-105 transition-all flex items-center space-x-1"
+                                                        >
+                                                            {paymentProcessing ? (
+                                                                <>
+                                                                    <Loader className="h-4 w-4 animate-spin" />
+                                                                    <span>Processing...</span>
+                                                                </>
+                                                            ) : (
+                                                                <span>Proceed to Payment</span>
+                                                            )}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleCancelBooking(booking.id)}
+                                                            disabled={paymentProcessing}
+                                                            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold shadow-md transform hover:scale-105 transition-all"
                                                         >
                                                             Cancel Booking
                                                         </button>
                                                     </div>
                                                 )}
+                                                {booking.status === 'CONFIRMED' && booking.status !== 'COMPLETED' && (() => {
+                                                    const ride = booking.ride;
+                                                    let driverPickupLocations = [];
+                                                    let driverDropLocations = [];
+                                                    
+                                                    if (ride?.pickupLocationsJson) {
+                                                        try {
+                                                            driverPickupLocations = JSON.parse(ride.pickupLocationsJson);
+                                                        } catch (e) {
+                                                            console.error('Error parsing pickup locations:', e);
+                                                        }
+                                                    }
+                                                    
+                                                    if (ride?.dropLocationsJson) {
+                                                        try {
+                                                            driverDropLocations = JSON.parse(ride.dropLocationsJson);
+                                                        } catch (e) {
+                                                            console.error('Error parsing drop locations:', e);
+                                                        }
+                                                    }
+                                                    
+                                                    const currentSelections = locationSelections[booking.id] || {
+                                                        pickup1: booking.pickupLocation || '',
+                                                        pickup2: booking.pickupLocation2 || '',
+                                                        drop: booking.dropoffLocation || ''
+                                                    };
+                                                    
+                                                    return (
+                                                        <div className="mt-4 space-y-4">
+                                                            <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
+                                                                <h3 className="text-sm font-semibold text-blue-800 mb-2">Select Your Travel Locations</h3>
+                                                                <p className="text-xs text-blue-700 mb-3">
+                                                                    While traveling, you can select 2 pickup locations and 1 drop location from the driver's available choices.
+                                                                </p>
+                                                                
+                                                                {driverPickupLocations.length > 0 && (
+                                                                    <div className="space-y-3">
+                                                                        <div>
+                                                                            <label className="block text-xs font-semibold text-gray-700 mb-2">Pickup Location 1 *</label>
+                                                                            <select
+                                                                                value={currentSelections.pickup1}
+                                                                                onChange={(e) => setLocationSelections({
+                                                                                    ...locationSelections,
+                                                                                    [booking.id]: { ...currentSelections, pickup1: e.target.value }
+                                                                                })}
+                                                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                                            >
+                                                                                <option value="">Select pickup location 1</option>
+                                                                                {driverPickupLocations.map((loc, idx) => (
+                                                                                    <option key={idx} value={loc}>{loc}</option>
+                                                                                ))}
+                                                                            </select>
+                                                                        </div>
+                                                                        
+                                                                        <div>
+                                                                            <label className="block text-xs font-semibold text-gray-700 mb-2">Pickup Location 2 (Optional)</label>
+                                                                            <select
+                                                                                value={currentSelections.pickup2 || ''}
+                                                                                onChange={(e) => setLocationSelections({
+                                                                                    ...locationSelections,
+                                                                                    [booking.id]: { ...currentSelections, pickup2: e.target.value }
+                                                                                })}
+                                                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                                            >
+                                                                                <option value="">Select pickup location 2 (optional)</option>
+                                                                                {driverPickupLocations.map((loc, idx) => (
+                                                                                    <option key={idx} value={loc} disabled={loc === currentSelections.pickup1}>{loc}</option>
+                                                                                ))}
+                                                                            </select>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                                
+                                                                {driverDropLocations.length > 0 && (
+                                                                    <div className="mt-3">
+                                                                        <label className="block text-xs font-semibold text-gray-700 mb-2">Drop Location *</label>
+                                                                        <select
+                                                                            value={currentSelections.drop}
+                                                                            onChange={(e) => setLocationSelections({
+                                                                                ...locationSelections,
+                                                                                [booking.id]: { ...currentSelections, drop: e.target.value }
+                                                                            })}
+                                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                                        >
+                                                                            <option value="">Select drop location</option>
+                                                                            {driverDropLocations.map((loc, idx) => (
+                                                                                <option key={idx} value={loc}>{loc}</option>
+                                                                            ))}
+                                                                        </select>
+                                                                    </div>
+                                                                )}
+                                                                
+                                                                <div className="mt-4 flex space-x-2">
+                                                                    <button
+                                                                        onClick={() => handleUpdateLocations(booking.id, booking)}
+                                                                        disabled={!currentSelections.pickup1 || !currentSelections.drop || updatingLocations[booking.id] || loading}
+                                                                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold shadow-md transform hover:scale-105 transition-all flex items-center space-x-1"
+                                                                    >
+                                                                        {updatingLocations[booking.id] ? (
+                                                                            <>
+                                                                                <Loader className="h-4 w-4 animate-spin" />
+                                                                                <span>Updating...</span>
+                                                                            </>
+                                                                        ) : (
+                                                                            <span>Update Locations</span>
+                                                                        )}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleCancelBooking(booking.id)}
+                                                                        disabled={updatingLocations[booking.id] || loading}
+                                                                        className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold shadow-md transform hover:scale-105 transition-all"
+                                                                    >
+                                                                        Cancel Booking
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })()}
                                             </div>
                                         </div>
                                     </div>
@@ -1322,6 +1659,63 @@ const PassengerDashboard = () => {
                         )}
                     </div>
                     )}
+
+                {activeTab === 'history' && (
+                    <div className="bg-white rounded-xl shadow-lg p-6">
+                        <h2 className="text-xl font-bold mb-6 flex items-center space-x-2 text-gray-800">
+                            <History className="h-5 w-5 text-purple-600" />
+                            <span>Ride History</span>
+                        </h2>
+                        {rideHistory.length === 0 ? (
+                            <p className="text-center text-gray-500 py-6">No ride history found.</p>
+                        ) : (
+                            <div className="space-y-4">
+                                {rideHistory.map(booking => (
+                                    <div key={booking.id} className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow-md p-4 border-l-4 border-purple-500">
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <div className="flex items-center space-x-2 mb-2">
+                                                    <h3 className="text-lg font-semibold text-gray-800">
+                                                        {booking.pickupLocation} <span className="text-gray-500">→</span> {booking.dropoffLocation}
+                                                    </h3>
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                                        booking.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                                                        booking.status === 'CONFIRMED' ? 'bg-blue-100 text-blue-800' :
+                                                        'bg-red-100 text-red-800'
+                                                    }`}>
+                                                        {booking.status}
+                                                    </span>
+                                                </div>
+                                                <div className="text-sm text-gray-600 mb-2">
+                                                    <p><strong>Ride:</strong> {(booking.ride?.citySource || booking.ride?.source)} → {(booking.ride?.cityDestination || booking.ride?.destination)}</p>
+                                                    <p><strong>Driver:</strong> {booking.ride?.driver?.name || booking.ride?.driver?.email || 'N/A'}</p>
+                                                </div>
+                                                <div className="flex flex-wrap items-center gap-2 text-xs mt-2">
+                                                    <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
+                                                        <Calendar className="h-3.5 w-3.5" />
+                                                        <span>{booking.ride?.date ? new Date(booking.ride.date).toLocaleDateString() : 'N/A'}</span>
+                                                    </span>
+                                                    <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
+                                                        <Clock className="h-3.5 w-3.5" />
+                                                        <span>{booking.ride?.time ? new Date(`1970-01-01T${booking.ride.time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
+                                                    </span>
+                                                    <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
+                                                        <Users className="h-3.5 w-3.5" />
+                                                        <span>{booking.numberOfSeats || 1} seat(s)</span>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="text-right ml-4">
+                                                <div className="text-[11px] text-gray-500 leading-tight">Fare Amount</div>
+                                                <div className="text-lg md:text-xl font-bold text-green-600">₹{(booking.fareAmount ?? 0).toFixed(2)}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
             </main>
 
             {/* Photo Viewer Modal */}
@@ -1417,6 +1811,35 @@ const PassengerDashboard = () => {
                     onPaymentSuccess={handlePaymentSuccess}
                     onPaymentFailure={handlePaymentFailure}
                 />
+            )}
+
+            {/* Global Loading Overlay - for all operations */}
+            {(loading || paymentProcessing || Object.values(updatingLocations).some(v => v) || Object.values(bookingLoading).some(v => v)) && (
+                <div className="fixed inset-0 bg-black bg-opacity-60 z-[60] flex items-center justify-center">
+                    <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
+                        <div className="flex flex-col items-center justify-center space-y-4">
+                            <Loader className="h-12 w-12 text-purple-600 animate-spin" />
+                            <h3 className="text-xl font-semibold text-gray-800">
+                                {paymentProcessing ? 'Processing Payment' : 
+                                 Object.values(updatingLocations).some(v => v) ? 'Updating Locations' :
+                                 Object.values(bookingLoading).some(v => v) ? 'Creating Booking' :
+                                 'Processing...'}
+                            </h3>
+                            <p className="text-sm text-gray-600 text-center">
+                                {paymentProcessing 
+                                    ? 'Please wait while we process your payment. Do not close this window or refresh the page.'
+                                    : Object.values(updatingLocations).some(v => v)
+                                    ? 'Please wait while we update your locations...'
+                                    : Object.values(bookingLoading).some(v => v)
+                                    ? 'Please wait while we create your booking request...'
+                                    : 'Please wait while we process your request...'}
+                            </p>
+                            <div className="w-full bg-gray-200 rounded-full h-2 mt-4">
+                                <div className="bg-purple-600 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
 
             <Footer />

@@ -1,9 +1,12 @@
 package com.infosys.rsa.service;
 
 import com.infosys.rsa.dto.RidePostRequest;
+import com.infosys.rsa.dto.RideRescheduleRequest;
 import com.infosys.rsa.dto.RideSearchRequest;
+import com.infosys.rsa.model.Booking;
 import com.infosys.rsa.model.Ride;
 import com.infosys.rsa.model.User;
+import com.infosys.rsa.repository.BookingRepository;
 import com.infosys.rsa.repository.RideRepository;
 import com.infosys.rsa.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,6 +32,9 @@ public class RideService {
 
     @Autowired
     EmailService emailService;
+
+    @Autowired
+    BookingRepository bookingRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -142,6 +149,71 @@ public class RideService {
     public Ride getRideById(Long rideId) {
         return rideRepository.findById(rideId)
                 .orElseThrow(() -> new RuntimeException("Ride not found"));
+    }
+
+    @Transactional
+    public Ride rescheduleRide(Long driverId, Long rideId, RideRescheduleRequest request) {
+        Ride ride = rideRepository.findById(rideId)
+                .orElseThrow(() -> new RuntimeException("Ride not found"));
+
+        if (!ride.getDriver().getId().equals(driverId)) {
+            throw new RuntimeException("You can only reschedule your own rides.");
+        }
+
+        if (ride.getStatus() == Ride.RideStatus.CANCELLED) {
+            throw new RuntimeException("Cannot reschedule a cancelled ride.");
+        }
+
+        if (ride.getStatus() == Ride.RideStatus.COMPLETED) {
+            throw new RuntimeException("Cannot reschedule a completed ride.");
+        }
+
+        // Store old values for notification
+        LocalDate oldDate = ride.getDate();
+        LocalTime oldTime = ride.getTime();
+        String oldDateStr = oldDate != null ? oldDate.toString() : "N/A";
+        String oldTimeStr = oldTime != null ? oldTime.toString() : "N/A";
+
+        // Update ride with new date and time
+        ride.setDate(request.getNewDate());
+        ride.setTime(request.getNewTime());
+        Ride updatedRide = rideRepository.save(ride);
+
+        // Send reschedule notifications to all passengers with confirmed/accepted bookings
+        String newDateStr = request.getNewDate().toString();
+        String newTimeStr = request.getNewTime().toString();
+        String driverName = ride.getDriver().getName() != null ? ride.getDriver().getName() : ride.getDriver().getEmail();
+
+        List<Booking> allBookings = bookingRepository.findByRideId(rideId);
+        
+        for (Booking booking : allBookings) {
+            if (booking.getStatus() == Booking.BookingStatus.CONFIRMED ||
+                booking.getStatus() == Booking.BookingStatus.ACCEPTED) {
+                
+                try {
+                    User passenger = booking.getPassenger();
+                    String passengerName = passenger.getName() != null ? passenger.getName() : passenger.getEmail();
+                    
+                    emailService.sendRideRescheduleNotification(
+                            passenger.getEmail(),
+                            passengerName,
+                            driverName,
+                            booking.getPickupLocation() != null ? booking.getPickupLocation() : ride.getSource(),
+                            booking.getDropoffLocation() != null ? booking.getDropoffLocation() : ride.getDestination(),
+                            oldDateStr,
+                            oldTimeStr,
+                            newDateStr,
+                            newTimeStr,
+                            request.getReason()
+                    );
+                } catch (Exception e) {
+                    // Log error but don't fail the transaction
+                    System.err.println("Failed to send reschedule notification: " + e.getMessage());
+                }
+            }
+        }
+
+        return updatedRide;
     }
 
 }

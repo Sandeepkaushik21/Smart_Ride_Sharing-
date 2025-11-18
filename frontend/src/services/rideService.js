@@ -25,5 +25,10 @@ export const rideService = {
     const response = await api.patch(`/rides/${id}/cancel`);
     return response.data;
   },
+
+  rescheduleRide: async (id, rescheduleData) => {
+    const response = await api.patch(`/rides/${id}/reschedule`, rescheduleData);
+    return response.data;
+  },
 };
 

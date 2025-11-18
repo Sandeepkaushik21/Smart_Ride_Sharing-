@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, MapPin, Calendar, Clock, Users, Car, Navigation, CheckCircle, X, Upload, Snowflake, Ticket } from 'lucide-react';
+import { Plus, MapPin, Calendar, Clock, Users, Car, Navigation, CheckCircle, X, Upload, Snowflake, Ticket, CheckCircle2, XCircle, History, Edit } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import BackButton from '../components/BackButton';
@@ -30,6 +30,18 @@ const DriverDashboard = () => {
     const [bookingsPage, setBookingsPage] = useState(0); // zero-based
     const [bookingsSize, setBookingsSize] = useState(3);
     const [bookingsTotalPages, setBookingsTotalPages] = useState(0);
+    // Pending bookings for accept/decline
+    const [pendingBookings, setPendingBookings] = useState([]);
+    // Ride history
+    const [rideHistory, setRideHistory] = useState([]);
+    // Reschedule modal state
+    const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+    const [rescheduleRideId, setRescheduleRideId] = useState(null);
+    const [rescheduleForm, setRescheduleForm] = useState({
+        newDate: '',
+        newTime: '',
+        reason: ''
+    });
     // const [bookingsTotalElements, setBookingsTotalElements] = useState(0);
     // Pagination for rides (driver)
     const [ridesPage, setRidesPage] = useState(0);
@@ -107,10 +119,12 @@ const DriverDashboard = () => {
     const fetchData = async () => {
         try {
             // Try to request paginated rides & bookings; services should accept page/size but fall back to full arrays
-            const [ridesData, bookingsData] = await Promise.all([
+            const [ridesData, bookingsData, pendingData, historyData] = await Promise.all([
                 // rideService may accept pagination args
                 rideService.getMyRides({ page: ridesPage, size: ridesSize }).catch(() => rideService.getMyRides()),
                 bookingService.getDriverBookings({ page: bookingsPage, size: bookingsSize }).catch(() => bookingService.getDriverBookings()),
+                bookingService.getPendingBookings().catch(() => []),
+                bookingService.getRideHistory().catch(() => []),
             ]);
 
             // Handle rides response (array or paginated)
@@ -130,11 +144,17 @@ const DriverDashboard = () => {
                 setBookings(Array.isArray(bookingsData.content) ? bookingsData.content : []);
                 setBookingsTotalPages(Number.isFinite(bookingsData.totalPages) ? bookingsData.totalPages : 0);
             }
+
+            // Set pending bookings and history
+            setPendingBookings(Array.isArray(pendingData) ? pendingData : []);
+            setRideHistory(Array.isArray(historyData) ? historyData : []);
         } catch (error) {
             console.error('Error fetching data:', error);
             // Set empty arrays on error to prevent undefined issues
             setMyRides([]);
             setBookings([]);
+            setPendingBookings([]);
+            setRideHistory([]);
         }
     };
 
@@ -190,9 +210,101 @@ const DriverDashboard = () => {
     useEffect(() => {
         if (activeTab === 'bookings') {
             fetchBookingsPage(bookingsPage, bookingsSize);
+        } else if (activeTab === 'pending' || activeTab === 'history') {
+            fetchData();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab]);
+
+    const handleAcceptBooking = async (bookingId) => {
+        const confirm = await showConfirm(
+            'Are you sure you want to accept this booking? An email notification will be sent to the passenger.',
+            'Yes, Accept',
+            'Cancel'
+        );
+
+        if (!confirm.isConfirmed) return;
+
+        setLoading(true);
+        try {
+            await bookingService.acceptBooking(bookingId);
+            await showSuccess('Booking accepted successfully! Passenger has been notified via email.');
+            await fetchData();
+        } catch (error) {
+            await showError(error.message || 'Error accepting booking');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeclineBooking = async (bookingId) => {
+        const confirm = await showConfirm(
+            'Are you sure you want to decline this booking?',
+            'Yes, Decline',
+            'Cancel'
+        );
+
+        if (!confirm.isConfirmed) return;
+
+        setLoading(true);
+        try {
+            await bookingService.declineBooking(bookingId);
+            await showSuccess('Booking declined successfully.');
+            await fetchData();
+        } catch (error) {
+            await showError(error.message || 'Error declining booking');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleRescheduleClick = (rideId) => {
+        const ride = myRides.find(r => r.id === rideId);
+        if (ride) {
+            setRescheduleRideId(rideId);
+            setRescheduleForm({
+                newDate: ride.date || '',
+                newTime: ride.time || '',
+                reason: ''
+            });
+            setShowRescheduleModal(true);
+        }
+    };
+
+    const handleRescheduleSubmit = async (e) => {
+        e.preventDefault();
+        
+        if (!rescheduleForm.newDate || !rescheduleForm.newTime) {
+            await showError('Please select both new date and time');
+            return;
+        }
+
+        const confirm = await showConfirm(
+            `Reschedule this ride to ${rescheduleForm.newDate} at ${rescheduleForm.newTime}? All passengers will be notified via email.`,
+            'Yes, Reschedule',
+            'Cancel'
+        );
+
+        if (!confirm.isConfirmed) return;
+
+        setLoading(true);
+        try {
+            await rideService.rescheduleRide(rescheduleRideId, {
+                newDate: rescheduleForm.newDate,
+                newTime: rescheduleForm.newTime,
+                reason: rescheduleForm.reason || null
+            });
+            await showSuccess('Ride rescheduled successfully! All passengers have been notified via email.');
+            setShowRescheduleModal(false);
+            setRescheduleRideId(null);
+            setRescheduleForm({ newDate: '', newTime: '', reason: '' });
+            await fetchData();
+        } catch (error) {
+            await showError(error.message || 'Error rescheduling ride');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Filter rides to exclude cancelled and past dates
     const filteredRides = myRides.filter(ride => !(ride.status === 'CANCELLED' || (ride.date && isDatePassed(ride.date))));
@@ -706,30 +818,52 @@ const DriverDashboard = () => {
                     </div>
                 )}
 
-                {/* Tabs for Rides and Bookings */}
+                {/* Tabs for Rides, Bookings, Pending, and History */}
                 <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-                    <div className="flex space-x-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                         <button
                             onClick={() => setActiveTab('rides')}
-                            className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center space-x-2 ${
+                            className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center space-x-2 ${
                                 activeTab === 'rides'
                                     ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-md'
                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                             }`}
                         >
                             <Car className="h-5 w-5" />
-                            <span>My Rides</span>
+                            <span className="hidden sm:inline">My Rides</span>
                         </button>
                         <button
                             onClick={() => setActiveTab('bookings')}
-                            className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center space-x-2 ${
+                            className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center space-x-2 ${
                                 activeTab === 'bookings'
                                     ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-md'
                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                             }`}
                         >
                             <Ticket className="h-5 w-5" />
-                            <span>My Bookings</span>
+                            <span className="hidden sm:inline">My Bookings</span>
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('pending')}
+                            className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center space-x-2 ${
+                                activeTab === 'pending'
+                                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                        >
+                            <CheckCircle2 className="h-5 w-5" />
+                            <span className="hidden sm:inline">Accept/Decline</span>
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('history')}
+                            className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center space-x-2 ${
+                                activeTab === 'history'
+                                    ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-md'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                        >
+                            <History className="h-5 w-5" />
+                            <span className="hidden sm:inline">History</span>
                         </button>
                     </div>
 
@@ -781,18 +915,27 @@ const DriverDashboard = () => {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                {/* Right: fare + cancel */}
+                                                {/* Right: fare + actions */}
                                                 <div className="text-right ml-4 flex flex-col items-end space-y-2">
                                                     <div>
                                                         <div className="text-[11px] text-gray-500 leading-tight">Estimated Fare</div>
                                                         <div className="text-lg md:text-xl font-bold text-green-600">₹{(ride.estimatedFare ?? 0).toFixed(2)}</div>
                                                     </div>
-                                                    <button
-                                                        onClick={() => handleCancelRide(ride.id)}
-                                                        className="px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-md text-sm shadow-sm"
-                                                    >
-                                                        Cancel Ride
-                                                    </button>
+                                                    <div className="flex space-x-2">
+                                                        <button
+                                                            onClick={() => handleRescheduleClick(ride.id)}
+                                                            className="px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-sm shadow-sm flex items-center space-x-1"
+                                                        >
+                                                            <Edit className="h-4 w-4" />
+                                                            <span>Reschedule</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleCancelRide(ride.id)}
+                                                            className="px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-md text-sm shadow-sm"
+                                                        >
+                                                            Cancel Ride
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -906,7 +1049,224 @@ const DriverDashboard = () => {
                             )}
                         </div>
                     )}
+
+                    {/* Pending Bookings Tab Content */}
+                    {activeTab === 'pending' && (
+                        <div className="mt-6">
+                            <div className="rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 text-white px-4 py-3 mb-3 flex items-center space-x-2">
+                                <CheckCircle2 className="h-4 w-4" />
+                                <span className="text-sm font-semibold">Pending Bookings ({pendingBookings.length})</span>
+                            </div>
+                            {pendingBookings.length === 0 ? (
+                                <p className="text-center text-gray-500 py-6">No pending bookings found.</p>
+                            ) : (
+                                <div>
+                                    {pendingBookings.map(booking => (
+                                        <div key={booking.id} className="bg-white rounded-lg shadow-md p-4 mb-4 border-l-4 border-blue-500">
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex items-start space-x-3 flex-1">
+                                                    <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0">
+                                                        <MapPin className="h-5 w-5" />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center space-x-2 mb-2">
+                                                            <h3 className="text-base md:text-lg font-semibold text-gray-800">
+                                                                {booking.pickupLocation} <span className="text-gray-500">→</span> {booking.dropoffLocation}
+                                                            </h3>
+                                                            <span className="text-xs font-semibold rounded-full px-2 py-0.5 bg-yellow-100 text-yellow-800">
+                                                                PENDING
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-sm text-gray-600 mb-2">
+                                                            <p><strong>Passenger:</strong> {booking.passenger?.name || booking.passenger?.email || 'N/A'}</p>
+                                                            <p><strong>Ride:</strong> {(booking.ride?.citySource || booking.ride?.source)} → {(booking.ride?.cityDestination || booking.ride?.destination)}</p>
+                                                        </div>
+                                                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                                                            <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
+                                                                <Calendar className="h-3.5 w-3.5" />
+                                                                <span>{booking.ride?.date ? new Date(booking.ride.date).toLocaleDateString() : 'N/A'}</span>
+                                                            </span>
+                                                            <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
+                                                                <Clock className="h-3.5 w-3.5" />
+                                                                <span>{booking.ride?.time ? new Date(`1970-01-01T${booking.ride.time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
+                                                            </span>
+                                                            <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
+                                                                <Users className="h-3.5 w-3.5" />
+                                                                <span>{booking.numberOfSeats || 1} seat(s)</span>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right ml-4 flex flex-col items-end space-y-2">
+                                                    <div>
+                                                        <div className="text-[11px] text-gray-500 leading-tight">Fare Amount</div>
+                                                        <div className="text-lg md:text-xl font-bold text-green-600">₹{(booking.fareAmount ?? 0).toFixed(2)}</div>
+                                                    </div>
+                                                    <div className="flex space-x-2">
+                                                        <button
+                                                            onClick={() => handleAcceptBooking(booking.id)}
+                                                            className="px-4 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-md text-sm shadow-sm flex items-center space-x-1"
+                                                        >
+                                                            <CheckCircle2 className="h-4 w-4" />
+                                                            <span>Accept</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeclineBooking(booking.id)}
+                                                            className="px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-md text-sm shadow-sm flex items-center space-x-1"
+                                                        >
+                                                            <XCircle className="h-4 w-4" />
+                                                            <span>Decline</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* History Tab Content */}
+                    {activeTab === 'history' && (
+                        <div className="mt-6">
+                            <div className="rounded-lg bg-gradient-to-r from-purple-600 to-purple-500 text-white px-4 py-3 mb-3 flex items-center space-x-2">
+                                <History className="h-4 w-4" />
+                                <span className="text-sm font-semibold">Ride History ({rideHistory.length})</span>
+                            </div>
+                            {rideHistory.length === 0 ? (
+                                <p className="text-center text-gray-500 py-6">No ride history found.</p>
+                            ) : (
+                                <div>
+                                    {rideHistory.map(booking => (
+                                        <div key={booking.id} className="bg-white rounded-lg shadow-md p-4 mb-4 border-l-4 border-purple-500">
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex items-start space-x-3 flex-1">
+                                                    <div className="h-10 w-10 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center flex-shrink-0">
+                                                        <MapPin className="h-5 w-5" />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center space-x-2 mb-2">
+                                                            <h3 className="text-base md:text-lg font-semibold text-gray-800">
+                                                                {booking.pickupLocation} <span className="text-gray-500">→</span> {booking.dropoffLocation}
+                                                            </h3>
+                                                            <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${
+                                                                booking.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                                                                booking.status === 'CONFIRMED' ? 'bg-blue-100 text-blue-800' :
+                                                                'bg-red-100 text-red-800'
+                                                            }`}>
+                                                                {booking.status}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-sm text-gray-600 mb-2">
+                                                            <p><strong>Passenger:</strong> {booking.passenger?.name || booking.passenger?.email || 'N/A'}</p>
+                                                            <p><strong>Ride:</strong> {(booking.ride?.citySource || booking.ride?.source)} → {(booking.ride?.cityDestination || booking.ride?.destination)}</p>
+                                                        </div>
+                                                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                                                            <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
+                                                                <Calendar className="h-3.5 w-3.5" />
+                                                                <span>{booking.ride?.date ? new Date(booking.ride.date).toLocaleDateString() : 'N/A'}</span>
+                                                            </span>
+                                                            <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
+                                                                <Clock className="h-3.5 w-3.5" />
+                                                                <span>{booking.ride?.time ? new Date(`1970-01-01T${booking.ride.time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
+                                                            </span>
+                                                            <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
+                                                                <Users className="h-3.5 w-3.5" />
+                                                                <span>{booking.numberOfSeats || 1} seat(s)</span>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right ml-4">
+                                                    <div className="text-[11px] text-gray-500 leading-tight">Fare Amount</div>
+                                                    <div className="text-lg md:text-xl font-bold text-green-600">₹{(booking.fareAmount ?? 0).toFixed(2)}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
+
+                {/* Reschedule Modal */}
+                {showRescheduleModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-xl font-bold text-gray-800 flex items-center space-x-2">
+                                    <Edit className="h-5 w-5 text-blue-600" />
+                                    <span>Reschedule Ride</span>
+                                </h2>
+                                <button
+                                    onClick={() => {
+                                        setShowRescheduleModal(false);
+                                        setRescheduleRideId(null);
+                                        setRescheduleForm({ newDate: '', newTime: '', reason: '' });
+                                    }}
+                                    className="text-gray-500 hover:text-gray-700"
+                                >
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
+                            <form onSubmit={handleRescheduleSubmit} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">New Date *</label>
+                                    <input
+                                        type="date"
+                                        required
+                                        value={rescheduleForm.newDate}
+                                        onChange={(e) => setRescheduleForm({ ...rescheduleForm, newDate: e.target.value })}
+                                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        min={new Date().toISOString().split('T')[0]}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">New Time *</label>
+                                    <input
+                                        type="time"
+                                        required
+                                        value={rescheduleForm.newTime}
+                                        onChange={(e) => setRescheduleForm({ ...rescheduleForm, newTime: e.target.value })}
+                                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Reason (Optional)</label>
+                                    <textarea
+                                        value={rescheduleForm.reason}
+                                        onChange={(e) => setRescheduleForm({ ...rescheduleForm, reason: e.target.value })}
+                                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        rows="3"
+                                        placeholder="Enter reason for rescheduling (optional)"
+                                    />
+                                </div>
+                                <div className="flex space-x-3 pt-4">
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-lg disabled:opacity-50"
+                                    >
+                                        {loading ? 'Rescheduling...' : 'Reschedule Ride'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setShowRescheduleModal(false);
+                                            setRescheduleRideId(null);
+                                            setRescheduleForm({ newDate: '', newTime: '', reason: '' });
+                                        }}
+                                        className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-semibold"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
 
                 <Footer />
             </main>
