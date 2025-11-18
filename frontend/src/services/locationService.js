@@ -10,8 +10,11 @@
 // Free tier: 5,000 requests/day
 // Documentation: https://locationiq.com/docs
 
+import axios from 'axios';
+
 const LOCATIONIQ_API_KEY = import.meta.env.VITE_LOCATIONIQ_API_KEY || '';
 const LOCATIONIQ_BASE_URL = 'https://us1.locationiq.com/v1';
+const API_BASE_URL = 'http://localhost:8080/api';
 
 export const locationService = {
   /**
@@ -141,57 +144,25 @@ export const locationService = {
   },
 
   /**
-   * Get Indian city suggestions (cities/towns/villages) for first-step selection
+   * Get Indian city suggestions (cities only) for first-step selection
+   * Uses backend API to ensure only cities are returned (no places/streets)
    * @param {string} query
    * @returns {Promise<string[]>}
    */
   getCitySuggestions: async (query, signal) => {
     if (!query || query.length < 2) return [];
 
-    if (!LOCATIONIQ_API_KEY) {
-      // Fallback list of Indian cities
-      return getDefaultIndianCities(query);
-    }
-
     try {
-      const url = new URL(`${LOCATIONIQ_BASE_URL}/search.php`);
-      url.searchParams.set('key', LOCATIONIQ_API_KEY);
-      url.searchParams.set('q', query);
-      url.searchParams.set('format', 'json');
-      url.searchParams.set('limit', '8');
-      url.searchParams.set('addressdetails', '1');
-      url.searchParams.set('countrycodes', 'in');
-      // Note: Nominatim/LocationIQ doesn't support strict type filtering via param reliably,
-      // we'll filter client-side using class/type/address fields.
-
-      const resp = await fetch(url.toString(), { signal });
-      if (!resp.ok) return getDefaultIndianCities(query);
-      const results = await resp.json();
-
-      const names = [];
-      for (const r of results) {
-        const cls = r.class || r.type;
-        const addr = r.address || {};
-        const isCityLike = (
-          cls === 'place' || cls === 'boundary' || cls === 'administrative'
-        ) && (
-          r.type === 'city' || r.type === 'town' || r.type === 'village' ||
-          addr.city || addr.town || addr.village
-        );
-        if (isCityLike) {
-          const name = (r.namedetails && r.namedetails.name) || r.display_name?.split(',')[0] || addr.city || addr.town || addr.village;
-          if (name) names.push(name.trim());
-        }
-      }
-
-      // Dedupe and filter by query substring
-      const unique = Array.from(new Set(names))
-        .filter(n => n.toLowerCase().includes(query.toLowerCase()))
-        .slice(0, 8);
-      if (unique.length > 0) return unique;
-      return getDefaultIndianCities(query);
+      // Use backend API which only returns cities from predefined list and database
+      const response = await axios.get(`${API_BASE_URL}/public/cities/suggestions`, {
+        params: { query },
+        signal
+      });
+      return Array.isArray(response.data) ? response.data : [];
     } catch (e) {
       if (e.name === 'AbortError') throw e;
+      console.error('Error fetching city suggestions from backend:', e);
+      // Fallback to default cities if backend fails
       return getDefaultIndianCities(query);
     }
   },

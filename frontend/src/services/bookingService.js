@@ -41,4 +41,37 @@ export const bookingService = {
     const response = await api.patch(`/bookings/${id}/cancel`);
     return response.data;
   },
+
+  getPendingBookings: async () => {
+    const response = await api.get('/bookings/pending-bookings');
+    return response.data;
+  },
+
+  acceptBooking: async (id) => {
+    const response = await api.patch(`/bookings/${id}/accept`);
+    return response.data;
+  },
+
+  declineBooking: async (id) => {
+    const response = await api.patch(`/bookings/${id}/decline`);
+    return response.data;
+  },
+
+  getRideHistory: async () => {
+    const response = await api.get('/bookings/history');
+    return response.data;
+  },
+
+  updateBookingLocations: async (bookingId, locationsData) => {
+    try {
+      const response = await api.patch(`/bookings/${bookingId}/update-locations`, locationsData);
+      return response.data;
+    } catch (error) {
+      console.error('Update booking locations API error:', error.response || error);
+      const serverMessage = error.response?.data?.message || error.response?.data || error.message;
+      const err = new Error(serverMessage);
+      err.original = error;
+      throw err;
+    }
+  },
 };

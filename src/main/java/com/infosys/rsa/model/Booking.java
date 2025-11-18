@@ -30,6 +30,9 @@ public class Booking {
     @Column(name = "pickup_location")
     private String pickupLocation;
 
+    @Column(name = "pickup_location2")
+    private String pickupLocation2; // Second pickup location (optional, for traveling passengers)
+
     @Column(name = "dropoff_location")
     private String dropoffLocation;
 
@@ -53,8 +56,9 @@ public class Booking {
     private LocalDateTime updatedAt;
 
     public enum BookingStatus {
-        PENDING,
-        CONFIRMED,
+        PENDING,        // Waiting for driver approval
+        ACCEPTED,       // Driver accepted, waiting for payment
+        CONFIRMED,      // Payment completed
         CANCELLED,
         COMPLETED
     }

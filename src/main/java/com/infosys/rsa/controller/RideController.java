@@ -1,6 +1,7 @@
 package com.infosys.rsa.controller;
 
 import com.infosys.rsa.dto.RidePostRequest;
+import com.infosys.rsa.dto.RideRescheduleRequest;
 import com.infosys.rsa.dto.RideSearchRequest;
 import com.infosys.rsa.dto.RideResponse;
 import com.infosys.rsa.model.Booking;
@@ -107,6 +108,32 @@ public class RideController {
             return ResponseEntity.ok(resp);
         } catch (RuntimeException e) {
             logger.error("Error cancelling ride ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
+    @PatchMapping("/{id}/reschedule")
+    @PreAuthorize("hasRole('DRIVER')")
+    public ResponseEntity<?> rescheduleRide(@PathVariable Long id, 
+                                             @Valid @RequestBody RideRescheduleRequest request,
+                                             Authentication authentication) {
+        logger.info("Entering rescheduleRide() with Ride ID: {}", id);
+        try {
+            UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+            logger.debug("Driver ID: {} attempting to reschedule ride ID: {} to date: {}, time: {}", 
+                    userPrincipal.getId(), id, request.getNewDate(), request.getNewTime());
+
+            Ride ride = rideService.rescheduleRide(userPrincipal.getId(), id, request);
+
+            List<Ride> myRides = rideService.getRidesByDriver(userPrincipal.getId());
+            List<Booking> driverBookings = bookingService.getBookingsByDriver(userPrincipal.getId());
+
+            logger.info("Ride ID: {} rescheduled successfully by driver ID: {}", id, userPrincipal.getId());
+
+            CancelRideResponse resp = new CancelRideResponse(ride, myRides, driverBookings);
+            return ResponseEntity.ok(resp);
+        } catch (RuntimeException e) {
+            logger.error("Error rescheduling ride ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
     }
