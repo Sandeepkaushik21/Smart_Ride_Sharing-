@@ -1245,3 +1245,214 @@ org.springframework.security.authentication.BadCredentialsException: Invalid ema
 2025-11-18 21:00:49 [http-nio-8080-exec-7] INFO  c.infosys.rsa.service.BookingService - Fetching bookings for passenger ID: 7
 2025-11-18 21:00:49 [http-nio-8080-exec-8] INFO  c.i.rsa.controller.BookingController - Found 6 historical bookings
 2025-11-18 21:00:49 [http-nio-8080-exec-7] INFO  c.i.rsa.controller.BookingController - Found 6 bookings for passenger ID: 7
+2025-11-18 21:05:45 [http-nio-8080-exec-5] INFO  c.i.rsa.controller.AuthController - Entering login() for email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:45 [http-nio-8080-exec-5] INFO  com.infosys.rsa.service.AuthService - User attempting to log in with email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:45 [http-nio-8080-exec-5] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:45 [http-nio-8080-exec-5] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:46 [http-nio-8080-exec-5] INFO  com.infosys.rsa.service.AuthService - JWT token generated successfully for sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:46 [http-nio-8080-exec-5] INFO  com.infosys.rsa.service.AuthService - User sandeepkaushik.r21@gmail.com logged in successfully with roles: [ROLE_PASSENGER]
+2025-11-18 21:05:46 [http-nio-8080-exec-5] INFO  c.i.rsa.controller.AuthController - User login successful for email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:49 [http-nio-8080-exec-3] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:49 [http-nio-8080-exec-10] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:49 [http-nio-8080-exec-3] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:49 [http-nio-8080-exec-10] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:49 [http-nio-8080-exec-3] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:49 [http-nio-8080-exec-10] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:49 [http-nio-8080-exec-10] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:49 [http-nio-8080-exec-3] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:49 [http-nio-8080-exec-3] INFO  c.i.rsa.controller.BookingController - Entering getRideHistory()
+2025-11-18 21:05:49 [http-nio-8080-exec-10] INFO  c.i.rsa.controller.BookingController - Entering getMyBookings()
+2025-11-18 21:05:49 [http-nio-8080-exec-3] INFO  c.infosys.rsa.service.BookingService - Fetching ride history for passenger ID: 7
+2025-11-18 21:05:49 [http-nio-8080-exec-10] INFO  c.infosys.rsa.service.BookingService - Fetching bookings for passenger ID: 7
+2025-11-18 21:05:49 [http-nio-8080-exec-3] INFO  c.i.rsa.controller.BookingController - Found 6 historical bookings
+2025-11-18 21:05:49 [http-nio-8080-exec-1] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:49 [http-nio-8080-exec-1] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:49 [http-nio-8080-exec-10] INFO  c.i.rsa.controller.BookingController - Found 6 bookings for passenger ID: 7
+2025-11-18 21:05:49 [http-nio-8080-exec-1] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:49 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:49 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:49 [http-nio-8080-exec-1] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:49 [http-nio-8080-exec-1] INFO  c.i.rsa.controller.BookingController - Entering getRideHistory()
+2025-11-18 21:05:49 [http-nio-8080-exec-1] INFO  c.infosys.rsa.service.BookingService - Fetching ride history for passenger ID: 7
+2025-11-18 21:05:49 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:49 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:49 [http-nio-8080-exec-4] INFO  c.i.rsa.controller.BookingController - Entering getMyBookings()
+2025-11-18 21:05:49 [http-nio-8080-exec-4] INFO  c.infosys.rsa.service.BookingService - Fetching bookings for passenger ID: 7
+2025-11-18 21:05:49 [http-nio-8080-exec-1] INFO  c.i.rsa.controller.BookingController - Found 6 historical bookings
+2025-11-18 21:05:49 [http-nio-8080-exec-4] INFO  c.i.rsa.controller.BookingController - Found 6 bookings for passenger ID: 7
+2025-11-18 21:05:52 [http-nio-8080-exec-2] INFO  c.i.rsa.controller.CityController - Entering getCitySuggestions() with query: chennai
+2025-11-18 21:05:52 [http-nio-8080-exec-2] INFO  com.infosys.rsa.service.CityService - Fetching city suggestions for query: 'chennai'
+2025-11-18 21:05:52 [http-nio-8080-exec-2] INFO  com.infosys.rsa.service.CityService - Returning 2 city suggestions for query 'chennai'
+2025-11-18 21:05:52 [http-nio-8080-exec-2] INFO  c.i.rsa.controller.CityController - City suggestions fetched successfully. Query: 'chennai', Count: 2
+2025-11-18 21:05:55 [http-nio-8080-exec-5] INFO  c.i.rsa.controller.CityController - Entering getCitySuggestions() with query: ben
+2025-11-18 21:05:55 [http-nio-8080-exec-5] INFO  com.infosys.rsa.service.CityService - Fetching city suggestions for query: 'ben'
+2025-11-18 21:05:55 [http-nio-8080-exec-5] INFO  com.infosys.rsa.service.CityService - Returning 2 city suggestions for query 'ben'
+2025-11-18 21:05:55 [http-nio-8080-exec-5] INFO  c.i.rsa.controller.CityController - City suggestions fetched successfully. Query: 'ben', Count: 2
+2025-11-18 21:05:57 [http-nio-8080-exec-8] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:57 [http-nio-8080-exec-8] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:57 [http-nio-8080-exec-8] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:57 [http-nio-8080-exec-8] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:57 [http-nio-8080-exec-8] INFO  c.i.rsa.controller.RideController - Entering searchRides() with request: source=Chennai, destination=Bengaluru, date=2025-11-18
+2025-11-18 21:05:57 [http-nio-8080-exec-8] INFO  c.i.rsa.controller.RideController - Search returned 0 rides
+2025-11-18 21:05:57 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:57 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:57 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:57 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:57 [http-nio-8080-exec-9] INFO  c.i.rsa.controller.RideController - Entering searchRides() with request: source=Chennai, destination=Bengaluru, date=2025-11-19
+2025-11-18 21:05:57 [http-nio-8080-exec-9] INFO  c.i.rsa.controller.RideController - Search returned 0 rides
+2025-11-18 21:05:57 [http-nio-8080-exec-10] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:57 [http-nio-8080-exec-10] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:57 [http-nio-8080-exec-10] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:57 [http-nio-8080-exec-10] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:57 [http-nio-8080-exec-10] INFO  c.i.rsa.controller.RideController - Entering searchRides() with request: source=Chennai, destination=Bengaluru, date=2025-11-20
+2025-11-18 21:05:57 [http-nio-8080-exec-10] INFO  c.i.rsa.controller.RideController - Search returned 0 rides
+2025-11-18 21:05:57 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:57 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:57 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:57 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:57 [http-nio-8080-exec-4] INFO  c.i.rsa.controller.RideController - Entering searchRides() with request: source=Chennai, destination=Bengaluru, date=2025-11-21
+2025-11-18 21:05:57 [http-nio-8080-exec-4] INFO  c.i.rsa.controller.RideController - Search returned 0 rides
+2025-11-18 21:05:57 [http-nio-8080-exec-5] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:57 [http-nio-8080-exec-5] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:57 [http-nio-8080-exec-5] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:57 [http-nio-8080-exec-5] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:57 [http-nio-8080-exec-5] INFO  c.i.rsa.controller.RideController - Entering searchRides() with request: source=Chennai, destination=Bengaluru, date=2025-11-22
+2025-11-18 21:05:57 [http-nio-8080-exec-5] INFO  c.i.rsa.controller.RideController - Search returned 0 rides
+2025-11-18 21:05:57 [http-nio-8080-exec-8] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:57 [http-nio-8080-exec-8] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:57 [http-nio-8080-exec-8] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:57 [http-nio-8080-exec-8] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:57 [http-nio-8080-exec-8] INFO  c.i.rsa.controller.RideController - Entering searchRides() with request: source=Chennai, destination=Bengaluru, date=2025-11-23
+2025-11-18 21:05:57 [http-nio-8080-exec-8] INFO  c.i.rsa.controller.RideController - Search returned 0 rides
+2025-11-18 21:05:57 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:57 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:57 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:57 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:57 [http-nio-8080-exec-9] INFO  c.i.rsa.controller.RideController - Entering searchRides() with request: source=Chennai, destination=Bengaluru, date=2025-11-24
+2025-11-18 21:05:57 [http-nio-8080-exec-9] INFO  c.i.rsa.controller.RideController - Search returned 0 rides
+2025-11-18 21:05:57 [http-nio-8080-exec-10] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:57 [http-nio-8080-exec-10] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:57 [http-nio-8080-exec-10] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:05:57 [http-nio-8080-exec-10] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:05:57 [http-nio-8080-exec-10] INFO  c.i.rsa.controller.RideController - Entering searchRides() with request: source=Chennai, destination=Bengaluru, date=2025-11-25
+2025-11-18 21:05:57 [http-nio-8080-exec-10] INFO  c.i.rsa.controller.RideController - Search returned 1 rides
+2025-11-18 21:06:12 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:06:12 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:06:12 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:06:12 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:06:12 [http-nio-8080-exec-4] INFO  c.i.rsa.controller.RideController - Entering searchRides() with request: source=Chennai, destination=Bengaluru, date=2025-11-25
+2025-11-18 21:06:12 [http-nio-8080-exec-4] INFO  c.i.rsa.controller.RideController - Search returned 1 rides
+2025-11-18 21:06:17 [http-nio-8080-exec-5] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:06:17 [http-nio-8080-exec-5] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:06:17 [http-nio-8080-exec-5] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:06:17 [http-nio-8080-exec-5] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:06:17 [http-nio-8080-exec-5] INFO  c.i.rsa.controller.BookingController - Entering createBooking() for rideId: 34
+2025-11-18 21:06:17 [http-nio-8080-exec-5] INFO  c.infosys.rsa.service.BookingService - Attempting to create booking for passenger ID: 7 and ride ID: 34
+2025-11-18 21:06:17 [http-nio-8080-exec-5] WARN  c.infosys.rsa.service.BookingService - Duplicate booking attempt detected for passenger ID: 7 and ride ID: 34
+2025-11-18 21:06:17 [http-nio-8080-exec-5] ERROR c.i.r.e.GlobalExceptionHandler - Duplicate booking: You have already booked this ride.
+2025-11-18 21:06:31 [http-nio-8080-exec-8] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:06:31 [http-nio-8080-exec-8] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:06:31 [http-nio-8080-exec-8] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:06:31 [http-nio-8080-exec-8] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:06:31 [http-nio-8080-exec-8] INFO  c.i.rsa.controller.BookingController - Entering cancelBooking() for bookingId: 47
+2025-11-18 21:06:31 [http-nio-8080-exec-8] WARN  c.infosys.rsa.service.BookingService - Attempting to cancel booking ID: 47 for passenger ID: 7
+2025-11-18 21:06:31 [http-nio-8080-exec-8] INFO  c.infosys.rsa.service.EmailService - Sending booking cancellation notification to driver: Sandeep Driver (sandeepkaushik.rq10@gmail.com)
+2025-11-18 21:06:35 [http-nio-8080-exec-8] INFO  c.infosys.rsa.service.EmailService - Booking cancellation notification sent successfully to driver sandeepkaushik.rq10@gmail.com
+2025-11-18 21:06:35 [http-nio-8080-exec-8] INFO  c.infosys.rsa.service.BookingService - Booking ID: 47 cancelled successfully. Restored 3 seat(s) to ride ID: 34
+2025-11-18 21:06:35 [http-nio-8080-exec-8] INFO  c.infosys.rsa.service.BookingService - Fetching bookings for passenger ID: 7
+2025-11-18 21:06:35 [http-nio-8080-exec-8] INFO  c.i.rsa.controller.BookingController - Booking with ID: 47 cancelled successfully
+2025-11-18 21:06:45 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:06:45 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:06:45 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:06:45 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:06:45 [http-nio-8080-exec-9] INFO  c.i.rsa.controller.RideController - Entering searchRides() with request: source=Chennai, destination=Bengaluru, date=2025-11-25
+2025-11-18 21:06:45 [http-nio-8080-exec-9] INFO  c.i.rsa.controller.RideController - Search returned 1 rides
+2025-11-18 21:06:52 [http-nio-8080-exec-2] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:06:52 [http-nio-8080-exec-2] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:06:52 [http-nio-8080-exec-2] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:06:52 [http-nio-8080-exec-2] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:06:52 [http-nio-8080-exec-2] INFO  c.i.rsa.controller.BookingController - Entering createBooking() for rideId: 34
+2025-11-18 21:06:52 [http-nio-8080-exec-2] INFO  c.infosys.rsa.service.BookingService - Attempting to create booking for passenger ID: 7 and ride ID: 34
+2025-11-18 21:06:52 [http-nio-8080-exec-2] WARN  c.infosys.rsa.service.BookingService - Duplicate booking attempt detected for passenger ID: 7 and ride ID: 34
+2025-11-18 21:06:52 [http-nio-8080-exec-2] ERROR c.i.r.e.GlobalExceptionHandler - Duplicate booking: You have already booked this ride.
+2025-11-18 21:07:06 [http-nio-8080-exec-6] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:07:06 [http-nio-8080-exec-6] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:07:06 [http-nio-8080-exec-6] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:07:06 [http-nio-8080-exec-6] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:07:06 [http-nio-8080-exec-6] INFO  c.i.rsa.controller.BookingController - Entering updateBookingLocations() for bookingId: 46
+2025-11-18 21:07:06 [http-nio-8080-exec-6] INFO  c.infosys.rsa.service.BookingService - Attempting to update locations for booking ID: 46 by passenger ID: 7
+2025-11-18 21:07:06 [http-nio-8080-exec-6] INFO  c.i.r.service.FareCalculationService - Calculating distance between 'Chennai Port' and 'East'
+2025-11-18 21:07:07 [http-nio-8080-exec-6] ERROR c.i.r.service.FareCalculationService - Error calling LocationIQ Directions API: 404 Not Found on GET request for "https://us1.locationiq.com/v1/directions/driving": "Invalid endpoint"
+2025-11-18 21:07:07 [http-nio-8080-exec-6] INFO  c.i.r.service.FareCalculationService - Calculated fare: 42934.158968672156 for distance: 8576.83179373443 km
+2025-11-18 21:07:07 [http-nio-8080-exec-6] INFO  c.infosys.rsa.service.BookingService - Booking locations updated successfully for booking ID: 46
+2025-11-18 21:07:07 [http-nio-8080-exec-6] INFO  c.i.rsa.controller.BookingController - Booking locations updated successfully for booking ID: 46
+2025-11-18 21:07:09 [http-nio-8080-exec-7] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:07:09 [http-nio-8080-exec-7] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:07:09 [http-nio-8080-exec-7] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: sandeepkaushik.r21@gmail.com
+2025-11-18 21:07:09 [http-nio-8080-exec-7] INFO  c.i.r.s.UserDetailsServiceImpl - User found: sandeepkaushik.r21@gmail.com, active=true, firstLogin=false
+2025-11-18 21:07:09 [http-nio-8080-exec-7] INFO  c.i.rsa.controller.BookingController - Entering getMyBookings()
+2025-11-18 21:07:09 [http-nio-8080-exec-7] INFO  c.infosys.rsa.service.BookingService - Fetching bookings for passenger ID: 7
+2025-11-18 21:07:09 [http-nio-8080-exec-7] INFO  c.i.rsa.controller.BookingController - Found 5 bookings for passenger ID: 7
+2025-11-18 21:07:34 [http-nio-8080-exec-10] INFO  c.i.rsa.controller.AuthController - Entering login() for email: admin@rideshare.com
+2025-11-18 21:07:34 [http-nio-8080-exec-10] INFO  com.infosys.rsa.service.AuthService - User attempting to log in with email: admin@rideshare.com
+2025-11-18 21:07:34 [http-nio-8080-exec-10] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: admin@rideshare.com
+2025-11-18 21:07:34 [http-nio-8080-exec-10] INFO  c.i.r.s.UserDetailsServiceImpl - User found: admin@rideshare.com, active=true, firstLogin=false
+2025-11-18 21:07:34 [http-nio-8080-exec-10] INFO  com.infosys.rsa.service.AuthService - JWT token generated successfully for admin@rideshare.com
+2025-11-18 21:07:34 [http-nio-8080-exec-10] INFO  com.infosys.rsa.service.AuthService - User admin@rideshare.com logged in successfully with roles: [ROLE_ADMIN]
+2025-11-18 21:07:34 [http-nio-8080-exec-10] INFO  c.i.rsa.controller.AuthController - User login successful for email: admin@rideshare.com
+2025-11-18 21:07:37 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: admin@rideshare.com
+2025-11-18 21:07:37 [http-nio-8080-exec-10] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: admin@rideshare.com
+2025-11-18 21:07:37 [http-nio-8080-exec-1] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: admin@rideshare.com
+2025-11-18 21:07:37 [http-nio-8080-exec-3] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: admin@rideshare.com
+2025-11-18 21:07:37 [http-nio-8080-exec-10] INFO  c.i.r.s.UserDetailsServiceImpl - User found: admin@rideshare.com, active=true, firstLogin=false
+2025-11-18 21:07:37 [http-nio-8080-exec-3] INFO  c.i.r.s.UserDetailsServiceImpl - User found: admin@rideshare.com, active=true, firstLogin=false
+2025-11-18 21:07:37 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - User found: admin@rideshare.com, active=true, firstLogin=false
+2025-11-18 21:07:37 [http-nio-8080-exec-1] INFO  c.i.r.s.UserDetailsServiceImpl - User found: admin@rideshare.com, active=true, firstLogin=false
+2025-11-18 21:07:37 [http-nio-8080-exec-1] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: admin@rideshare.com
+2025-11-18 21:07:37 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: admin@rideshare.com
+2025-11-18 21:07:37 [http-nio-8080-exec-3] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: admin@rideshare.com
+2025-11-18 21:07:37 [http-nio-8080-exec-10] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: admin@rideshare.com
+2025-11-18 21:07:37 [http-nio-8080-exec-3] INFO  c.i.r.s.UserDetailsServiceImpl - User found: admin@rideshare.com, active=true, firstLogin=false
+2025-11-18 21:07:37 [http-nio-8080-exec-9] INFO  c.i.r.s.UserDetailsServiceImpl - User found: admin@rideshare.com, active=true, firstLogin=false
+2025-11-18 21:07:37 [http-nio-8080-exec-1] INFO  c.i.r.s.UserDetailsServiceImpl - User found: admin@rideshare.com, active=true, firstLogin=false
+2025-11-18 21:07:37 [http-nio-8080-exec-10] INFO  c.i.r.s.UserDetailsServiceImpl - User found: admin@rideshare.com, active=true, firstLogin=false
+2025-11-18 21:07:37 [http-nio-8080-exec-1] INFO  c.i.rsa.controller.AdminController - AdminController | Fetching all passengers
+2025-11-18 21:07:37 [http-nio-8080-exec-10] INFO  c.i.rsa.controller.AdminController - AdminController | Fetching all pending driver accounts
+2025-11-18 21:07:37 [http-nio-8080-exec-9] INFO  c.i.rsa.controller.AdminController - AdminController | Fetching dashboard statistics
+2025-11-18 21:07:37 [http-nio-8080-exec-3] INFO  c.i.rsa.controller.AdminController - AdminController | Fetching all approved drivers
+2025-11-18 21:07:37 [http-nio-8080-exec-1] INFO  c.infosys.rsa.service.AdminService - Fetching all passengers
+2025-11-18 21:07:37 [http-nio-8080-exec-10] INFO  c.infosys.rsa.service.AdminService - Fetching all pending drivers
+2025-11-18 21:07:37 [http-nio-8080-exec-9] INFO  c.infosys.rsa.service.AdminService - Fetching dashboard statistics
+2025-11-18 21:07:37 [http-nio-8080-exec-3] INFO  c.infosys.rsa.service.AdminService - Fetching all approved drivers
+2025-11-18 21:07:37 [http-nio-8080-exec-10] INFO  c.i.rsa.controller.AdminController - Pending drivers count: 0
+2025-11-18 21:07:37 [http-nio-8080-exec-2] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: admin@rideshare.com
+2025-11-18 21:07:37 [http-nio-8080-exec-2] INFO  c.i.r.s.UserDetailsServiceImpl - User found: admin@rideshare.com, active=true, firstLogin=false
+2025-11-18 21:07:37 [http-nio-8080-exec-2] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: admin@rideshare.com
+2025-11-18 21:07:37 [http-nio-8080-exec-1] INFO  c.i.rsa.controller.AdminController - Total passengers found: 1
+2025-11-18 21:07:37 [http-nio-8080-exec-2] INFO  c.i.r.s.UserDetailsServiceImpl - User found: admin@rideshare.com, active=true, firstLogin=false
+2025-11-18 21:07:37 [http-nio-8080-exec-9] INFO  c.infosys.rsa.service.AdminService - Dashboard statistics fetched successfully
+2025-11-18 21:07:37 [http-nio-8080-exec-2] INFO  c.i.rsa.controller.AdminController - AdminController | Fetching all pending driver accounts
+2025-11-18 21:07:37 [http-nio-8080-exec-2] INFO  c.infosys.rsa.service.AdminService - Fetching all pending drivers
+2025-11-18 21:07:37 [http-nio-8080-exec-5] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: admin@rideshare.com
+2025-11-18 21:07:37 [http-nio-8080-exec-5] INFO  c.i.r.s.UserDetailsServiceImpl - User found: admin@rideshare.com, active=true, firstLogin=false
+2025-11-18 21:07:37 [http-nio-8080-exec-6] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: admin@rideshare.com
+2025-11-18 21:07:37 [http-nio-8080-exec-6] INFO  c.i.r.s.UserDetailsServiceImpl - User found: admin@rideshare.com, active=true, firstLogin=false
+2025-11-18 21:07:37 [http-nio-8080-exec-5] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: admin@rideshare.com
+2025-11-18 21:07:37 [http-nio-8080-exec-2] INFO  c.i.rsa.controller.AdminController - Pending drivers count: 0
+2025-11-18 21:07:37 [http-nio-8080-exec-5] INFO  c.i.r.s.UserDetailsServiceImpl - User found: admin@rideshare.com, active=true, firstLogin=false
+2025-11-18 21:07:37 [http-nio-8080-exec-6] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: admin@rideshare.com
+2025-11-18 21:07:37 [http-nio-8080-exec-5] INFO  c.i.rsa.controller.AdminController - AdminController | Fetching all passengers
+2025-11-18 21:07:37 [http-nio-8080-exec-5] INFO  c.infosys.rsa.service.AdminService - Fetching all passengers
+2025-11-18 21:07:37 [http-nio-8080-exec-6] INFO  c.i.r.s.UserDetailsServiceImpl - User found: admin@rideshare.com, active=true, firstLogin=false
+2025-11-18 21:07:37 [http-nio-8080-exec-6] INFO  c.i.rsa.controller.AdminController - AdminController | Fetching dashboard statistics
+2025-11-18 21:07:37 [http-nio-8080-exec-6] INFO  c.infosys.rsa.service.AdminService - Fetching dashboard statistics
+2025-11-18 21:07:37 [http-nio-8080-exec-3] INFO  c.i.rsa.controller.AdminController - Total approved drivers found: 1
+2025-11-18 21:07:37 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: admin@rideshare.com
+2025-11-18 21:07:37 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - User found: admin@rideshare.com, active=true, firstLogin=false
+2025-11-18 21:07:37 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - Attempting to load user by email: admin@rideshare.com
+2025-11-18 21:07:37 [http-nio-8080-exec-5] INFO  c.i.rsa.controller.AdminController - Total passengers found: 1
+2025-11-18 21:07:37 [http-nio-8080-exec-4] INFO  c.i.r.s.UserDetailsServiceImpl - User found: admin@rideshare.com, active=true, firstLogin=false
+2025-11-18 21:07:37 [http-nio-8080-exec-4] INFO  c.i.rsa.controller.AdminController - AdminController | Fetching all approved drivers
+2025-11-18 21:07:37 [http-nio-8080-exec-4] INFO  c.infosys.rsa.service.AdminService - Fetching all approved drivers
+2025-11-18 21:07:37 [http-nio-8080-exec-6] INFO  c.infosys.rsa.service.AdminService - Dashboard statistics fetched successfully
+2025-11-18 21:07:37 [http-nio-8080-exec-4] INFO  c.i.rsa.controller.AdminController - Total approved drivers found: 1

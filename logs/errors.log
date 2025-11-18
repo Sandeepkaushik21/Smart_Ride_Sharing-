@@ -130,3 +130,6 @@ org.springframework.security.authentication.BadCredentialsException: Invalid ema
 	at java.base/java.lang.Thread.run(Thread.java:840)
 2025-11-18 20:48:02 [http-nio-8080-exec-3] ERROR c.i.r.service.FareCalculationService - Error calling LocationIQ Directions API: 404 Not Found on GET request for "https://us1.locationiq.com/v1/directions/driving": "Invalid endpoint"
 2025-11-18 20:52:59 [http-nio-8080-exec-1] ERROR c.i.r.service.FareCalculationService - Error calling LocationIQ Directions API: 404 Not Found on GET request for "https://us1.locationiq.com/v1/directions/driving": "Invalid endpoint"
+2025-11-18 21:06:17 [http-nio-8080-exec-5] ERROR c.i.r.e.GlobalExceptionHandler - Duplicate booking: You have already booked this ride.
+2025-11-18 21:06:52 [http-nio-8080-exec-2] ERROR c.i.r.e.GlobalExceptionHandler - Duplicate booking: You have already booked this ride.
+2025-11-18 21:07:07 [http-nio-8080-exec-6] ERROR c.i.r.service.FareCalculationService - Error calling LocationIQ Directions API: 404 Not Found on GET request for "https://us1.locationiq.com/v1/directions/driving": "Invalid endpoint"
