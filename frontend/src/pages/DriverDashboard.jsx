@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Plus, MapPin, Calendar, Clock, Users, Car, Navigation, CheckCircle, X, Upload, Snowflake, Ticket, CheckCircle2, XCircle, History, Edit } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -32,8 +32,14 @@ const DriverDashboard = () => {
     const [bookingsTotalPages, setBookingsTotalPages] = useState(0);
     // Pending bookings for accept/decline
     const [pendingBookings, setPendingBookings] = useState([]);
+    const [pendingPage, setPendingPage] = useState(0);
+    const [pendingSize, setPendingSize] = useState(3);
+    const [pendingTotalPages, setPendingTotalPages] = useState(0);
     // Ride history
     const [rideHistory, setRideHistory] = useState([]);
+    const [historyPage, setHistoryPage] = useState(0);
+    const [historySize, setHistorySize] = useState(3);
+    const [historyTotalPages, setHistoryTotalPages] = useState(0);
     // Reschedule modal state
     const [showRescheduleModal, setShowRescheduleModal] = useState(false);
     const [rescheduleRideId, setRescheduleRideId] = useState(null);
@@ -123,8 +129,8 @@ const DriverDashboard = () => {
                 // rideService may accept pagination args
                 rideService.getMyRides({ page: ridesPage, size: ridesSize }).catch(() => rideService.getMyRides()),
                 bookingService.getDriverBookings({ page: bookingsPage, size: bookingsSize }).catch(() => bookingService.getDriverBookings()),
-                bookingService.getPendingBookings().catch(() => []),
-                bookingService.getRideHistory().catch(() => []),
+                bookingService.getPendingBookings({ page: pendingPage, size: pendingSize }).catch(() => bookingService.getPendingBookings()),
+                bookingService.getRideHistory({ page: historyPage, size: historySize }).catch(() => bookingService.getRideHistory()),
             ]);
 
             // Handle rides response (array or paginated)
@@ -145,9 +151,23 @@ const DriverDashboard = () => {
                 setBookingsTotalPages(Number.isFinite(bookingsData.totalPages) ? bookingsData.totalPages : 0);
             }
 
-            // Set pending bookings and history
-            setPendingBookings(Array.isArray(pendingData) ? pendingData : []);
-            setRideHistory(Array.isArray(historyData) ? historyData : []);
+            // Handle pending bookings response (array or paginated)
+            if (Array.isArray(pendingData)) {
+                setPendingBookings(pendingData);
+                setPendingTotalPages(0);
+            } else {
+                setPendingBookings(Array.isArray(pendingData.content) ? pendingData.content : []);
+                setPendingTotalPages(Number.isFinite(pendingData.totalPages) ? pendingData.totalPages : 0);
+            }
+
+            // Handle history response (array or paginated)
+            if (Array.isArray(historyData)) {
+                setRideHistory(historyData);
+                setHistoryTotalPages(0);
+            } else {
+                setRideHistory(Array.isArray(historyData.content) ? historyData.content : []);
+                setHistoryTotalPages(Number.isFinite(historyData.totalPages) ? historyData.totalPages : 0);
+            }
         } catch (error) {
             console.error('Error fetching data:', error);
             // Set empty arrays on error to prevent undefined issues
@@ -206,12 +226,66 @@ const DriverDashboard = () => {
         }
     };
 
+    // Fetch pending bookings page
+    const fetchPendingPage = async (page = pendingPage, size = pendingSize) => {
+        try {
+            const resp = await bookingService.getPendingBookings({ page, size });
+            if (Array.isArray(resp)) {
+                setPendingBookings(resp);
+                setPendingTotalPages(0);
+            } else {
+                setPendingBookings(Array.isArray(resp.content) ? resp.content : []);
+                setPendingTotalPages(Number.isFinite(resp.totalPages) ? resp.totalPages : 0);
+            }
+            setPendingPage(page);
+            setPendingSize(size);
+        } catch (err) {
+            // Fallback: try non-paginated endpoint
+            try {
+                const all = await bookingService.getPendingBookings();
+                setPendingBookings(Array.isArray(all) ? all : []);
+                setPendingTotalPages(0);
+            } catch (e) {
+                console.error('Error fetching pending bookings page:', err, e);
+                setPendingBookings([]);
+            }
+        }
+    };
+
+    // Fetch history page
+    const fetchHistoryPage = async (page = historyPage, size = historySize) => {
+        try {
+            const resp = await bookingService.getRideHistory({ page, size });
+            if (Array.isArray(resp)) {
+                setRideHistory(resp);
+                setHistoryTotalPages(0);
+            } else {
+                setRideHistory(Array.isArray(resp.content) ? resp.content : []);
+                setHistoryTotalPages(Number.isFinite(resp.totalPages) ? resp.totalPages : 0);
+            }
+            setHistoryPage(page);
+            setHistorySize(size);
+        } catch (err) {
+            // Fallback: try non-paginated endpoint
+            try {
+                const all = await bookingService.getRideHistory();
+                setRideHistory(Array.isArray(all) ? all : []);
+                setHistoryTotalPages(0);
+            } catch (e) {
+                console.error('Error fetching history page:', err, e);
+                setRideHistory([]);
+            }
+        }
+    };
+
     // When the user opens the bookings tab, ensure we have the correct page loaded.
     useEffect(() => {
         if (activeTab === 'bookings') {
             fetchBookingsPage(bookingsPage, bookingsSize);
-        } else if (activeTab === 'pending' || activeTab === 'history') {
-            fetchData();
+        } else if (activeTab === 'pending') {
+            fetchPendingPage(pendingPage, pendingSize);
+        } else if (activeTab === 'history') {
+            fetchHistoryPage(historyPage, historySize);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab]);
@@ -229,7 +303,7 @@ const DriverDashboard = () => {
         try {
             await bookingService.acceptBooking(bookingId);
             await showSuccess('Booking accepted successfully! Passenger has been notified via email.');
-            await fetchData();
+            await fetchPendingPage(pendingPage, pendingSize);
         } catch (error) {
             await showError(error.message || 'Error accepting booking');
         } finally {
@@ -250,7 +324,7 @@ const DriverDashboard = () => {
         try {
             await bookingService.declineBooking(bookingId);
             await showSuccess('Booking declined successfully.');
-            await fetchData();
+            await fetchPendingPage(pendingPage, pendingSize);
         } catch (error) {
             await showError(error.message || 'Error declining booking');
         } finally {
@@ -325,6 +399,20 @@ const DriverDashboard = () => {
         const start = bookingsPage * bookingsSize;
         return filteredBookings.slice(start, start + bookingsSize);
     })();
+
+    // Client-side pagination for pending bookings
+    const displayedPendingBookings = useMemo(() => {
+        if (pendingTotalPages > 0) return pendingBookings;
+        const start = pendingPage * pendingSize;
+        return pendingBookings.slice(start, start + pendingSize);
+    }, [pendingBookings, pendingPage, pendingSize, pendingTotalPages]);
+
+    // Client-side pagination for history
+    const displayedHistory = useMemo(() => {
+        if (historyTotalPages > 0) return rideHistory;
+        const start = historyPage * historySize;
+        return rideHistory.slice(start, start + historySize);
+    }, [rideHistory, historyPage, historySize, historyTotalPages]);
 
     const handleCancelRide = async (rideId) => {
         const confirm = await showConfirm(
@@ -1055,13 +1143,13 @@ const DriverDashboard = () => {
                         <div className="mt-6">
                             <div className="rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 text-white px-4 py-3 mb-3 flex items-center space-x-2">
                                 <CheckCircle2 className="h-4 w-4" />
-                                <span className="text-sm font-semibold">Pending Bookings ({pendingBookings.length})</span>
+                                <span className="text-sm font-semibold">Pending Bookings ({pendingTotalPages > 0 ? pendingBookings.length : pendingBookings.length})</span>
                             </div>
                             {pendingBookings.length === 0 ? (
                                 <p className="text-center text-gray-500 py-6">No pending bookings found.</p>
                             ) : (
                                 <div>
-                                    {pendingBookings.map(booking => (
+                                    {displayedPendingBookings.map(booking => (
                                         <div key={booking.id} className="bg-white rounded-lg shadow-md p-4 mb-4 border-l-4 border-blue-500">
                                             <div className="flex items-start justify-between">
                                                 <div className="flex items-start space-x-3 flex-1">
@@ -1124,6 +1212,88 @@ const DriverDashboard = () => {
                                     ))}
                                 </div>
                             )}
+
+                            {/* Pagination Controls for Pending Bookings */}
+                            {((pendingTotalPages > 0 && pendingTotalPages > 1) || (pendingTotalPages === 0 && pendingBookings.length > pendingSize)) && (
+                                <div className="px-6 py-4 flex items-center justify-between bg-white border-t mt-4 rounded-lg">
+                                    <div className="text-sm text-gray-600">
+                                        Showing page {pendingPage + 1} {pendingTotalPages > 0 ? `of ${pendingTotalPages}` : `of ${Math.ceil(pendingBookings.length / pendingSize)}`} — {pendingBookings.length} pending bookings
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <button
+                                            onClick={() => {
+                                                const newPage = Math.max(0, pendingPage - 1);
+                                                if (pendingTotalPages > 0) {
+                                                    fetchPendingPage(newPage, pendingSize);
+                                                } else {
+                                                    setPendingPage(newPage);
+                                                }
+                                            }}
+                                            disabled={pendingPage <= 0}
+                                            className={`px-3 py-1 rounded-md ${pendingPage <= 0 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white border hover:bg-gray-50'}`}
+                                        >Prev</button>
+                                        <div className="flex items-center space-x-1">
+                                            {Array.from({ length: pendingTotalPages > 0 ? pendingTotalPages : Math.ceil(Math.max(1, pendingBookings.length) / pendingSize) }).map((_, idx) => {
+                                                const total = pendingTotalPages > 0 ? pendingTotalPages : Math.ceil(Math.max(1, pendingBookings.length) / pendingSize);
+                                                const isCurrent = idx === pendingPage;
+                                                const isEdge = idx === 0 || idx === total - 1;
+                                                const isNear = Math.abs(idx - pendingPage) <= 2;
+                                                const isEllipsisStart = !isNear && idx === 1;
+                                                const isEllipsisEnd = !isNear && idx === total - 2;
+
+                                                if (!isCurrent && !isEdge && !isNear) {
+                                                    if (isEllipsisStart) return <span key="ellipsis-start" className="px-3 py-1 text-gray-500">...</span>;
+                                                    if (isEllipsisEnd) return <span key="ellipsis-end" className="px-3 py-1 text-gray-500">...</span>;
+                                                    return null;
+                                                }
+
+                                                return (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={() => {
+                                                            if (pendingTotalPages > 0) {
+                                                                fetchPendingPage(idx, pendingSize);
+                                                            } else {
+                                                                setPendingPage(idx);
+                                                            }
+                                                        }}
+                                                        className={`px-3 py-1 rounded-md ${isCurrent ? 'bg-blue-600 text-white' : 'bg-white border hover:bg-gray-100'}`}
+                                                    >{idx + 1}</button>
+                                                );
+                                            })}
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                const total = pendingTotalPages > 0 ? pendingTotalPages - 1 : Math.max(0, Math.ceil(pendingBookings.length / pendingSize) - 1);
+                                                const newPage = Math.min(total, pendingPage + 1);
+                                                if (pendingTotalPages > 0) {
+                                                    fetchPendingPage(newPage, pendingSize);
+                                                } else {
+                                                    setPendingPage(newPage);
+                                                }
+                                            }}
+                                            disabled={pendingPage >= (pendingTotalPages > 0 ? pendingTotalPages - 1 : Math.max(0, Math.ceil(pendingBookings.length / pendingSize) - 1))}
+                                            className={`px-3 py-1 rounded-md ${pendingPage >= (pendingTotalPages > 0 ? pendingTotalPages - 1 : Math.max(0, Math.ceil(pendingBookings.length / pendingSize) - 1)) ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white border hover:bg-gray-50'}`}
+                                        >Next</button>
+                                        <select
+                                            value={pendingSize}
+                                            onChange={(e) => {
+                                                const newSize = parseInt(e.target.value, 10);
+                                                setPendingSize(newSize);
+                                                setPendingPage(0);
+                                                if (pendingTotalPages > 0) {
+                                                    fetchPendingPage(0, newSize);
+                                                }
+                                            }}
+                                            className="ml-3 px-2 py-1 border rounded-md bg-white text-sm"
+                                        >
+                                            {[3, 5, 10, 20].map(s => (
+                                                <option key={s} value={s}>{s} / page</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -1132,13 +1302,13 @@ const DriverDashboard = () => {
                         <div className="mt-6">
                             <div className="rounded-lg bg-gradient-to-r from-purple-600 to-purple-500 text-white px-4 py-3 mb-3 flex items-center space-x-2">
                                 <History className="h-4 w-4" />
-                                <span className="text-sm font-semibold">Ride History ({rideHistory.length})</span>
+                                <span className="text-sm font-semibold">Ride History ({historyTotalPages > 0 ? rideHistory.length : rideHistory.length})</span>
                             </div>
                             {rideHistory.length === 0 ? (
                                 <p className="text-center text-gray-500 py-6">No ride history found.</p>
                             ) : (
                                 <div>
-                                    {rideHistory.map(booking => (
+                                    {displayedHistory.map(booking => (
                                         <div key={booking.id} className="bg-white rounded-lg shadow-md p-4 mb-4 border-l-4 border-purple-500">
                                             <div className="flex items-start justify-between">
                                                 <div className="flex items-start space-x-3 flex-1">
@@ -1185,6 +1355,88 @@ const DriverDashboard = () => {
                                             </div>
                                         </div>
                                     ))}
+                                </div>
+                            )}
+
+                            {/* Pagination Controls for History */}
+                            {((historyTotalPages > 0 && historyTotalPages > 1) || (historyTotalPages === 0 && rideHistory.length > historySize)) && (
+                                <div className="px-6 py-4 flex items-center justify-between bg-white border-t mt-4 rounded-lg">
+                                    <div className="text-sm text-gray-600">
+                                        Showing page {historyPage + 1} {historyTotalPages > 0 ? `of ${historyTotalPages}` : `of ${Math.ceil(rideHistory.length / historySize)}`} — {rideHistory.length} history items
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <button
+                                            onClick={() => {
+                                                const newPage = Math.max(0, historyPage - 1);
+                                                if (historyTotalPages > 0) {
+                                                    fetchHistoryPage(newPage, historySize);
+                                                } else {
+                                                    setHistoryPage(newPage);
+                                                }
+                                            }}
+                                            disabled={historyPage <= 0}
+                                            className={`px-3 py-1 rounded-md ${historyPage <= 0 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white border hover:bg-gray-50'}`}
+                                        >Prev</button>
+                                        <div className="flex items-center space-x-1">
+                                            {Array.from({ length: historyTotalPages > 0 ? historyTotalPages : Math.ceil(Math.max(1, rideHistory.length) / historySize) }).map((_, idx) => {
+                                                const total = historyTotalPages > 0 ? historyTotalPages : Math.ceil(Math.max(1, rideHistory.length) / historySize);
+                                                const isCurrent = idx === historyPage;
+                                                const isEdge = idx === 0 || idx === total - 1;
+                                                const isNear = Math.abs(idx - historyPage) <= 2;
+                                                const isEllipsisStart = !isNear && idx === 1;
+                                                const isEllipsisEnd = !isNear && idx === total - 2;
+
+                                                if (!isCurrent && !isEdge && !isNear) {
+                                                    if (isEllipsisStart) return <span key="ellipsis-start" className="px-3 py-1 text-gray-500">...</span>;
+                                                    if (isEllipsisEnd) return <span key="ellipsis-end" className="px-3 py-1 text-gray-500">...</span>;
+                                                    return null;
+                                                }
+
+                                                return (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={() => {
+                                                            if (historyTotalPages > 0) {
+                                                                fetchHistoryPage(idx, historySize);
+                                                            } else {
+                                                                setHistoryPage(idx);
+                                                            }
+                                                        }}
+                                                        className={`px-3 py-1 rounded-md ${isCurrent ? 'bg-purple-600 text-white' : 'bg-white border hover:bg-gray-100'}`}
+                                                    >{idx + 1}</button>
+                                                );
+                                            })}
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                const total = historyTotalPages > 0 ? historyTotalPages - 1 : Math.max(0, Math.ceil(rideHistory.length / historySize) - 1);
+                                                const newPage = Math.min(total, historyPage + 1);
+                                                if (historyTotalPages > 0) {
+                                                    fetchHistoryPage(newPage, historySize);
+                                                } else {
+                                                    setHistoryPage(newPage);
+                                                }
+                                            }}
+                                            disabled={historyPage >= (historyTotalPages > 0 ? historyTotalPages - 1 : Math.max(0, Math.ceil(rideHistory.length / historySize) - 1))}
+                                            className={`px-3 py-1 rounded-md ${historyPage >= (historyTotalPages > 0 ? historyTotalPages - 1 : Math.max(0, Math.ceil(rideHistory.length / historySize) - 1)) ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white border hover:bg-gray-50'}`}
+                                        >Next</button>
+                                        <select
+                                            value={historySize}
+                                            onChange={(e) => {
+                                                const newSize = parseInt(e.target.value, 10);
+                                                setHistorySize(newSize);
+                                                setHistoryPage(0);
+                                                if (historyTotalPages > 0) {
+                                                    fetchHistoryPage(0, newSize);
+                                                }
+                                            }}
+                                            className="ml-3 px-2 py-1 border rounded-md bg-white text-sm"
+                                        >
+                                            {[3, 5, 10, 20].map(s => (
+                                                <option key={s} value={s}>{s} / page</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
                             )}
                         </div>

@@ -64,6 +64,9 @@ const PassengerDashboard = () => {
     const [bookingsTotalPages, setBookingsTotalPages] = useState(0);
     // Ride history
     const [rideHistory, setRideHistory] = useState([]);
+    const [historyPage, setHistoryPage] = useState(0);
+    const [historySize, setHistorySize] = useState(3);
+    const [historyTotalPages, setHistoryTotalPages] = useState(0);
 
     // =========================================================================
     // ✨ MISSING WIZARD STATE & LOGIC INJECTION START ✨
@@ -272,6 +275,13 @@ const PassengerDashboard = () => {
         return filteredBookings.slice(start, end);
     }, [filteredBookings, bookingsPage, bookingsSize, bookingsTotalPages, bookings]);
 
+    // Client-side pagination for history
+    const displayedHistory = useMemo(() => {
+        if (historyTotalPages > 0) return rideHistory;
+        const start = historyPage * historySize;
+        return rideHistory.slice(start, start + historySize);
+    }, [rideHistory, historyPage, historySize, historyTotalPages]);
+
     // =========================================================================
     // ✨ MISSING WIZARD STATE & LOGIC INJECTION END ✨
     // =========================================================================
@@ -353,12 +363,7 @@ const PassengerDashboard = () => {
         // Load first page on mount
         fetchMyBookings(0, bookingsSize);
         // Load ride history
-        bookingService.getRideHistory().then(data => {
-            setRideHistory(Array.isArray(data) ? data : []);
-        }).catch(err => {
-            console.error('Error fetching ride history:', err);
-            setRideHistory([]);
-        });
+        fetchHistoryPage(0, historySize);
     }, []);
 
     // Keyboard navigation for photo viewer
@@ -385,6 +390,32 @@ const PassengerDashboard = () => {
         } else {
             // client-side: we already have full bookings array, just set page
             setBookingsPage(page);
+        }
+    };
+
+    // Fetch history page
+    const fetchHistoryPage = async (page = historyPage, size = historySize) => {
+        try {
+            const resp = await bookingService.getRideHistory({ page, size });
+            if (Array.isArray(resp)) {
+                setRideHistory(resp);
+                setHistoryTotalPages(0);
+            } else {
+                setRideHistory(Array.isArray(resp.content) ? resp.content : []);
+                setHistoryTotalPages(Number.isFinite(resp.totalPages) ? resp.totalPages : 0);
+            }
+            setHistoryPage(page);
+            setHistorySize(size);
+        } catch (err) {
+            // Fallback: try non-paginated endpoint
+            try {
+                const all = await bookingService.getRideHistory();
+                setRideHistory(Array.isArray(all) ? all : []);
+                setHistoryTotalPages(0);
+            } catch (e) {
+                console.error('Error fetching history page:', err, e);
+                setRideHistory([]);
+            }
         }
     };
 
@@ -1664,13 +1695,13 @@ const PassengerDashboard = () => {
                     <div className="bg-white rounded-xl shadow-lg p-6">
                         <h2 className="text-xl font-bold mb-6 flex items-center space-x-2 text-gray-800">
                             <History className="h-5 w-5 text-purple-600" />
-                            <span>Ride History</span>
+                            <span>Ride History ({rideHistory.length})</span>
                         </h2>
                         {rideHistory.length === 0 ? (
                             <p className="text-center text-gray-500 py-6">No ride history found.</p>
                         ) : (
                             <div className="space-y-4">
-                                {rideHistory.map(booking => (
+                                {displayedHistory.map(booking => (
                                     <div key={booking.id} className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow-md p-4 border-l-4 border-purple-500">
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
@@ -1712,6 +1743,88 @@ const PassengerDashboard = () => {
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+                        )}
+
+                        {/* Pagination Controls for History */}
+                        {((historyTotalPages > 0 && historyTotalPages > 1) || (historyTotalPages === 0 && rideHistory.length > historySize)) && (
+                            <div className="px-6 py-4 flex items-center justify-between bg-white border-t mt-4 rounded-lg">
+                                <div className="text-sm text-gray-600">
+                                    Showing page {historyPage + 1} {historyTotalPages > 0 ? `of ${historyTotalPages}` : `of ${Math.ceil(rideHistory.length / historySize)}`} — {rideHistory.length} history items
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <button
+                                        onClick={() => {
+                                            const newPage = Math.max(0, historyPage - 1);
+                                            if (historyTotalPages > 0) {
+                                                fetchHistoryPage(newPage, historySize);
+                                            } else {
+                                                setHistoryPage(newPage);
+                                            }
+                                        }}
+                                        disabled={historyPage <= 0}
+                                        className={`px-3 py-1 rounded-md ${historyPage <= 0 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white border hover:bg-gray-50'}`}
+                                    >Prev</button>
+                                    <div className="flex items-center space-x-1">
+                                        {Array.from({ length: historyTotalPages > 0 ? historyTotalPages : Math.ceil(Math.max(1, rideHistory.length) / historySize) }).map((_, idx) => {
+                                            const total = historyTotalPages > 0 ? historyTotalPages : Math.ceil(Math.max(1, rideHistory.length) / historySize);
+                                            const isCurrent = idx === historyPage;
+                                            const isEdge = idx === 0 || idx === total - 1;
+                                            const isNear = Math.abs(idx - historyPage) <= 2;
+                                            const isEllipsisStart = !isNear && idx === 1;
+                                            const isEllipsisEnd = !isNear && idx === total - 2;
+
+                                            if (!isCurrent && !isEdge && !isNear) {
+                                                if (isEllipsisStart) return <span key="ellipsis-start" className="px-3 py-1 text-gray-500">...</span>;
+                                                if (isEllipsisEnd) return <span key="ellipsis-end" className="px-3 py-1 text-gray-500">...</span>;
+                                                return null;
+                                            }
+
+                                            return (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => {
+                                                        if (historyTotalPages > 0) {
+                                                            fetchHistoryPage(idx, historySize);
+                                                        } else {
+                                                            setHistoryPage(idx);
+                                                        }
+                                                    }}
+                                                    className={`px-3 py-1 rounded-md ${isCurrent ? 'bg-purple-600 text-white' : 'bg-white border hover:bg-gray-100'}`}
+                                                >{idx + 1}</button>
+                                            );
+                                        })}
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            const total = historyTotalPages > 0 ? historyTotalPages - 1 : Math.max(0, Math.ceil(rideHistory.length / historySize) - 1);
+                                            const newPage = Math.min(total, historyPage + 1);
+                                            if (historyTotalPages > 0) {
+                                                fetchHistoryPage(newPage, historySize);
+                                            } else {
+                                                setHistoryPage(newPage);
+                                            }
+                                        }}
+                                        disabled={historyPage >= (historyTotalPages > 0 ? historyTotalPages - 1 : Math.max(0, Math.ceil(rideHistory.length / historySize) - 1))}
+                                        className={`px-3 py-1 rounded-md ${historyPage >= (historyTotalPages > 0 ? historyTotalPages - 1 : Math.max(0, Math.ceil(rideHistory.length / historySize) - 1)) ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white border hover:bg-gray-50'}`}
+                                    >Next</button>
+                                    <select
+                                        value={historySize}
+                                        onChange={(e) => {
+                                            const newSize = parseInt(e.target.value, 10);
+                                            setHistorySize(newSize);
+                                            setHistoryPage(0);
+                                            if (historyTotalPages > 0) {
+                                                fetchHistoryPage(0, newSize);
+                                            }
+                                        }}
+                                        className="ml-3 px-2 py-1 border rounded-md bg-white text-sm"
+                                    >
+                                        {[3, 5, 10, 20].map(s => (
+                                            <option key={s} value={s}>{s} / page</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                         )}
                     </div>
