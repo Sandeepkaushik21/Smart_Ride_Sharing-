@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Car, CheckCircle, XCircle, TrendingUp, DollarSign, Shield, Activity, Trash2, LayoutGrid, Settings, Menu } from 'lucide-react';
+import { Users, Car, CheckCircle, XCircle, TrendingUp, DollarSign, Shield, Activity, Trash2, LayoutGrid, Settings, Menu, Plus, X, Clock, AlertCircle, ArrowUp, ArrowDown, Target, BarChart3, PieChart, LineChart as LineChartIcon, Zap } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import BackButton from '../components/BackButton';
@@ -18,6 +18,24 @@ const AdminDashboard = () => {
     const [activeOverviewTab, setActiveOverviewTab] = useState('overview');
     const [loading, setLoading] = useState(true);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [todos, setTodos] = useState(() => {
+        const saved = localStorage.getItem('adminTodos');
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch {
+                return [];
+            }
+        }
+        return [
+            { id: 1, text: 'Review pending driver documents', date: 'Today', completed: false, priority: 'high' },
+            { id: 2, text: 'Export bookings report', date: 'Yesterday', completed: true, priority: 'medium' },
+            { id: 3, text: 'Audit suspicious accounts', date: '2 days ago', completed: true, priority: 'low' },
+            { id: 4, text: 'Archive inactive users', date: 'Last week', completed: false, priority: 'medium' }
+        ];
+    });
+    const [showAddTodo, setShowAddTodo] = useState(false);
+    const [newTodoText, setNewTodoText] = useState('');
     // Pagination for admin driver/passenger lists (client-side)
     const [driversPage, setDriversPage] = useState(0);
     const [driversSize, setDriversSize] = useState(5);
@@ -95,6 +113,35 @@ const AdminDashboard = () => {
     useEffect(() => {
         fetchData();
     }, []);
+
+    useEffect(() => {
+        localStorage.setItem('adminTodos', JSON.stringify(todos));
+    }, [todos]);
+
+    const addTodo = () => {
+        if (newTodoText.trim()) {
+            const newTodo = {
+                id: Date.now(),
+                text: newTodoText.trim(),
+                date: 'Today',
+                completed: false,
+                priority: 'medium'
+            };
+            setTodos([newTodo, ...todos]);
+            setNewTodoText('');
+            setShowAddTodo(false);
+        }
+    };
+
+    const toggleTodo = (id) => {
+        setTodos(todos.map(todo => 
+            todo.id === id ? { ...todo, completed: !todo.completed } : todo
+        ));
+    };
+
+    const deleteTodo = (id) => {
+        setTodos(todos.filter(todo => todo.id !== id));
+    };
 
     const fetchData = async () => {
         try {
@@ -346,74 +393,494 @@ const AdminDashboard = () => {
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                             {/* Market Overview (interactive charts) */}
                             <div className="lg:col-span-2 bg-white rounded-xl shadow-lg p-6">
-                                <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center justify-between mb-6">
                                     <div>
-                                        <div className="text-sm font-semibold text-gray-800 capitalize">{activeOverviewTab}</div>
-                                        <div className="text-xs text-gray-500">Interactive snapshot</div>
+                                        <div className="text-lg font-bold text-gray-900 capitalize flex items-center gap-2">
+                                            {activeOverviewTab === 'overview' && <BarChart3 className="h-5 w-5 text-indigo-600" />}
+                                            {activeOverviewTab === 'audiences' && <Users className="h-5 w-5 text-indigo-600" />}
+                                            {activeOverviewTab === 'demographics' && <PieChart className="h-5 w-5 text-indigo-600" />}
+                                            {activeOverviewTab === 'more' && <Activity className="h-5 w-5 text-indigo-600" />}
+                                            {activeOverviewTab === 'overview' ? 'Business Overview' : activeOverviewTab === 'audiences' ? 'Audience Analytics' : activeOverviewTab === 'demographics' ? 'Demographics' : 'Advanced Analytics'}
+                                        </div>
+                                        <div className="text-xs text-gray-500 mt-1">Comprehensive insights and trends</div>
                                     </div>
-                                    <button className="px-3 py-1 border rounded-lg text-sm">This month ▾</button>
+                                    <select className="px-3 py-1.5 border rounded-lg text-sm bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                        <option>This month</option>
+                                        <option>Last month</option>
+                                        <option>Last 3 months</option>
+                                        <option>Last 6 months</option>
+                                        <option>This year</option>
+                                    </select>
                                 </div>
-                                <div className="text-2xl font-bold text-gray-900 mb-2">₹{(stats?.totalBookings || 0) * 523}</div>
-                                <div className="text-xs text-green-600 font-semibold mb-4">+1.37%</div>
+
                                 {activeOverviewTab === 'overview' && (
-                                    <BarChart data={generateMonthlySeries(stats)} height={200} />
+                                    <div className="space-y-6">
+                                        {/* Key Metrics Row */}
+                                        <div className="grid grid-cols-3 gap-4">
+                                            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <div className="text-xs text-gray-600 font-medium">Total Revenue</div>
+                                                    <DollarSign className="h-4 w-4 text-blue-600" />
+                                                </div>
+                                                <div className="text-xl font-bold text-gray-900">₹{((stats?.totalBookings || 0) * 523).toLocaleString()}</div>
+                                                <div className="flex items-center gap-1 mt-1 text-xs">
+                                                    <ArrowUp className="h-3 w-3 text-green-600" />
+                                                    <span className="text-green-600 font-semibold">+12.5%</span>
+                                                    <span className="text-gray-500">vs last month</span>
+                                                </div>
+                                            </div>
+                                            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-100">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <div className="text-xs text-gray-600 font-medium">Active Rides</div>
+                                                    <Car className="h-4 w-4 text-green-600" />
+                                                </div>
+                                                <div className="text-xl font-bold text-gray-900">{stats?.totalRides || 0}</div>
+                                                <div className="flex items-center gap-1 mt-1 text-xs">
+                                                    <ArrowUp className="h-3 w-3 text-green-600" />
+                                                    <span className="text-green-600 font-semibold">+8.2%</span>
+                                                    <span className="text-gray-500">vs last month</span>
+                                                </div>
+                                            </div>
+                                            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-100">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <div className="text-xs text-gray-600 font-medium">Avg. Booking</div>
+                                                    <Target className="h-4 w-4 text-purple-600" />
+                                                </div>
+                                                <div className="text-xl font-bold text-gray-900">₹{stats?.totalBookings ? Math.round((stats.totalBookings * 523) / stats.totalBookings) : 523}</div>
+                                                <div className="flex items-center gap-1 mt-1 text-xs">
+                                                    <ArrowDown className="h-3 w-3 text-red-600" />
+                                                    <span className="text-red-600 font-semibold">-2.1%</span>
+                                                    <span className="text-gray-500">vs last month</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Main Chart */}
+                                        <div>
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="text-sm font-semibold text-gray-700">Revenue Trend (Last 12 Months)</div>
+                                                <div className="flex items-center gap-2 text-xs">
+                                                    <div className="flex items-center gap-1">
+                                                        <div className="w-3 h-3 bg-indigo-500 rounded"></div>
+                                                        <span className="text-gray-600">Revenue</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <BarChart data={generateMonthlySeries(stats)} height={250} />
+                                        </div>
+
+                                        {/* Secondary Metrics */}
+                                        <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                                            <div>
+                                                <div className="text-xs text-gray-500 mb-1">Conversion Rate</div>
+                                                <div className="flex items-baseline gap-2">
+                                                    <div className="text-lg font-bold text-gray-900">
+                                                        {stats?.totalBookings && stats?.totalUsers 
+                                                            ? Math.round((stats.totalBookings / stats.totalUsers) * 100) 
+                                                            : 0}%
+                                                    </div>
+                                                    <div className="text-xs text-green-600 flex items-center gap-1">
+                                                        <ArrowUp className="h-3 w-3" />
+                                                        +3.2%
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div className="text-xs text-gray-500 mb-1">Growth Rate</div>
+                                                <div className="flex items-baseline gap-2">
+                                                    <div className="text-lg font-bold text-gray-900">
+                                                        {stats?.totalUsers ? Math.round((stats.totalUsers / Math.max(1, stats.totalUsers - 10)) * 100 - 100) : 0}%
+                                                    </div>
+                                                    <div className="text-xs text-green-600 flex items-center gap-1">
+                                                        <TrendingUp className="h-3 w-3" />
+                                                        MoM
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 )}
+
                                 {activeOverviewTab === 'audiences' && (
-                                    <LineChart data={generateWeeklySeries(stats)} height={200} />
+                                    <div className="space-y-6">
+                                        {/* Audience Metrics */}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-4 border border-blue-100">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <div className="text-xs text-gray-600 font-medium">Total Audience</div>
+                                                    <Users className="h-4 w-4 text-blue-600" />
+                                                </div>
+                                                <div className="text-2xl font-bold text-gray-900">{stats?.totalUsers || 0}</div>
+                                                <div className="flex items-center gap-1 mt-1 text-xs">
+                                                    <ArrowUp className="h-3 w-3 text-green-600" />
+                                                    <span className="text-green-600 font-semibold">+15.3%</span>
+                                                    <span className="text-gray-500">growth</span>
+                                                </div>
+                                            </div>
+                                            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-100">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <div className="text-xs text-gray-600 font-medium">Active Users</div>
+                                                    <Activity className="h-4 w-4 text-indigo-600" />
+                                                </div>
+                                                <div className="text-2xl font-bold text-gray-900">
+                                                    {Math.round((stats?.totalUsers || 0) * 0.75)}
+                                                </div>
+                                                <div className="text-xs text-gray-500 mt-1">75% of total users</div>
+                                            </div>
+                                        </div>
+
+                                        {/* User Growth Chart */}
+                                        <div>
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="text-sm font-semibold text-gray-700">User Growth (Last 8 Weeks)</div>
+                                                <div className="flex items-center gap-2 text-xs">
+                                                    <div className="flex items-center gap-1">
+                                                        <div className="w-3 h-3 bg-indigo-500 rounded-full"></div>
+                                                        <span className="text-gray-600">New Users</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                                        <span className="text-gray-600">Active</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <LineChart data={generateWeeklySeries(stats)} height={250} stroke="#6366f1" />
+                                        </div>
+
+                                        {/* User Segmentation */}
+                                        <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                                            <div className="text-center">
+                                                <div className="text-xs text-gray-500 mb-1">Drivers</div>
+                                                <div className="text-lg font-bold text-gray-900">{stats?.totalDrivers || 0}</div>
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    {stats?.totalUsers ? Math.round((stats.totalDrivers / stats.totalUsers) * 100) : 0}% of total
+                                                </div>
+                                            </div>
+                                            <div className="text-center">
+                                                <div className="text-xs text-gray-500 mb-1">Passengers</div>
+                                                <div className="text-lg font-bold text-gray-900">{stats?.totalPassengers || 0}</div>
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    {stats?.totalUsers ? Math.round((stats.totalPassengers / stats.totalUsers) * 100) : 0}% of total
+                                                </div>
+                                            </div>
+                                            <div className="text-center">
+                                                <div className="text-xs text-gray-500 mb-1">Engagement</div>
+                                                <div className="text-lg font-bold text-gray-900">
+                                                    {stats?.totalBookings && stats?.totalUsers 
+                                                        ? Math.round((stats.totalBookings / stats.totalUsers) * 10) / 10 
+                                                        : 0}
+                                                </div>
+                                                <div className="text-xs text-gray-500 mt-1">bookings/user</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Audience Insights */}
+                                        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-100">
+                                            <div className="flex items-start gap-3">
+                                                <Zap className="h-5 w-5 text-indigo-600 mt-0.5 flex-shrink-0" />
+                                                <div>
+                                                    <div className="text-sm font-semibold text-gray-900 mb-1">Key Insight</div>
+                                                    <div className="text-xs text-gray-600">
+                                                        Your audience has grown by {stats?.totalUsers ? Math.round((stats.totalUsers / Math.max(1, stats.totalUsers - 10)) * 100 - 100) : 0}% this month. 
+                                                        Driver-to-passenger ratio is {stats?.totalDrivers && stats?.totalPassengers 
+                                                            ? (stats.totalDrivers / stats.totalPassengers).toFixed(2) 
+                                                            : '0'}:1, indicating a healthy marketplace balance.
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 )}
+
                                 {activeOverviewTab === 'demographics' && (
-                                    <DonutChart segments={[
-                                        { label: 'Drivers', value: stats?.totalDrivers || 0, color: '#22c55e' },
-                                        { label: 'Passengers', value: stats?.totalPassengers || 0, color: '#6366f1' },
-                                        { label: 'Other', value: Math.max(1, (stats?.totalUsers || 0) - ((stats?.totalDrivers||0)+(stats?.totalPassengers||0))), color: '#f59e0b' },
-                                    ]} />
+                                    <div className="space-y-6">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <div className="text-sm font-semibold text-gray-700 mb-3">User Distribution</div>
+                                                <DonutChart segments={[
+                                                    { label: 'Drivers', value: stats?.totalDrivers || 0, color: '#22c55e' },
+                                                    { label: 'Passengers', value: stats?.totalPassengers || 0, color: '#6366f1' },
+                                                    { label: 'Other', value: Math.max(1, (stats?.totalUsers || 0) - ((stats?.totalDrivers||0)+(stats?.totalPassengers||0))), color: '#f59e0b' },
+                                                ]} />
+                                            </div>
+                                            <div className="space-y-4">
+                                                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-100">
+                                                    <div className="text-xs text-gray-600 mb-1">Driver Share</div>
+                                                    <div className="text-2xl font-bold text-gray-900">
+                                                        {stats?.totalUsers ? Math.round((stats.totalDrivers / stats.totalUsers) * 100) : 0}%
+                                                    </div>
+                                                    <div className="text-xs text-gray-500 mt-1">{stats?.totalDrivers || 0} drivers</div>
+                                                </div>
+                                                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-100">
+                                                    <div className="text-xs text-gray-600 mb-1">Passenger Share</div>
+                                                    <div className="text-2xl font-bold text-gray-900">
+                                                        {stats?.totalUsers ? Math.round((stats.totalPassengers / stats.totalUsers) * 100) : 0}%
+                                                    </div>
+                                                    <div className="text-xs text-gray-500 mt-1">{stats?.totalPassengers || 0} passengers</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="pt-4 border-t">
+                                            <div className="text-sm font-semibold text-gray-700 mb-3">Platform Balance</div>
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs text-gray-600">Driver-to-Passenger Ratio</span>
+                                                    <span className="text-sm font-semibold text-gray-900">
+                                                        {stats?.totalDrivers && stats?.totalPassengers 
+                                                            ? (stats.totalDrivers / stats.totalPassengers).toFixed(2) 
+                                                            : '0'}:1
+                                                    </span>
+                                                </div>
+                                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                                    <div 
+                                                        className="bg-gradient-to-r from-green-500 to-indigo-500 h-2 rounded-full transition-all"
+                                                        style={{ 
+                                                            width: `${stats?.totalUsers ? Math.min(100, (stats.totalDrivers / Math.max(1, stats.totalPassengers)) * 50) : 0}%` 
+                                                        }}
+                                                    ></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 )}
+
                                 {activeOverviewTab === 'more' && (
-                                    <div className="text-sm text-gray-600">More analytics coming soon. Use other tabs for insights.</div>
+                                    <div className="space-y-6">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg p-4 border border-yellow-100">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <div className="text-xs text-gray-600 font-medium">Pending Actions</div>
+                                                    <AlertCircle className="h-4 w-4 text-yellow-600" />
+                                                </div>
+                                                <div className="text-2xl font-bold text-gray-900">{stats?.pendingDrivers || 0}</div>
+                                                <div className="text-xs text-gray-500 mt-1">Drivers awaiting approval</div>
+                                            </div>
+                                            <div className="bg-gradient-to-br from-red-50 to-pink-50 rounded-lg p-4 border border-red-100">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <div className="text-xs text-gray-600 font-medium">System Health</div>
+                                                    <CheckCircle className="h-4 w-4 text-green-600" />
+                                                </div>
+                                                <div className="text-2xl font-bold text-gray-900">98%</div>
+                                                <div className="text-xs text-gray-500 mt-1">Uptime this month</div>
+                                            </div>
+                                        </div>
+                                        <div className="text-center py-8 text-gray-500">
+                                            <Activity className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                                            <div className="text-sm font-medium">Advanced Analytics</div>
+                                            <div className="text-xs mt-1">More detailed analytics and custom reports coming soon</div>
+                                        </div>
+                                    </div>
                                 )}
                             </div>
 
                             {/* Todo List */}
                             <div className="bg-white rounded-xl shadow-lg p-6">
                                 <div className="flex items-center justify-between mb-4">
-                                    <div className="text-sm font-semibold text-gray-800">Todo List</div>
-                                    <button className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-sm">＋</button>
+                                    <div>
+                                        <div className="text-sm font-semibold text-gray-800">Todo List</div>
+                                        <div className="text-xs text-gray-500">{todos.filter(t => !t.completed).length} pending tasks</div>
+                                    </div>
+                                    <button 
+                                        onClick={() => setShowAddTodo(!showAddTodo)}
+                                        className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition-colors flex items-center gap-1"
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        Add
+                                    </button>
                                 </div>
-                                <ul className="space-y-3 text-sm">
-                                    {[{
-                                        text: 'Review pending driver documents', date: 'Today', tag: 'Due tomorrow', color: 'bg-yellow-100 text-yellow-800'
-                                    },{
-                                        text: 'Export bookings report', date: 'Yesterday', tag: 'Done', color: 'bg-green-100 text-green-800'
-                                    },{
-                                        text: 'Audit suspicious accounts', date: '2 days ago', tag: 'Done', color: 'bg-green-100 text-green-800'
-                                    },{
-                                        text: 'Archive inactive users', date: 'Last week', tag: 'Expired', color: 'bg-red-100 text-red-800'
-                                    }].map((t, idx) => (
-                                        <li key={idx} className="flex items-start gap-3">
-                                            <input type="checkbox" className="mt-1" defaultChecked={t.tag === 'Done'} />
-                                            <div className="flex-1">
-                                                <div className="text-gray-800">{t.text}</div>
-                                                <div className="text-xs text-gray-500 flex items-center gap-2">
-                                                    <span>{t.date}</span>
-                                                    <span className={`px-2 py-0.5 rounded-full ${t.color}`}>{t.tag}</span>
-                                                </div>
-                                            </div>
-                                        </li>
-                                    ))}
+                                
+                                {showAddTodo && (
+                                    <div className="mb-4 p-3 bg-gray-50 rounded-lg border">
+                                        <input
+                                            type="text"
+                                            value={newTodoText}
+                                            onChange={(e) => setNewTodoText(e.target.value)}
+                                            onKeyPress={(e) => e.key === 'Enter' && addTodo()}
+                                            placeholder="Enter new task..."
+                                            className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                            autoFocus
+                                        />
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <button
+                                                onClick={addTodo}
+                                                className="px-3 py-1 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700"
+                                            >
+                                                Add Task
+                                            </button>
+                                            <button
+                                                onClick={() => { setShowAddTodo(false); setNewTodoText(''); }}
+                                                className="px-3 py-1 border rounded text-sm hover:bg-gray-100"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <ul className="space-y-3 text-sm max-h-96 overflow-y-auto">
+                                    {todos.length === 0 ? (
+                                        <li className="text-center text-gray-500 py-4">No tasks yet. Add one to get started!</li>
+                                    ) : (
+                                        todos.map((todo) => {
+                                            const getPriorityColor = (priority) => {
+                                                switch(priority) {
+                                                    case 'high': return 'bg-red-100 text-red-800';
+                                                    case 'medium': return 'bg-yellow-100 text-yellow-800';
+                                                    default: return 'bg-blue-100 text-blue-800';
+                                                }
+                                            };
+                                            const getStatusColor = (completed) => {
+                                                return completed ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
+                                            };
+                                            return (
+                                                <li key={todo.id} className={`flex items-start gap-3 p-2 rounded-lg transition-colors ${todo.completed ? 'bg-gray-50 opacity-75' : 'hover:bg-gray-50'}`}>
+                                                    <input 
+                                                        type="checkbox" 
+                                                        className="mt-1 cursor-pointer" 
+                                                        checked={todo.completed}
+                                                        onChange={() => toggleTodo(todo.id)}
+                                                    />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className={`text-gray-800 ${todo.completed ? 'line-through' : ''}`}>{todo.text}</div>
+                                                        <div className="text-xs text-gray-500 flex items-center gap-2 mt-1">
+                                                            <Clock className="h-3 w-3" />
+                                                            <span>{todo.date}</span>
+                                                            <span className={`px-2 py-0.5 rounded-full text-xs ${getPriorityColor(todo.priority)}`}>
+                                                                {todo.priority}
+                                                            </span>
+                                                            <span className={`px-2 py-0.5 rounded-full text-xs ${getStatusColor(todo.completed)}`}>
+                                                                {todo.completed ? 'Done' : 'Pending'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => deleteTodo(todo.id)}
+                                                        className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                                                        title="Delete task"
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </button>
+                                                </li>
+                                            );
+                                        })
+                                    )}
                                 </ul>
                             </div>
                         </div>
 
-                        {/* Type By Amount (donut) */}
+                        {/* Type By Amount + Performance Metrics */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                            {/* Type By Amount - Enhanced with Bar Chart */}
                             <div className="bg-white rounded-xl shadow-lg p-6">
-                                <div className="text-sm font-semibold text-gray-800 mb-4">Type By Amount</div>
-                                <DonutChart segments={[
-                                    { label: 'Rides', value: stats?.totalRides || 0, color: '#6366f1' },
-                                    { label: 'Bookings', value: stats?.totalBookings || 0, color: '#22c55e' },
-                                    { label: 'Drivers', value: stats?.totalDrivers || 0, color: '#f59e0b' },
-                                    { label: 'Other', value: Math.max(1, (stats?.totalUsers || 0) - ((stats?.totalDrivers||0)+(stats?.totalPassengers||0))), color: '#d1d5db' },
-                                ]} />
+                                <div className="flex items-center justify-between mb-4">
+                                    <div>
+                                        <div className="text-lg font-semibold text-gray-800">Type By Amount</div>
+                                        <div className="text-xs text-gray-500">Revenue breakdown by category</div>
+                                    </div>
+                                </div>
+                                <div className="mb-6">
+                                    <DonutChart segments={[
+                                        { label: 'Rides', value: stats?.totalRides || 0, color: '#6366f1' },
+                                        { label: 'Bookings', value: stats?.totalBookings || 0, color: '#22c55e' },
+                                        { label: 'Drivers', value: stats?.totalDrivers || 0, color: '#f59e0b' },
+                                        { label: 'Other', value: Math.max(1, (stats?.totalUsers || 0) - ((stats?.totalDrivers||0)+(stats?.totalPassengers||0))), color: '#d1d5db' },
+                                    ]} />
+                                </div>
+                                <div className="mt-6">
+                                    <div className="text-sm font-semibold text-gray-700 mb-3">Amount Distribution</div>
+                                    <EnhancedBarChart data={[
+                                        { label: 'Rides', value: stats?.totalRides || 0, color: '#6366f1', amount: (stats?.totalRides || 0) * 523 },
+                                        { label: 'Bookings', value: stats?.totalBookings || 0, color: '#22c55e', amount: (stats?.totalBookings || 0) * 523 },
+                                        { label: 'Drivers', value: stats?.totalDrivers || 0, color: '#f59e0b', amount: (stats?.totalDrivers || 0) * 300 },
+                                        { label: 'Other', value: Math.max(1, (stats?.totalUsers || 0) - ((stats?.totalDrivers||0)+(stats?.totalPassengers||0))), color: '#d1d5db', amount: 1000 },
+                                    ]} />
+                                </div>
+                            </div>
+
+                            {/* Performance Metrics - New Section */}
+                            <div className="bg-white rounded-xl shadow-lg p-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div>
+                                        <div className="text-lg font-semibold text-gray-800">Performance Metrics</div>
+                                        <div className="text-xs text-gray-500">Key performance indicators</div>
+                                    </div>
+                                </div>
+                                
+                                <div className="space-y-4">
+                                    {/* Revenue Card */}
+                                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <div className="text-xs text-gray-600 mb-1">Total Revenue</div>
+                                                <div className="text-2xl font-bold text-gray-900">₹{((stats?.totalBookings || 0) * 523 + (stats?.totalRides || 0) * 400).toLocaleString()}</div>
+                                                <div className="text-xs text-green-600 font-semibold mt-1 flex items-center gap-1">
+                                                    <TrendingUp className="h-3 w-3" />
+                                                    +12.5% from last month
+                                                </div>
+                                            </div>
+                                            <div className="bg-green-100 rounded-full p-3">
+                                                <DollarSign className="h-6 w-6 text-green-600" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Active Users Card */}
+                                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <div className="text-xs text-gray-600 mb-1">Active Users</div>
+                                                <div className="text-2xl font-bold text-gray-900">{stats?.totalUsers || 0}</div>
+                                                <div className="text-xs text-blue-600 font-semibold mt-1 flex items-center gap-1">
+                                                    <Users className="h-3 w-3" />
+                                                    {stats?.totalDrivers || 0} drivers, {stats?.totalPassengers || 0} passengers
+                                                </div>
+                                            </div>
+                                            <div className="bg-blue-100 rounded-full p-3">
+                                                <Users className="h-6 w-6 text-blue-600" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Completion Rate */}
+                                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-200">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <div className="text-xs text-gray-600 mb-1">Ride Completion Rate</div>
+                                                <div className="text-2xl font-bold text-gray-900">
+                                                    {stats?.totalRides && stats?.totalBookings 
+                                                        ? Math.round((stats.totalRides / stats.totalBookings) * 100) 
+                                                        : 0}%
+                                                </div>
+                                                <div className="text-xs text-purple-600 font-semibold mt-1 flex items-center gap-1">
+                                                    <CheckCircle className="h-3 w-3" />
+                                                    {stats?.totalRides || 0} completed rides
+                                                </div>
+                                            </div>
+                                            <div className="bg-purple-100 rounded-full p-3">
+                                                <CheckCircle className="h-6 w-6 text-purple-600" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Pending Actions Alert */}
+                                    {stats?.pendingDrivers > 0 && (
+                                        <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg p-4 border border-yellow-200">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <div className="text-xs text-gray-600 mb-1">Pending Actions</div>
+                                                    <div className="text-2xl font-bold text-gray-900">{stats.pendingDrivers}</div>
+                                                    <div className="text-xs text-yellow-600 font-semibold mt-1 flex items-center gap-1">
+                                                        <AlertCircle className="h-3 w-3" />
+                                                        Drivers awaiting approval
+                                                    </div>
+                                                </div>
+                                                <div className="bg-yellow-100 rounded-full p-3">
+                                                    <AlertCircle className="h-6 w-6 text-yellow-600" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </>
@@ -817,14 +1284,28 @@ function downloadBlob(filename, data, type = 'text/csv;charset=utf-8') {
 
 function BarChart({ data, height = 200 }) {
     const max = Math.max(1, ...data.map(d => d.value));
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return (
-        <div className="h-48 flex items-end gap-2" style={{ height }}>
-            {data.map((d, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center">
-                    <div className="w-full bg-blue-200 rounded-t h-1"></div>
-                    <div style={{ height: `${(d.value / max) * 90}%` }} className="w-full bg-indigo-500 rounded-t"></div>
-                </div>
-            ))}
+        <div className="space-y-2" style={{ height }}>
+            <div className="h-48 flex items-end gap-2">
+                {data.map((d, i) => {
+                    const barHeight = (d.value / max) * 100;
+                    return (
+                        <div key={i} className="flex-1 flex flex-col items-center group">
+                            <div 
+                                style={{ height: `${barHeight}%` }} 
+                                className="w-full bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-t transition-all duration-300 hover:from-indigo-700 hover:to-indigo-500 shadow-sm group-hover:shadow-md"
+                                title={`${monthNames[d.label] || d.label}: ${d.value}`}
+                            ></div>
+                        </div>
+                    );
+                })}
+            </div>
+            <div className="flex items-center justify-between text-xs text-gray-500 px-1">
+                {data.slice(0, 6).map((d, i) => (
+                    <span key={i} className="flex-1 text-center">{monthNames[d.label] || d.label}</span>
+                ))}
+            </div>
         </div>
     );
 }
@@ -836,10 +1317,45 @@ function LineChart({ data, height = 200, stroke = '#6366f1' }) {
         const y = 100 - (d.value / max) * 90;
         return `${x},${y}`;
     }).join(' ');
+    const areaPoints = `${points} 100,100 0,100`;
     return (
-        <svg viewBox="0 0 100 100" className="w-full h-52">
-            <polyline fill="none" stroke={stroke} strokeWidth="2" points={points} />
-        </svg>
+        <div className="relative w-full" style={{ height }}>
+            <svg viewBox="0 0 100 100" className="w-full h-full" preserveAspectRatio="none">
+                {/* Gradient definitions */}
+                <defs>
+                    <linearGradient id="lineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor={stroke} stopOpacity="0.3" />
+                        <stop offset="100%" stopColor={stroke} stopOpacity="0.05" />
+                    </linearGradient>
+                </defs>
+                {/* Area fill */}
+                <polygon fill="url(#lineGradient)" points={areaPoints} />
+                {/* Line */}
+                <polyline 
+                    fill="none" 
+                    stroke={stroke} 
+                    strokeWidth="2.5" 
+                    points={points}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                />
+                {/* Data points */}
+                {data.map((d, i) => {
+                    const x = (i / (data.length - 1)) * 100;
+                    const y = 100 - (d.value / max) * 90;
+                    return (
+                        <circle 
+                            key={i}
+                            cx={x} 
+                            cy={y} 
+                            r="2" 
+                            fill={stroke}
+                            className="hover:r-3 transition-all"
+                        />
+                    );
+                })}
+            </svg>
+        </div>
     );
 }
 
@@ -849,20 +1365,63 @@ function DonutChart({ segments }) {
     const arcs = segments.map((seg, idx) => {
         const start = (acc / total) * 360; acc += Math.max(0, seg.value);
         const end = (acc / total) * 360;
-        return { start, end, color: seg.color, label: seg.label };
+        return { start, end, color: seg.color, label: seg.label, value: seg.value };
     });
     const conic = arcs.map(a => `${a.color} ${a.start}deg ${a.end}deg`).join(', ');
+    const percentage = (val) => total > 0 ? Math.round((val / total) * 100) : 0;
     return (
         <div className="flex items-center gap-8">
-            <div className="relative w-40 h-40">
+            <div className="relative w-40 h-40 flex-shrink-0">
                 <div className="absolute inset-0 rounded-full" style={{ background: `conic-gradient(${conic})` }}></div>
-                <div className="absolute inset-4 bg-white rounded-full"></div>
+                <div className="absolute inset-4 bg-white rounded-full flex items-center justify-center">
+                    <div className="text-center">
+                        <div className="text-xs text-gray-500">Total</div>
+                        <div className="text-lg font-bold text-gray-900">{total}</div>
+                    </div>
+                </div>
             </div>
-            <div className="text-sm space-y-2">
+            <div className="text-sm space-y-3 flex-1">
                 {segments.map((s, i) => (
-                    <div key={i} className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm" style={{ background: s.color }}></span> {s.label}</div>
+                    <div key={i} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <span className="w-4 h-4 rounded-sm shadow-sm" style={{ background: s.color }}></span>
+                            <span className="text-gray-700 font-medium">{s.label}</span>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-gray-900 font-semibold">{s.value}</div>
+                            <div className="text-xs text-gray-500">{percentage(s.value)}%</div>
+                        </div>
+                    </div>
                 ))}
             </div>
+        </div>
+    );
+}
+
+function EnhancedBarChart({ data }) {
+    const max = Math.max(1, ...data.map(d => d.amount));
+    return (
+        <div className="space-y-3">
+            {data.map((d, i) => {
+                const percentage = (d.amount / max) * 100;
+                return (
+                    <div key={i} className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-700 font-medium">{d.label}</span>
+                            <span className="text-gray-900 font-semibold">₹{d.amount.toLocaleString()}</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                            <div 
+                                className="h-full rounded-full transition-all duration-500 shadow-sm"
+                                style={{ 
+                                    width: `${percentage}%`,
+                                    background: `linear-gradient(90deg, ${d.color}, ${d.color}dd)`
+                                }}
+                            ></div>
+                        </div>
+                    </div>
+                );
+            })}
         </div>
     );
 }

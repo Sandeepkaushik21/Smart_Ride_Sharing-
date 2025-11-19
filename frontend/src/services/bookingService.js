@@ -22,8 +22,9 @@ export const bookingService = {
     }
   },
 
-  getMyBookings: async () => {
-    const response = await api.get('/bookings/my-bookings');
+  getMyBookings: async (params = {}) => {
+    // Support pagination params { page, size, ... }
+    const response = await api.get('/bookings/my-bookings', { params });
     return response.data;
   },
 
@@ -42,8 +43,9 @@ export const bookingService = {
     return response.data;
   },
 
-  getPendingBookings: async () => {
-    const response = await api.get('/bookings/pending-bookings');
+  getPendingBookings: async (params = {}) => {
+    // Support pagination params { page, size, ... }
+    const response = await api.get('/bookings/pending-bookings', { params });
     return response.data;
   },
 
@@ -57,8 +59,9 @@ export const bookingService = {
     return response.data;
   },
 
-  getRideHistory: async () => {
-    const response = await api.get('/bookings/history');
+  getRideHistory: async (params = {}) => {
+    // Support pagination params { page, size, ... }
+    const response = await api.get('/bookings/history', { params });
     return response.data;
   },
 

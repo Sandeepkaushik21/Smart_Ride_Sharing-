@@ -1,0 +1,47 @@
+# SonarQube Ignore File
+# Files and directories to ignore during analysis
+
+# Build outputs
+target/
+dist/
+build/
+node_modules/
+
+# Logs
+*.log
+logs/
+app.log*
+
+# Dependencies
+node_modules/
+.m2/
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Frontend build
+frontend/dist/
+frontend/node_modules/
+
+# Compiled files
+*.class
+*.jar
+*.war
+
+# Test reports
+surefire-reports/
+test-results/
+
+# Coverage reports (we generate these, but don't analyze them)
+coverage/
+*.lcov
+
