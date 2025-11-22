@@ -1,13 +1,17 @@
 package com.infosys.rsa.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.infosys.rsa.exception.UserNotFoundException;
 import com.infosys.rsa.model.User;
 import com.infosys.rsa.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class UserService {
@@ -17,6 +21,8 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     /**
      * Fetch a user by ID
      */
@@ -25,7 +31,7 @@ public class UserService {
         return userRepository.findById(userId)
                 .orElseThrow(() -> {
                     logger.error("User not found with ID: {}", userId);
-                    return new RuntimeException("User not found");
+                    return new UserNotFoundException("User not found with ID: " + userId);
                 });
     }
 
@@ -87,5 +93,52 @@ public class UserService {
 
         logger.debug("Pending drivers found: {}", pendingDrivers.size());
         return pendingDrivers;
+    }
+
+    /**
+     * Save or update master vehicle details for a driver
+     */
+    @Transactional
+    public User saveMasterVehicleDetails(Long userId, Map<String, Object> masterDetails) {
+        logger.info("Saving master vehicle details for userId: {}", userId);
+        
+        User user = getUserById(userId);
+        
+        try {
+            String masterDetailsJson = objectMapper.writeValueAsString(masterDetails);
+            user.setMasterVehicleDetailsJson(masterDetailsJson);
+            User updatedUser = userRepository.save(user);
+            logger.info("Master vehicle details saved successfully for userId: {}", userId);
+            return updatedUser;
+        } catch (Exception e) {
+            logger.error("Error saving master vehicle details for userId {}: {}", userId, e.getMessage());
+            throw new RuntimeException("Error saving master vehicle details: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Get master vehicle details for a driver
+     */
+    public Map<String, Object> getMasterVehicleDetails(Long userId) {
+        logger.info("Fetching master vehicle details for userId: {}", userId);
+        
+        User user = getUserById(userId);
+        
+        if (user.getMasterVehicleDetailsJson() == null || user.getMasterVehicleDetailsJson().isEmpty()) {
+            logger.debug("No master vehicle details found for userId: {}", userId);
+            return null;
+        }
+        
+        try {
+            Map<String, Object> masterDetails = objectMapper.readValue(
+                user.getMasterVehicleDetailsJson(),
+                new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}
+            );
+            logger.debug("Master vehicle details retrieved successfully for userId: {}", userId);
+            return masterDetails;
+        } catch (Exception e) {
+            logger.error("Error parsing master vehicle details for userId {}: {}", userId, e.getMessage());
+            throw new RuntimeException("Error parsing master vehicle details: " + e.getMessage());
+        }
     }
 }

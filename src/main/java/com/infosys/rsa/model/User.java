@@ -76,6 +76,10 @@ public class User {
     @Column(name = "wallet_balance")
     private Double walletBalance = 0.0;
 
+    // Master vehicle details (stored as JSON for reuse in ride posting)
+    @Column(name = "master_vehicle_details", columnDefinition = "LONGTEXT")
+    private String masterVehicleDetailsJson; // JSON string containing: vehiclePhotos, hasAC, vehicleType, vehicleModel, vehicleColor, otherFeatures
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

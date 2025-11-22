@@ -73,6 +73,7 @@ public class AuthController {
             this.message = message;
         }
 
+        @SuppressWarnings("unused") // Used by Jackson for JSON serialization
         public String getMessage() {
             return message;
         }
@@ -85,6 +86,7 @@ public class AuthController {
             this.message = message;
         }
 
+        @SuppressWarnings("unused") // Used by Jackson for JSON serialization
         public String getMessage() {
             return message;
         }

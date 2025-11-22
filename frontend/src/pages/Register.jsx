@@ -62,38 +62,38 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <Navbar />
       
-      <main className="flex-grow py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-lg">
+      <main className="flex-grow py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-2xl mx-auto bg-white p-6 rounded-xl shadow-2xl border border-gray-100">
           <BackButton to="/" />
           
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-4">
-              <div className="bg-blue-100 rounded-full p-3">
-                <UserPlus className="h-8 w-8 text-blue-600" />
+          <div className="text-center mb-6">
+            <div className="flex justify-center mb-3">
+              <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full p-2.5 shadow-lg">
+                <UserPlus className="h-5 w-5 text-white" />
               </div>
             </div>
-            <h2 className="text-3xl font-extrabold text-gray-900">Create your account</h2>
+            <h2 className="text-3xl font-extrabold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">Create your account</h2>
             <p className="mt-2 text-sm text-gray-600">
               Already have an account?{' '}
-              <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
+              <Link to="/login" className="font-medium text-blue-600 hover:text-blue-700 transition-colors">
                 Sign in
               </Link>
             </p>
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2.5 rounded-lg mb-4 text-base">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Full Name *
                 </label>
                 <div className="relative">
@@ -103,14 +103,14 @@ const Register = () => {
                     required
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className="pl-11 w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-base"
                     placeholder="John Doe"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Email *
                 </label>
                 <div className="relative">
@@ -120,14 +120,14 @@ const Register = () => {
                     required
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className="pl-11 w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-base"
                     placeholder="john@example.com"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Phone
                 </label>
                 <div className="relative">
@@ -136,14 +136,14 @@ const Register = () => {
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className="pl-11 w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-base"
                     placeholder="9876543210"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Password *
                 </label>
                 <div className="relative">
@@ -154,21 +154,21 @@ const Register = () => {
                     minLength={6}
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className="pl-11 w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-base"
                     placeholder="At least 6 characters"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Role *
                 </label>
                 <select
                   required
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-base"
                 >
                   <option value="PASSENGER">Passenger</option>
                   <option value="DRIVER">Driver</option>
@@ -177,14 +177,14 @@ const Register = () => {
             </div>
 
             {formData.role === 'DRIVER' && (
-              <div className="border-t pt-6 space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+              <div className="border-t pt-5 space-y-4">
+                <h3 className="text-base font-semibold text-gray-900 flex items-center">
                   <Car className="h-5 w-5 mr-2 text-blue-600" />
                   Vehicle Information
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
                       Vehicle Model *
                     </label>
                     <input
@@ -192,12 +192,12 @@ const Register = () => {
                       required={formData.role === 'DRIVER'}
                       value={formData.vehicleModel}
                       onChange={(e) => setFormData({ ...formData, vehicleModel: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-base"
                       placeholder="Toyota Camry"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
                       License Plate *
                     </label>
                     <input
@@ -205,12 +205,12 @@ const Register = () => {
                       required={formData.role === 'DRIVER'}
                       value={formData.licensePlate}
                       onChange={(e) => setFormData({ ...formData, licensePlate: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-base"
                       placeholder="ABC1234"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
                       Capacity *
                     </label>
                     <input
@@ -219,7 +219,7 @@ const Register = () => {
                       min={1}
                       value={formData.vehicleCapacity}
                       onChange={(e) => setFormData({ ...formData, vehicleCapacity: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-base"
                       placeholder="4"
                     />
                   </div>
@@ -231,7 +231,7 @@ const Register = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                className="w-full flex justify-center py-2.5 px-5 border border-transparent rounded-lg shadow-lg text-base font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-300 transform hover:scale-105"
               >
                 {loading ? 'Creating account...' : 'Create Account'}
               </button>

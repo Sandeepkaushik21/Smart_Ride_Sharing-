@@ -2,6 +2,8 @@ package com.infosys.rsa.service;
 
 import com.infosys.rsa.config.JwtUtils;
 import com.infosys.rsa.dto.*;
+import com.infosys.rsa.exception.EmailAlreadyTakenException;
+import com.infosys.rsa.exception.PhoneAlreadyTakenException;
 import com.infosys.rsa.model.Role;
 import com.infosys.rsa.model.User;
 import com.infosys.rsa.repository.RoleRepository;
@@ -54,12 +56,12 @@ public class AuthService {
 
         if (userRepository.existsByEmail(request.getEmail())) {
             logger.error("Registration failed - Email {} is already taken", request.getEmail());
-            throw new RuntimeException("Error: Email is already taken!");
+            throw new EmailAlreadyTakenException("Error: Email is already taken!");
         }
 
         if (request.getPhone() != null && !request.getPhone().isEmpty() && userRepository.existsByPhone(request.getPhone())) {
             logger.error("Registration failed - Phone {} is already taken", request.getPhone());
-            throw new RuntimeException("Error: Phone is already taken!");
+            throw new PhoneAlreadyTakenException("Error: Phone is already taken!");
         }
 
         User user = new User();

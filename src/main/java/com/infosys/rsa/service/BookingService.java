@@ -459,4 +459,112 @@ public class BookingService {
         logger.info("Booking locations updated successfully for booking ID: {}", bookingId);
         return updatedBooking;
     }
+
+    // ---------------- ACCEPT RESCHEDULED RIDE ---------------- 
+    @Transactional
+    public Booking acceptRescheduledRide(Long passengerId, Long bookingId) {
+        logger.info("Passenger ID: {} attempting to accept rescheduled ride for booking ID: {}", passengerId, bookingId);
+
+        Booking booking = bookingRepository.findByIdWithRide(bookingId)
+                .orElseThrow(() -> {
+                    logger.error("Booking not found with ID: {}", bookingId);
+                    return new RideNotFoundException("Booking not found with ID: " + bookingId);
+                });
+
+        if (!booking.getPassenger().getId().equals(passengerId)) {
+            logger.error("Unauthorized reschedule acceptance attempt by passenger ID: {}", passengerId);
+            throw new PassengerNotFoundException("You can only accept rescheduled rides for your own bookings.");
+        }
+
+        if (booking.getStatus() != Booking.BookingStatus.RESCHEDULED) {
+            logger.error("Booking ID: {} is not in RESCHEDULED status. Current status: {}", bookingId, booking.getStatus());
+            throw new InvalidLocationException("This booking is not rescheduled. Current status: " + booking.getStatus());
+        }
+
+        // Change status back to CONFIRMED (if payment was made) or ACCEPTED (if payment wasn't made yet)
+        // Since rescheduled bookings were previously CONFIRMED or ACCEPTED, we restore to CONFIRMED
+        // The passenger will need to make payment again if needed
+        booking.setStatus(Booking.BookingStatus.CONFIRMED);
+        Booking updatedBooking = bookingRepository.save(booking);
+
+        // Send confirmation email to passenger
+        try {
+            User passenger = booking.getPassenger();
+            User driver = booking.getRide().getDriver();
+            String passengerName = passenger.getName() != null ? passenger.getName() : passenger.getEmail();
+            String driverName = driver.getName() != null ? driver.getName() : driver.getEmail();
+            String dateStr = booking.getRide().getDate() != null ? booking.getRide().getDate().toString() : "N/A";
+            String timeStr = booking.getRide().getTime() != null ? booking.getRide().getTime().toString() : "N/A";
+
+            emailService.sendBookingConfirmation(
+                    passenger.getEmail(),
+                    passengerName,
+                    booking.getPickupLocation() != null ? booking.getPickupLocation() : booking.getRide().getSource(),
+                    booking.getDropoffLocation() != null ? booking.getDropoffLocation() : booking.getRide().getDestination(),
+                    dateStr,
+                    timeStr
+            );
+        } catch (Exception e) {
+            logger.error("Failed to send acceptance confirmation email: {}", e.getMessage());
+        }
+
+        logger.info("Rescheduled ride accepted successfully for booking ID: {}", bookingId);
+        return updatedBooking;
+    }
+
+    // ---------------- CANCEL RESCHEDULED RIDE ---------------- 
+    @Transactional
+    public Booking cancelRescheduledRide(Long passengerId, Long bookingId) {
+        logger.info("Passenger ID: {} attempting to cancel rescheduled ride for booking ID: {}", passengerId, bookingId);
+
+        Booking booking = bookingRepository.findByIdWithRide(bookingId)
+                .orElseThrow(() -> {
+                    logger.error("Booking not found with ID: {}", bookingId);
+                    return new RideNotFoundException("Booking not found with ID: " + bookingId);
+                });
+
+        if (!booking.getPassenger().getId().equals(passengerId)) {
+            logger.error("Unauthorized reschedule cancellation attempt by passenger ID: {}", passengerId);
+            throw new PassengerNotFoundException("You can only cancel rescheduled rides for your own bookings.");
+        }
+
+        if (booking.getStatus() != Booking.BookingStatus.RESCHEDULED) {
+            logger.error("Booking ID: {} is not in RESCHEDULED status. Current status: {}", bookingId, booking.getStatus());
+            throw new InvalidLocationException("This booking is not rescheduled. Current status: " + booking.getStatus());
+        }
+
+        Ride ride = booking.getRide();
+        int seatsToRestore = booking.getNumberOfSeats() != null ? booking.getNumberOfSeats() : 1;
+        ride.setAvailableSeats(ride.getAvailableSeats() + seatsToRestore);
+        rideRepository.save(ride);
+
+        booking.setStatus(Booking.BookingStatus.CANCELLED);
+        Booking updatedBooking = bookingRepository.save(booking);
+
+        // Send cancellation notification to driver
+        try {
+            User driver = ride.getDriver();
+            User passenger = booking.getPassenger();
+            String driverName = driver.getName() != null ? driver.getName() : driver.getEmail();
+            String passengerName = passenger.getName() != null ? passenger.getName() : passenger.getEmail();
+            String dateStr = ride.getDate() != null ? ride.getDate().toString() : "N/A";
+            String timeStr = ride.getTime() != null ? ride.getTime().toString() : "N/A";
+
+            emailService.sendBookingCancellationNotification(
+                    driver.getEmail(),
+                    driverName,
+                    passengerName,
+                    booking.getPickupLocation() != null ? booking.getPickupLocation() : ride.getSource(),
+                    booking.getDropoffLocation() != null ? booking.getDropoffLocation() : ride.getDestination(),
+                    dateStr,
+                    timeStr
+            );
+        } catch (Exception e) {
+            logger.error("Failed to send cancellation notification email: {}", e.getMessage());
+        }
+
+        logger.info("Rescheduled ride cancelled successfully for booking ID: {}. Restored {} seat(s) to ride ID: {}", 
+                bookingId, seatsToRestore, ride.getId());
+        return updatedBooking;
+    }
 }

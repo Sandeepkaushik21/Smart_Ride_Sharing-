@@ -6,6 +6,7 @@ import BackButton from '../components/BackButton';
 import CityAutocomplete from '../components/CityAutocomplete';
 import { rideService } from '../services/rideService';
 import { bookingService } from '../services/bookingService';
+import { userService } from '../services/userService';
 import { showConfirm, showSuccess, showError } from '../utils/swal';
 import { authService } from '../services/authService';
 
@@ -62,6 +63,10 @@ const DriverDashboard = () => {
     // Restore: arrays for up to 4 pickup & 4 drop locations (step 2 of wizard)
     const [pickupLocations, setPickupLocations] = useState(['', '', '', '']);
     const [dropLocations, setDropLocations] = useState(['', '', '', '']);
+    // Master vehicle details
+    const [useMasterDetails, setUseMasterDetails] = useState(false);
+    const [masterDetails, setMasterDetails] = useState(null);
+    const [hasMasterDetails, setHasMasterDetails] = useState(false);
 
     const handlePickupChange = (index, value) => {
         const updated = [...pickupLocations];
@@ -77,7 +82,22 @@ const DriverDashboard = () => {
 
     useEffect(() => {
         fetchData();
+        loadMasterDetails();
     }, []);
+
+    // Load master vehicle details
+    const loadMasterDetails = async () => {
+        try {
+            const details = await userService.getMasterVehicleDetails();
+            if (details) {
+                setMasterDetails(details);
+                setHasMasterDetails(true);
+            }
+        } catch (error) {
+            console.log('No master details found or error loading:', error);
+            setHasMasterDetails(false);
+        }
+    };
 
     // Reset location arrays when cities change
     useEffect(() => {
@@ -494,25 +514,30 @@ const DriverDashboard = () => {
     const handlePostRide = async (e) => {
         e.preventDefault();
 
-        // Validate vehicle photos
-        if (vehiclePhotos.length < 4) {
-            await showError('Please upload at least 4 photos of your vehicle');
-            return;
-        }
+        // Validate vehicle photos and details only if not using master details
+        if (!useMasterDetails) {
+            if (vehiclePhotos.length < 4) {
+                await showError('Please upload at least 4 photos of your vehicle');
+                return;
+            }
 
-        if (vehiclePhotos.length > 5) {
-            await showError('Please upload maximum 5 photos');
-            return;
-        }
+            if (vehiclePhotos.length > 5) {
+                await showError('Please upload maximum 5 photos');
+                return;
+            }
 
-        // Validate vehicle condition fields
-        if (postForm.hasAC === null || postForm.hasAC === undefined) {
-            await showError('Please specify if your vehicle has AC');
-            return;
-        }
+            // Validate vehicle condition fields
+            if (postForm.hasAC === null || postForm.hasAC === undefined) {
+                await showError('Please specify if your vehicle has AC');
+                return;
+            }
 
-        if (!postForm.vehicleType || postForm.vehicleType.trim() === '') {
-            await showError('Please specify your vehicle type (Car, Bike, etc.)');
+            if (!postForm.vehicleType || postForm.vehicleType.trim() === '') {
+                await showError('Please specify your vehicle type (Car, Bike, etc.)');
+                return;
+            }
+        } else if (!hasMasterDetails) {
+            await showError('No master vehicle details found. Please save master details first or uncheck "Use Master Details".');
             return;
         }
 
@@ -539,12 +564,13 @@ const DriverDashboard = () => {
                 date: postForm.date,
                 time: postForm.time,
                 availableSeats: parseInt(postForm.availableSeats),
-                vehiclePhotos: vehiclePhotos,
-                hasAC: postForm.hasAC,
-                vehicleType: postForm.vehicleType,
-                vehicleModel: postForm.vehicleModel,
-                vehicleColor: postForm.vehicleColor,
-                otherFeatures: postForm.otherFeatures,
+                useMasterDetails: useMasterDetails,
+                vehiclePhotos: useMasterDetails ? [] : vehiclePhotos,
+                hasAC: useMasterDetails ? null : postForm.hasAC,
+                vehicleType: useMasterDetails ? null : postForm.vehicleType,
+                vehicleModel: useMasterDetails ? null : postForm.vehicleModel,
+                vehicleColor: useMasterDetails ? null : postForm.vehicleColor,
+                otherFeatures: useMasterDetails ? null : postForm.otherFeatures,
             });
             await showSuccess('Ride posted successfully!');
             setShowPostForm(false);
@@ -564,6 +590,7 @@ const DriverDashboard = () => {
             setDropLocations(['', '', '', '']);
             setPostStep(1);
             setVehiclePhotos([]);
+            setUseMasterDetails(false);
             // Refresh data to show newly posted ride
             await fetchData();
             // Switch to rides tab to show updated list
@@ -576,40 +603,44 @@ const DriverDashboard = () => {
     };
 
     return (
-        <div className="min-h-screen flex flex-col bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
+        <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
             <Navbar />
 
-            <main className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+            <main className="flex-grow max-w-7xl mx-auto w-full px-3 sm:px-5 lg:px-6 py-5">
                 <BackButton />
 
                 {/* Header Section */}
-                <div className="mb-8 bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-600">
+                <div className="mb-6 bg-gradient-to-r from-white via-purple-50/30 to-blue-50/30 rounded-xl shadow-2xl p-5 border-2 border-purple-200/50 backdrop-blur-sm">
                     <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900 flex items-center space-x-3">
-                                <Car className="h-6 w-6 text-purple-600" />
-                                <span>Driver Dashboard</span>
-                            </h1>
-                            <p className="text-gray-600 mt-2 text-sm">
-                                Post rides and manage your bookings
-                                {(() => {
-                                    const currentUser = authService.getCurrentUser();
-                                    const driverName = currentUser?.name || currentUser?.email || '';
-                                    return driverName ? ` • ${driverName}` : '';
-                                })()}
-                            </p>
+                        <div className="flex items-center space-x-4">
+                            <div className="p-3 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl shadow-lg">
+                                <Car className="h-6 w-6 text-white" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent flex items-center space-x-2">
+                                    <span>Driver Dashboard</span>
+                                </h1>
+                                <p className="text-gray-600 mt-1 text-sm">
+                                    Post rides and manage your bookings
+                                    {(() => {
+                                        const currentUser = authService.getCurrentUser();
+                                        const driverName = currentUser?.name || currentUser?.email || '';
+                                        return driverName ? ` • ${driverName}` : '';
+                                    })()}
+                                </p>
+                            </div>
                         </div>
                         <button
                             onClick={() => setShowPostForm(!showPostForm)}
-                            className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-semibold shadow-lg transform hover:scale-105 transition-all ${
+                            className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-bold shadow-xl transform hover:scale-105 transition-all text-base ${
                                 showPostForm
-                                    ? 'bg-gradient-to-r from-red-500 to-red-600 text-white'
+                                    ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700'
                                     : 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700'
                             }`}
                         >
                             {showPostForm ? (
                                 <>
-                                    <span>×</span>
+                                    <X className="h-5 w-5" />
                                     <span>Cancel</span>
                                 </>
                             ) : (
@@ -623,9 +654,11 @@ const DriverDashboard = () => {
                 </div>
 
                 {showPostForm && (
-                    <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border-2 border-purple-200">
-                        <h2 className="text-xl font-bold mb-6 flex items-center space-x-2 text-gray-800">
-                            <Plus className="h-5 w-5 text-purple-600" />
+                    <div className="bg-white rounded-xl shadow-2xl p-6 mb-6 border-2 border-purple-300/50 backdrop-blur-sm">
+                        <h2 className="text-2xl font-bold mb-6 flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                            <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg">
+                                <Plus className="h-5 w-5 text-white" />
+                            </div>
                             <span>Post a New Ride</span>
                         </h2>
 
@@ -815,7 +848,40 @@ const DriverDashboard = () => {
                                     </div>
                                 </div>
 
+                                {/* Master Details Option */}
+                                <div className="border-t-2 border-gray-200 pt-6">
+                                    <div className="flex items-center space-x-3 mb-4">
+                                        <input
+                                            type="checkbox"
+                                            id="useMasterDetails"
+                                            checked={useMasterDetails}
+                                            onChange={(e) => {
+                                                setUseMasterDetails(e.target.checked);
+                                                if (e.target.checked && !hasMasterDetails) {
+                                                    showError('No master vehicle details found. Please save master details first.');
+                                                    setUseMasterDetails(false);
+                                                }
+                                            }}
+                                            disabled={!hasMasterDetails}
+                                            className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
+                                        />
+                                        <label htmlFor="useMasterDetails" className="text-sm font-semibold text-gray-700 cursor-pointer">
+                                            Use Master Vehicle Details {!hasMasterDetails && '(No master details saved yet)'}
+                                        </label>
+                                    </div>
+                                    {hasMasterDetails && masterDetails && (
+                                        <div className="bg-green-50 border-l-4 border-green-400 p-3 rounded mb-4">
+                                            <p className="text-sm text-green-800">
+                                                <strong>Master Details Available:</strong> {masterDetails.vehicleType || 'N/A'} 
+                                                {masterDetails.vehicleModel && ` - ${masterDetails.vehicleModel}`}
+                                                {masterDetails.hasAC !== undefined && ` | AC: ${masterDetails.hasAC ? 'Yes' : 'No'}`}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+
                                 {/* Vehicle Photos Section */}
+                                {!useMasterDetails && (
                                 <div className="border-t-2 border-gray-200 pt-6">
                                      <label className="block text-sm font-semibold text-gray-700 mb-3">Vehicle Photos * (4-5 photos required)</label>
                                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
@@ -843,8 +909,10 @@ const DriverDashboard = () => {
                                          <p className="text-sm text-orange-600 mt-2">Please upload at least {4 - vehiclePhotos.length} more photo(s)</p>
                                      )}
                                  </div>
+                                 )}
 
                                  {/* Vehicle Condition Details */}
+                                 {!useMasterDetails && (
                                  <div className="border-t-2 border-gray-200 pt-6">
                                      <h3 className="text-lg font-semibold text-gray-800 mb-4">Vehicle Condition Details *</h3>
                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -893,6 +961,7 @@ const DriverDashboard = () => {
                                          </div>
                                      </div>
                                  </div>
+                                 )}
 
                                 <div className="flex justify-between">
                                     <button type="button" onClick={() => setPostStep(2)} className="px-8 py-3 bg-gray-200 rounded-lg">Back</button>
@@ -907,14 +976,14 @@ const DriverDashboard = () => {
                 )}
 
                 {/* Tabs for Rides, Bookings, Pending, and History */}
-                <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div className="bg-white rounded-xl shadow-2xl p-4 mb-8 border border-gray-100">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <button
                             onClick={() => setActiveTab('rides')}
-                            className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center space-x-2 ${
+                            className={`px-5 py-3 rounded-xl font-bold transition-all flex items-center justify-center space-x-2 text-base ${
                                 activeTab === 'rides'
-                                    ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-md'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-xl transform scale-105'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gradient-to-r hover:from-green-50 hover:to-green-100'
                             }`}
                         >
                             <Car className="h-5 w-5" />
@@ -922,10 +991,10 @@ const DriverDashboard = () => {
                         </button>
                         <button
                             onClick={() => setActiveTab('bookings')}
-                            className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center space-x-2 ${
+                            className={`px-5 py-3 rounded-xl font-bold transition-all flex items-center justify-center space-x-2 text-base ${
                                 activeTab === 'bookings'
-                                    ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-md'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-xl transform scale-105'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gradient-to-r hover:from-green-50 hover:to-green-100'
                             }`}
                         >
                             <Ticket className="h-5 w-5" />
@@ -933,10 +1002,10 @@ const DriverDashboard = () => {
                         </button>
                         <button
                             onClick={() => setActiveTab('pending')}
-                            className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center space-x-2 ${
+                            className={`px-5 py-3 rounded-xl font-bold transition-all flex items-center justify-center space-x-2 text-base ${
                                 activeTab === 'pending'
-                                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-xl transform scale-105'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100'
                             }`}
                         >
                             <CheckCircle2 className="h-5 w-5" />
@@ -944,10 +1013,10 @@ const DriverDashboard = () => {
                         </button>
                         <button
                             onClick={() => setActiveTab('history')}
-                            className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center space-x-2 ${
+                            className={`px-5 py-3 rounded-xl font-bold transition-all flex items-center justify-center space-x-2 text-base ${
                                 activeTab === 'history'
-                                    ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-md'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-xl transform scale-105'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gradient-to-r hover:from-purple-50 hover:to-purple-100'
                             }`}
                         >
                             <History className="h-5 w-5" />
@@ -1103,9 +1172,11 @@ const DriverDashboard = () => {
                                                     </div>
                                                 </div>
                                                 {/* Right: fare */}
-                                                <div className="text-right ml-4">
-                                                    <div className="text-[11px] text-gray-500 leading-tight">Estimated Fare</div>
-                                                    <div className="text-lg md:text-xl font-bold text-green-600">₹{(booking.totalPrice ?? 0).toFixed(2)}</div>
+                                                <div className="text-right ml-4 flex flex-col items-end space-y-2">
+                                                    <div>
+                                                        <div className="text-[11px] text-gray-500 leading-tight">Estimated Fare</div>
+                                                        <div className="text-lg md:text-xl font-bold text-green-600">₹{(booking.totalPrice ?? booking.fareAmount ?? 0).toFixed(2)}</div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

@@ -23,28 +23,33 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="bg-blue-600 text-white shadow-lg">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <nav className="bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 text-white shadow-2xl backdrop-blur-md border-b border-white/10">
+      <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-6">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
-            <Link to="/" className="flex items-center space-x-2">
-              <Home className="h-6 w-6" />
-              <span className="text-xl font-bold">Smart Ride Sharing</span>
+            <Link to="/" className="flex items-center space-x-2 group">
+              <div className="p-1.5 bg-white/10 rounded-lg group-hover:bg-white/20 transition-all duration-300 group-hover:scale-110">
+                <Home className="h-4 w-4" />
+              </div>
+              <span className="text-lg md:text-xl font-bold bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
+                Smart Ride Sharing
+              </span>
             </Link>
           </div>
 
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-3">
             {isAuthenticated ? (
               <>
                 <Link
                   to="/profile"
-                  className="px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 flex items-center space-x-1">
+                  className="px-4 py-2 rounded-lg text-sm font-semibold hover:bg-white/10 transition-all duration-300 flex items-center space-x-2 border border-white/20 hover:border-white/40"
+                >
                   <User className="h-4 w-4" />
                   <span>Profile</span>
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 flex items-center space-x-1"
+                  className="px-4 py-2 rounded-lg text-sm font-semibold hover:bg-white/10 transition-all duration-300 flex items-center space-x-2 border border-white/20 hover:border-white/40"
                 >
                   <LogOut className="h-4 w-4" />
                   <span>Logout</span>
@@ -54,13 +59,13 @@ const Navbar = () => {
               <>
                 <Link
                   to="/login"
-                  className="px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
+                  className="px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-white/10 transition-all duration-300 border border-white/20 hover:border-white/40"
                 >
                   Login
                 </Link>
                 <Link
                   to="/register"
-                  className="px-3 py-2 rounded-md text-sm font-medium bg-white text-blue-600 hover:bg-gray-100"
+                  className="px-5 py-2.5 rounded-lg text-sm font-semibold bg-white text-blue-700 hover:bg-blue-50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                 >
                   Register
                 </Link>
@@ -71,20 +76,20 @@ const Navbar = () => {
           <div className="md:hidden">
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="p-2 rounded-md hover:bg-blue-700"
+              className="p-2 rounded-lg hover:bg-white/10 transition-all duration-300 border border-white/20"
             >
-              {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </div>
 
         {isOpen && (
-          <div className="md:hidden pb-4 space-y-2">
+          <div className="md:hidden pb-4 space-y-2 animate-in slide-in-from-top">
             {isAuthenticated ? (
               <>
                 <Link
                   to="/profile"
-                  className="block px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
+                  className="block px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-white/10 transition-all duration-300 border border-white/20"
                   onClick={() => setIsOpen(false)}
                 >
                   Profile
@@ -94,7 +99,7 @@ const Navbar = () => {
                     setIsOpen(false);
                     await handleLogout();
                   }}
-                  className="block w-full text-left px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
+                  className="block w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-white/10 transition-all duration-300 border border-white/20"
                 >
                   Logout
                 </button>
@@ -103,14 +108,14 @@ const Navbar = () => {
               <>
                 <Link
                   to="/login"
-                  className="block px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
+                  className="block px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-white/10 transition-all duration-300 border border-white/20"
                   onClick={() => setIsOpen(false)}
                 >
                   Login
                 </Link>
                 <Link
                   to="/register"
-                  className="block px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
+                  className="block px-4 py-2.5 rounded-lg text-sm font-semibold bg-white text-blue-700 hover:bg-blue-50 transition-all duration-300"
                   onClick={() => setIsOpen(false)}
                 >
                   Register

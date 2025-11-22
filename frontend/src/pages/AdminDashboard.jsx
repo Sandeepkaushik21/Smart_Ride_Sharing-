@@ -268,39 +268,39 @@ const AdminDashboard = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100">
+            <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
                 <Navbar />
                 <div className="flex-grow flex items-center justify-center">
-                    <div className="text-xl font-semibold text-gray-700">Loading dashboard...</div>
+                    <div className="text-sm font-semibold text-gray-700">Loading dashboard...</div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen flex flex-col bg-gray-50">
+        <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
             <Navbar />
 
             {/* Responsive Shell with Sidebar */}
             <div className="flex flex-1">
                 {/* Sidebar (desktop) */}
-                <aside className={`hidden lg:flex lg:flex-col lg:w-64 bg-white border-r shadow-sm`}>
-                    <div className="h-16 flex items-center px-4 border-b">
-                        <div className="flex items-center gap-2 text-gray-800 font-bold">
-                            <LayoutGrid className="h-5 w-5 text-blue-600" />
+                <aside className={`hidden lg:flex lg:flex-col lg:w-56 bg-white border-r shadow-lg rounded-r-xl`}>
+                    <div className="h-14 flex items-center px-3 border-b bg-gradient-to-r from-blue-600 to-indigo-600">
+                        <div className="flex items-center gap-1.5 text-white font-bold text-sm">
+                            <LayoutGrid className="h-4 w-4" />
                             <span>Admin Panel</span>
                         </div>
                     </div>
-                    <nav className="flex-1 px-2 py-4 space-y-1">
-                        <SidebarItem icon={<Activity className="h-4 w-4" />} label="Overview" active={activeTab==='stats'} onClick={() => setActiveTab('stats')} />
-                        <SidebarItem icon={<Car className="h-4 w-4" />} label={`Drivers (${allDrivers.length})`} active={activeTab==='drivers'} onClick={() => setActiveTab('drivers')} />
-                        <SidebarItem icon={<Users className="h-4 w-4" />} label={`Passengers (${allPassengers.length})`} active={activeTab==='passengers'} onClick={() => setActiveTab('passengers')} />
-                        <SidebarItem icon={<XCircle className="h-4 w-4" />} label={`Pending (${pendingDrivers.length})`} active={activeTab==='pending'} onClick={() => setActiveTab('pending')} />
-                        <div className="pt-2 mt-2 border-t"></div>
-                        <SidebarItem icon={<Settings className="h-4 w-4" />} label="Settings" active={activeTab==='settings'} onClick={() => setActiveTab('settings')} />
-                        <SidebarItem icon={<Shield className="h-4 w-4" />} label="Logout" active={false} onClick={handleLogout} />
+                    <nav className="flex-1 px-2 py-3 space-y-0.5">
+                        <SidebarItem icon={<Activity className="h-3.5 w-3.5" />} label="Overview" active={activeTab==='stats'} onClick={() => setActiveTab('stats')} />
+                        <SidebarItem icon={<Car className="h-3.5 w-3.5" />} label={`Drivers (${allDrivers.length})`} active={activeTab==='drivers'} onClick={() => setActiveTab('drivers')} />
+                        <SidebarItem icon={<Users className="h-3.5 w-3.5" />} label={`Passengers (${allPassengers.length})`} active={activeTab==='passengers'} onClick={() => setActiveTab('passengers')} />
+                        <SidebarItem icon={<XCircle className="h-3.5 w-3.5" />} label={`Pending (${pendingDrivers.length})`} active={activeTab==='pending'} onClick={() => setActiveTab('pending')} />
+                        <div className="pt-1.5 mt-1.5 border-t"></div>
+                        <SidebarItem icon={<Settings className="h-3.5 w-3.5" />} label="Settings" active={activeTab==='settings'} onClick={() => setActiveTab('settings')} />
+                        <SidebarItem icon={<Shield className="h-3.5 w-3.5" />} label="Logout" active={false} onClick={handleLogout} />
                     </nav>
-                    <div className="p-4 text-xs text-gray-500">© {new Date().getFullYear()} RSA Admin</div>
+                    <div className="p-3 text-xs text-gray-500">© {new Date().getFullYear()} RSA Admin</div>
                 </aside>
 
                 {/* Mobile Sidebar Drawer */}
@@ -333,20 +333,20 @@ const AdminDashboard = () => {
                 {/* Content */}
                 <main className="flex-1 min-w-0">
                     {/* Top header */}
-                    <div className="px-4 sm:px-6 lg:px-8 py-4 border-b bg-white flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <button className="lg:hidden p-2 rounded hover:bg-gray-100" onClick={() => setSidebarOpen(true)}>
-                                <Menu className="h-5 w-5" />
+                    <div className="px-3 sm:px-5 lg:px-6 py-3 border-b bg-white/80 backdrop-blur-sm shadow-sm flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <button className="lg:hidden p-1.5 rounded-lg hover:bg-gray-100 transition-colors" onClick={() => setSidebarOpen(true)}>
+                                <Menu className="h-4 w-4" />
                             </button>
-                            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
-                                <Shield className="h-6 w-6 text-blue-600" />
+                            <h1 className="text-base sm:text-lg font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-1.5">
+                                <Shield className="h-4 w-4 text-blue-600" />
                                 Admin Dashboard
                             </h1>
                         </div>
-                        <div className="hidden sm:flex items-center gap-2 text-sm">
-                            <button onClick={handleShare} className="px-3 py-1.5 rounded border hover:bg-gray-50">Share</button>
-                            <button onClick={handlePrint} className="px-3 py-1.5 rounded border hover:bg-gray-50">Print</button>
-                            <button onClick={handleExport} className="px-3 py-1.5 rounded bg-indigo-600 text-white">Export</button>
+                        <div className="hidden sm:flex items-center gap-1.5 text-xs">
+                            <button onClick={handleShare} className="px-2.5 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors text-xs">Share</button>
+                            <button onClick={handlePrint} className="px-2.5 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors text-xs">Print</button>
+                            <button onClick={handleExport} className="px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 transition-all text-xs shadow-lg">Export</button>
                         </div>
                     </div>
 

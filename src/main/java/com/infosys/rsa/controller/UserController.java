@@ -11,6 +11,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/user")
@@ -49,11 +51,45 @@ public class UserController {
         }
     }
 
+    @PostMapping("/master-vehicle-details")
+    @PreAuthorize("hasRole('DRIVER')")
+    public ResponseEntity<?> saveMasterVehicleDetails(@RequestBody Map<String, Object> masterDetails,
+                                                      Authentication authentication) {
+        logger.info("Entering saveMasterVehicleDetails()");
+        try {
+            UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+            logger.debug("Saving master vehicle details for userId: {}", userPrincipal.getId());
+            User updatedUser = userService.saveMasterVehicleDetails(userPrincipal.getId(), masterDetails);
+            logger.info("Master vehicle details saved successfully for userId: {}", userPrincipal.getId());
+            return ResponseEntity.ok(updatedUser);
+        } catch (RuntimeException e) {
+            logger.error("Error saving master vehicle details: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
+    @GetMapping("/master-vehicle-details")
+    @PreAuthorize("hasRole('DRIVER')")
+    public ResponseEntity<?> getMasterVehicleDetails(Authentication authentication) {
+        logger.info("Entering getMasterVehicleDetails()");
+        try {
+            UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+            logger.debug("Fetching master vehicle details for userId: {}", userPrincipal.getId());
+            Map<String, Object> masterDetails = userService.getMasterVehicleDetails(userPrincipal.getId());
+            logger.info("Master vehicle details fetched successfully for userId: {}", userPrincipal.getId());
+            return ResponseEntity.ok(masterDetails);
+        } catch (RuntimeException e) {
+            logger.error("Error fetching master vehicle details: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
     private static class ErrorResponse {
         private String message;
         public ErrorResponse(String message) {
             this.message = message;
         }
+        @SuppressWarnings("unused") // Used by Jackson for JSON serialization
         public String getMessage() {
             return message;
         }

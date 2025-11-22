@@ -59,6 +59,7 @@ public class Booking {
         PENDING,        // Waiting for driver approval
         ACCEPTED,       // Driver accepted, waiting for payment
         CONFIRMED,      // Payment completed
+        RESCHEDULED,    // Ride rescheduled by driver, waiting for passenger to accept/cancel
         CANCELLED,
         COMPLETED
     }

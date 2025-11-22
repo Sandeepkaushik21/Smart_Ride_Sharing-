@@ -176,6 +176,32 @@ public class BookingController {
         return ResponseEntity.ok(updatedBooking);
     }
 
+    // ---------------- ACCEPT RESCHEDULED RIDE ---------------- 
+    @PatchMapping("/{id}/accept-reschedule")
+    @PreAuthorize("hasRole('PASSENGER')")
+    public ResponseEntity<?> acceptRescheduledRide(@PathVariable Long id, Authentication authentication) {
+        logger.info("Entering acceptRescheduledRide() for bookingId: {}", id);
+        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+        logger.debug("Passenger ID: {} attempting to accept rescheduled ride", userPrincipal.getId());
+
+        Booking updatedBooking = bookingService.acceptRescheduledRide(userPrincipal.getId(), id);
+        logger.info("Rescheduled ride accepted successfully for booking ID: {}", id);
+        return ResponseEntity.ok(updatedBooking);
+    }
+
+    // ---------------- CANCEL RESCHEDULED RIDE ---------------- 
+    @PatchMapping("/{id}/cancel-reschedule")
+    @PreAuthorize("hasRole('PASSENGER')")
+    public ResponseEntity<?> cancelRescheduledRide(@PathVariable Long id, Authentication authentication) {
+        logger.info("Entering cancelRescheduledRide() for bookingId: {}", id);
+        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+        logger.debug("Passenger ID: {} attempting to cancel rescheduled ride", userPrincipal.getId());
+
+        Booking cancelledBooking = bookingService.cancelRescheduledRide(userPrincipal.getId(), id);
+        logger.info("Rescheduled ride cancelled successfully for booking ID: {}", id);
+        return ResponseEntity.ok(cancelledBooking);
+    }
+
     // ✅ Response wrapper for cancel API
     private static class CancelBookingResponse {
         private Booking cancelledBooking;
@@ -188,8 +214,11 @@ public class BookingController {
             this.updatedRide = updatedRide;
         }
 
+        @SuppressWarnings("unused") // Used by Jackson for JSON serialization
         public Booking getCancelledBooking() { return cancelledBooking; }
+        @SuppressWarnings("unused") // Used by Jackson for JSON serialization
         public List<Booking> getMyBookings() { return myBookings; }
+        @SuppressWarnings("unused") // Used by Jackson for JSON serialization
         public Ride getUpdatedRide() { return updatedRide; }
     }
 }
