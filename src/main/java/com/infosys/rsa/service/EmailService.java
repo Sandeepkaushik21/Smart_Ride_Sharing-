@@ -242,7 +242,7 @@ public class EmailService {
                             "Date: %s\n" +
                             "Time: %s\n" +
                             (reason != null && !reason.trim().isEmpty() ? "Reason: %s\n\n" : "\n") +
-                            "If you have already made a payment, you will receive a full refund.\n\n" +
+                            "If you have already made a payment, you will receive a full refund within 7 working days.\n\n" +
                             "We apologize for any inconvenience caused.\n\n" +
                             "Thank you for using Smart Ride Sharing!\n\n" +
                             "Best Regards,\n" +
@@ -367,6 +367,43 @@ public class EmailService {
             logger.info("Ride reminder notification sent successfully to {}", toEmail);
         } catch (Exception e) {
             logger.error("Failed to send ride reminder notification to {}: {}", toEmail, e.getMessage());
+        }
+    }
+
+    public void sendRescheduleRefundNotification(String toEmail, String driverName, double refundAmount,
+                                                 int refundedBookingsCount, String oldDate, String oldTime,
+                                                 String newDate, String newTime) {
+        logger.info("Sending reschedule refund notification to driver: {} ({})", driverName, toEmail);
+
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(toEmail);
+            message.setSubject("Ride Rescheduled - Payment Refund Information");
+
+            String body = String.format(
+                    "Dear %s,\n\n" +
+                            "Your ride has been rescheduled. As a result, payments from %d passenger(s) have been refunded.\n\n" +
+                            "Reschedule Details:\n" +
+                            "Previous Schedule: %s at %s\n" +
+                            "New Schedule: %s at %s\n\n" +
+                            "Refund Information:\n" +
+                            "Total Refund Amount: ₹%.2f\n" +
+                            "Number of Bookings Refunded: %d\n\n" +
+                            "The refunded amount will be processed back to the passengers' accounts.\n\n" +
+                            "Please note: Passengers will be notified and can choose to accept the new schedule or cancel their booking.\n\n" +
+                            "Thank you for using Smart Ride Sharing!\n\n" +
+                            "Best Regards,\n" +
+                            "Smart Ride Sharing Team",
+                    driverName, refundedBookingsCount, oldDate, oldTime, newDate, newTime,
+                    refundAmount, refundedBookingsCount
+            );
+
+            message.setText(body);
+            mailSender.send(message);
+            logger.info("Reschedule refund notification sent successfully to {}", toEmail);
+        } catch (Exception e) {
+            logger.error("Failed to send reschedule refund notification to {}: {}", toEmail, e.getMessage());
         }
     }
 }

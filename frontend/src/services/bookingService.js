@@ -65,16 +65,13 @@ export const bookingService = {
     return response.data;
   },
 
-  updateBookingLocations: async (bookingId, locationsData) => {
-    try {
-      const response = await api.patch(`/bookings/${bookingId}/update-locations`, locationsData);
-      return response.data;
-    } catch (error) {
-      console.error('Update booking locations API error:', error.response || error);
-      const serverMessage = error.response?.data?.message || error.response?.data || error.message;
-      const err = new Error(serverMessage);
-      err.original = error;
-      throw err;
-    }
+  acceptRescheduledRide: async (bookingId) => {
+    const response = await api.patch(`/bookings/${bookingId}/accept-reschedule`);
+    return response.data;
+  },
+
+  cancelRescheduledRide: async (bookingId) => {
+    const response = await api.patch(`/bookings/${bookingId}/cancel-reschedule`);
+    return response.data;
   },
 };

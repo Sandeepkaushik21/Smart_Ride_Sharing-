@@ -16,7 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
@@ -69,13 +71,82 @@ public class RideService {
         ride.setEstimatedFare(estimatedFare);
         ride.setStatus(Ride.RideStatus.SCHEDULED);
 
-        // Store vehicle photos as JSON string
-        if (request.getVehiclePhotos() != null && !request.getVehiclePhotos().isEmpty()) {
+        // Handle vehicle details: use master details if requested, otherwise use provided details
+        if (request.getUseMasterDetails() != null && request.getUseMasterDetails() && driver.getMasterVehicleDetailsJson() != null) {
+            // Load master vehicle details from driver's profile
             try {
-                String vehiclePhotosJson = objectMapper.writeValueAsString(request.getVehiclePhotos());
-                ride.setVehiclePhotosJson(vehiclePhotosJson);
+                Map<String, Object> masterDetails = objectMapper.readValue(
+                    driver.getMasterVehicleDetailsJson(), 
+                    new TypeReference<Map<String, Object>>() {}
+                );
+                
+                // Set vehicle photos from master details
+                if (masterDetails.containsKey("vehiclePhotos")) {
+                    Object photos = masterDetails.get("vehiclePhotos");
+                    if (photos instanceof List) {
+                        String vehiclePhotosJson = objectMapper.writeValueAsString(photos);
+                        ride.setVehiclePhotosJson(vehiclePhotosJson);
+                    }
+                }
+                
+                // Set vehicle condition details from master details
+                if (masterDetails.containsKey("hasAC")) {
+                    ride.setHasAC((Boolean) masterDetails.get("hasAC"));
+                }
+                if (masterDetails.containsKey("vehicleType")) {
+                    ride.setVehicleType((String) masterDetails.get("vehicleType"));
+                }
+                if (masterDetails.containsKey("vehicleModel")) {
+                    ride.setVehicleModel((String) masterDetails.get("vehicleModel"));
+                }
+                if (masterDetails.containsKey("vehicleColor")) {
+                    ride.setVehicleColor((String) masterDetails.get("vehicleColor"));
+                }
+                if (masterDetails.containsKey("otherFeatures")) {
+                    ride.setOtherFeatures((String) masterDetails.get("otherFeatures"));
+                }
             } catch (Exception e) {
-                throw new RuntimeException("Error processing vehicle photos: " + e.getMessage());
+                throw new RuntimeException("Error loading master vehicle details: " + e.getMessage());
+            }
+        } else {
+            // Use provided vehicle details
+            // Store vehicle photos as JSON string
+            if (request.getVehiclePhotos() != null && !request.getVehiclePhotos().isEmpty()) {
+                try {
+                    String vehiclePhotosJson = objectMapper.writeValueAsString(request.getVehiclePhotos());
+                    ride.setVehiclePhotosJson(vehiclePhotosJson);
+                } catch (Exception e) {
+                    throw new RuntimeException("Error processing vehicle photos: " + e.getMessage());
+                }
+            }
+
+            // Store vehicle condition details
+            ride.setHasAC(request.getHasAC());
+            ride.setVehicleType(request.getVehicleType());
+            ride.setVehicleModel(request.getVehicleModel());
+            ride.setVehicleColor(request.getVehicleColor());
+            ride.setOtherFeatures(request.getOtherFeatures());
+            
+            // Auto-save master vehicle details if not already saved
+            if (driver.getMasterVehicleDetailsJson() == null || driver.getMasterVehicleDetailsJson().trim().isEmpty()) {
+                try {
+                    Map<String, Object> masterDetails = new java.util.HashMap<>();
+                    if (request.getVehiclePhotos() != null && !request.getVehiclePhotos().isEmpty()) {
+                        masterDetails.put("vehiclePhotos", request.getVehiclePhotos());
+                    }
+                    masterDetails.put("hasAC", request.getHasAC());
+                    masterDetails.put("vehicleType", request.getVehicleType());
+                    masterDetails.put("vehicleModel", request.getVehicleModel());
+                    masterDetails.put("vehicleColor", request.getVehicleColor());
+                    masterDetails.put("otherFeatures", request.getOtherFeatures());
+                    
+                    String masterDetailsJson = objectMapper.writeValueAsString(masterDetails);
+                    driver.setMasterVehicleDetailsJson(masterDetailsJson);
+                    userRepository.save(driver);
+                } catch (Exception e) {
+                    // Log error but don't fail the ride creation
+                    System.err.println("Error saving master vehicle details: " + e.getMessage());
+                }
             }
         }
 
@@ -98,13 +169,6 @@ public class RideService {
                 throw new RuntimeException("Error processing drop locations: " + e.getMessage());
             }
         }
-
-        // Store vehicle condition details
-        ride.setHasAC(request.getHasAC());
-        ride.setVehicleType(request.getVehicleType());
-        ride.setVehicleModel(request.getVehicleModel());
-        ride.setVehicleColor(request.getVehicleColor());
-        ride.setOtherFeatures(request.getOtherFeatures());
 
         Ride savedRide = rideRepository.save(ride);
 
@@ -185,10 +249,26 @@ public class RideService {
         String driverName = ride.getDriver().getName() != null ? ride.getDriver().getName() : ride.getDriver().getEmail();
 
         List<Booking> allBookings = bookingRepository.findByRideId(rideId);
+        double totalRefundAmount = 0.0;
+        int refundedBookingsCount = 0;
         
         for (Booking booking : allBookings) {
             if (booking.getStatus() == Booking.BookingStatus.CONFIRMED ||
                 booking.getStatus() == Booking.BookingStatus.ACCEPTED) {
+                
+                // If booking is CONFIRMED (payment made), mark as RESCHEDULED and calculate refund
+                if (booking.getStatus() == Booking.BookingStatus.CONFIRMED) {
+                    booking.setStatus(Booking.BookingStatus.RESCHEDULED);
+                    bookingRepository.save(booking);
+                    if (booking.getFareAmount() != null) {
+                        totalRefundAmount += booking.getFareAmount();
+                        refundedBookingsCount++;
+                    }
+                } else {
+                    // If booking is ACCEPTED (no payment yet), just mark as RESCHEDULED
+                    booking.setStatus(Booking.BookingStatus.RESCHEDULED);
+                    bookingRepository.save(booking);
+                }
                 
                 try {
                     User passenger = booking.getPassenger();
@@ -210,6 +290,24 @@ public class RideService {
                     // Log error but don't fail the transaction
                     System.err.println("Failed to send reschedule notification: " + e.getMessage());
                 }
+            }
+        }
+        
+        // Send refund notification email to driver if there were confirmed bookings
+        if (refundedBookingsCount > 0) {
+            try {
+                emailService.sendRescheduleRefundNotification(
+                        ride.getDriver().getEmail(),
+                        driverName,
+                        totalRefundAmount,
+                        refundedBookingsCount,
+                        oldDateStr,
+                        oldTimeStr,
+                        newDateStr,
+                        newTimeStr
+                );
+            } catch (Exception e) {
+                System.err.println("Failed to send refund notification to driver: " + e.getMessage());
             }
         }
 

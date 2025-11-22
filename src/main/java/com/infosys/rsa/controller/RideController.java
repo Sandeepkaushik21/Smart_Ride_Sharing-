@@ -143,6 +143,7 @@ public class RideController {
         public ErrorResponse(String message) {
             this.message = message;
         }
+        @SuppressWarnings("unused") // Used by Jackson for JSON serialization
         public String getMessage() {
             return message;
         }
@@ -160,8 +161,11 @@ public class RideController {
             this.driverBookings = driverBookings;
         }
 
+        @SuppressWarnings("unused") // Used by Jackson for JSON serialization
         public Ride getRide() { return ride; }
+        @SuppressWarnings("unused") // Used by Jackson for JSON serialization
         public List<Ride> getMyRides() { return myRides; }
+        @SuppressWarnings("unused") // Used by Jackson for JSON serialization
         public List<Booking> getDriverBookings() { return driverBookings; }
     }
 }

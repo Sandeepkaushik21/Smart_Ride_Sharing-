@@ -37,7 +37,11 @@ public class SecurityConfig {
     }
 
     @Bean
+    @SuppressWarnings("deprecation")
     public DaoAuthenticationProvider authenticationProvider() {
+        // Note: setUserDetailsService() and setPasswordEncoder() are deprecated in Spring Security 6.3+
+        // This is a known limitation - the new API will be available in future versions
+        // For now, using the constructor with setters is the recommended approach
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
         authProvider.setUserDetailsService(userDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder());

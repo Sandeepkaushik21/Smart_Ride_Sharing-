@@ -63,18 +63,18 @@ const ChangePassword = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <Navbar />
       
-      <main className="flex-grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-lg">
+      <main className="flex-grow flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-6 bg-white p-6 rounded-xl shadow-2xl border border-gray-100">
           <div>
             <div className="flex justify-center">
-              <div className="bg-yellow-100 rounded-full p-3">
-                <Lock className="h-8 w-8 text-yellow-600" />
+              <div className="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full p-2.5 shadow-lg">
+                <Lock className="h-5 w-5 text-white" />
               </div>
             </div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            <h2 className="mt-5 text-center text-3xl font-extrabold bg-gradient-to-r from-yellow-600 via-orange-600 to-red-600 bg-clip-text text-transparent">
               Change Your Password
             </h2>
             <p className="mt-2 text-center text-sm text-gray-600">
@@ -83,16 +83,16 @@ const ChangePassword = () => {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded flex items-center space-x-2">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2.5 rounded-lg flex items-center space-x-2 text-base">
               <AlertCircle className="h-5 w-5" />
               <span>{error}</span>
             </div>
           )}
 
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <form className="mt-7 space-y-5" onSubmit={handleSubmit}>
             <div className="space-y-4">
               <div>
-                <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-1.5">
                   Temporary Password *
                 </label>
                 <div className="relative">
@@ -104,14 +104,14 @@ const ChangePassword = () => {
                     required
                     value={formData.currentPassword}
                     onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
-                    className="pl-10 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-yellow-500 focus:border-yellow-500"
+                    className="pl-11 appearance-none relative block w-full px-3 py-2.5 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all text-base"
                     placeholder="Enter temporary password from email"
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1.5">
                   New Password *
                 </label>
                 <div className="relative">
@@ -124,14 +124,14 @@ const ChangePassword = () => {
                     minLength={6}
                     value={formData.newPassword}
                     onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
-                    className="pl-10 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-yellow-500 focus:border-yellow-500"
+                    className="pl-11 appearance-none relative block w-full px-3 py-2.5 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all text-base"
                     placeholder="At least 6 characters"
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1.5">
                   Confirm New Password *
                 </label>
                 <div className="relative">
@@ -144,7 +144,7 @@ const ChangePassword = () => {
                     minLength={6}
                     value={formData.confirmPassword}
                     onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                    className="pl-10 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-yellow-500 focus:border-yellow-500"
+                    className="pl-11 appearance-none relative block w-full px-3 py-2.5 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all text-base"
                     placeholder="Confirm your new password"
                   />
                 </div>
@@ -155,7 +155,7 @@ const ChangePassword = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 disabled:opacity-50"
+                className="w-full flex justify-center py-2.5 px-5 border border-transparent rounded-lg shadow-lg text-base font-semibold text-white bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 disabled:opacity-50 transition-all duration-300 transform hover:scale-105"
               >
                 {loading ? 'Changing password...' : 'Change Password'}
               </button>

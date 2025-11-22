@@ -45,16 +45,15 @@ public class RidePostRequest {
     @Positive(message = "Available seats must be positive")
     private Integer availableSeats;
 
-    // Vehicle photos (base64 encoded strings)
-    @NotNull(message = "Vehicle photos are required")
-    @Size(min = 4, max = 5, message = "Please upload 4-5 photos of your vehicle")
+    // Flag to use master vehicle details
+    private Boolean useMasterDetails = false;
+
+    // Vehicle photos (base64 encoded strings) - optional if useMasterDetails is true
     private List<String> vehiclePhotos;
 
-    // Vehicle condition details
-    @NotNull(message = "AC information is required")
+    // Vehicle condition details - optional if useMasterDetails is true
     private Boolean hasAC;
 
-    @NotBlank(message = "Vehicle type is required")
     private String vehicleType; // Car, Bike, etc.
 
     private String vehicleModel;
