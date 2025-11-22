@@ -763,7 +763,7 @@ const PassengerDashboard = () => {
                             </div>
                             <div>
                                 <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent flex items-center space-x-2">
-                                    <span>Passenger Hub</span>
+                                    <span>Passenger Dashboard</span>
                                 </h1>
                                 <p className="text-gray-600 mt-1 text-sm">
                                     Welcome, {(() => {
