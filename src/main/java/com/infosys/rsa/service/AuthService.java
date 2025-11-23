@@ -201,4 +201,67 @@ public class AuthService {
 
         logger.info("Password changed successfully for user ID {}", userId);
     }
+
+    @Transactional
+    public void forgotPassword(ForgotPasswordRequest request) {
+        logger.info("Processing forgot password request for email: {}", request.getEmail());
+
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> {
+                    logger.error("Forgot password failed - Email {} not found", request.getEmail());
+                    // Don't reveal if email exists or not for security
+                    return new RuntimeException("If the email exists, a temporary password has been sent.");
+                });
+
+        // Only allow password reset for users who have logged in at least once
+        // (i.e., isFirstLogin should be false)
+        if (user.getIsFirstLogin() != null && user.getIsFirstLogin()) {
+            logger.error("Forgot password failed - User {} has not completed first login", request.getEmail());
+            throw new RuntimeException("Please complete your first login before resetting password.");
+        }
+
+        // Generate temporary password
+        String tempPassword = UUID.randomUUID().toString().substring(0, 10);
+        user.setTempPassword(tempPassword);
+        // Set isFirstLogin to true temporarily so they can use temp password
+        user.setIsFirstLogin(true);
+        userRepository.save(user);
+
+        logger.info("Temporary password generated for user {}", request.getEmail());
+
+        // Send email with temporary password
+        emailService.sendForgotPasswordEmail(user.getEmail(), tempPassword, user.getName());
+        logger.info("Forgot password email sent to {}", request.getEmail());
+    }
+
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        logger.info("Processing reset password request for email: {}", request.getEmail());
+
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> {
+                    logger.error("Reset password failed - Email {} not found", request.getEmail());
+                    return new RuntimeException("Invalid email or temporary password");
+                });
+
+        // Verify temporary password
+        if (user.getTempPassword() == null || !user.getTempPassword().equals(request.getTempPassword())) {
+            logger.error("Reset password failed - Invalid temporary password for {}", request.getEmail());
+            throw new RuntimeException("Invalid email or temporary password");
+        }
+
+        // Check if user is in password reset state (isFirstLogin should be true with temp password)
+        if (user.getIsFirstLogin() == null || !user.getIsFirstLogin()) {
+            logger.error("Reset password failed - User {} is not in password reset state", request.getEmail());
+            throw new RuntimeException("Invalid password reset request. Please request a new temporary password.");
+        }
+
+        // Set new password
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setIsFirstLogin(false);
+        user.setTempPassword(null);
+        userRepository.save(user);
+
+        logger.info("Password reset successfully for user {}", request.getEmail());
+    }
 }

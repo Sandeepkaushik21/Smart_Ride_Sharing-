@@ -449,6 +449,28 @@ const DriverDashboard = () => {
         }
     };
 
+    const handleCompleteBooking = async (bookingId) => {
+        const confirm = await showConfirm(
+            'Mark this ride as completed? Passengers will be able to rate you after completion.',
+            'Yes, Mark Complete',
+            'Cancel'
+        );
+
+        if (!confirm.isConfirmed) return;
+
+        setLoading(true);
+        try {
+            await bookingService.completeBooking(bookingId);
+            await showSuccess('Ride marked as completed! Passengers can now rate you.');
+            await fetchData();
+        } catch (error) {
+            console.error('Error completing booking:', error);
+            await showError(error.message || 'Error marking booking as complete');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleRescheduleClick = (rideId) => {
         const ride = myRides.find(r => r.id === rideId);
         if (ride) {
@@ -1504,7 +1526,13 @@ const DriverDashboard = () => {
                                                             <h3 className="text-base md:text-lg font-semibold text-gray-800">
                                                                 {(booking.ride.citySource || booking.ride.source)} <span className="text-gray-500">→</span> {(booking.ride.cityDestination || booking.ride.destination)}
                                                             </h3>
-                                                            <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${booking.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                            <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${
+                                                                booking.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                                                                booking.status === 'CONFIRMED' ? 'bg-blue-100 text-blue-800' :
+                                                                booking.status === 'ACCEPTED' ? 'bg-yellow-100 text-yellow-800' :
+                                                                booking.status === 'PENDING' ? 'bg-orange-100 text-orange-800' :
+                                                                'bg-red-100 text-red-800'
+                                                            }`}>
                                                                 {booking.status}
                                                             </span>
                                                         </div>
@@ -1525,12 +1553,18 @@ const DriverDashboard = () => {
                                                     </div>
                                                 </div>
                                                 {/* Right: fare */}
-                                                <div className="text-right ml-4 flex flex-col items-end space-y-2">
-                                                    <div>
-                                                        <div className="text-[11px] text-gray-500 leading-tight">Estimated Fare</div>
-                                                        <div className="text-lg md:text-xl font-bold text-green-600">₹{(booking.totalPrice ?? booking.fareAmount ?? 0).toFixed(2)}</div>
-                                                    </div>
-                                                </div>
+                                                        <div className="text-right ml-4 flex flex-col items-end space-y-2">
+                                                            <div>
+                                                                <div className="text-[11px] text-gray-500 leading-tight">Estimated Fare</div>
+                                                                <div className="text-lg md:text-xl font-bold text-green-600">₹{(booking.totalPrice ?? booking.fareAmount ?? 0).toFixed(2)}</div>
+                                                            </div>
+                                                            {booking.status === 'COMPLETED' && (
+                                                                <span className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg text-sm font-semibold flex items-center space-x-2">
+                                                                    <CheckCircle className="h-4 w-4" />
+                                                                    <span>Completed</span>
+                                                                </span>
+                                                            )}
+                                                        </div>
                                             </div>
                                             </div>
                                     ))}
@@ -1718,9 +1752,26 @@ const DriverDashboard = () => {
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        <div className="text-right ml-4">
-                                                            <div className="text-[11px] text-gray-500 leading-tight">Fare Amount</div>
-                                                            <div className="text-lg md:text-xl font-bold text-green-600">₹{(booking.fareAmount ?? 0).toFixed(2)}</div>
+                                                        <div className="text-right ml-4 flex flex-col items-end space-y-2">
+                                                            <div>
+                                                                <div className="text-[11px] text-gray-500 leading-tight">Fare Amount</div>
+                                                                <div className="text-lg md:text-xl font-bold text-green-600">₹{(booking.fareAmount ?? 0).toFixed(2)}</div>
+                                                            </div>
+                                                            {booking.status === 'CONFIRMED' && booking.ride?.date && isDatePassed(booking.ride.date) && (
+                                                                <button
+                                                                    onClick={() => handleCompleteBooking(booking.id)}
+                                                                    className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg text-sm font-semibold shadow-lg transform hover:scale-105 transition-all flex items-center space-x-2 hover:from-green-600 hover:to-emerald-700"
+                                                                >
+                                                                    <CheckCircle className="h-4 w-4" />
+                                                                    <span>Mark Complete</span>
+                                                                </button>
+                                                            )}
+                                                            {booking.status === 'COMPLETED' && (
+                                                                <span className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg text-sm font-semibold flex items-center space-x-2">
+                                                                    <CheckCircle className="h-4 w-4" />
+                                                                    <span>Completed</span>
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>

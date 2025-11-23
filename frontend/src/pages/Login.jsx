@@ -21,9 +21,13 @@ const Login = () => {
     try {
       const response = await authService.login(formData.email, formData.password);
       
-      // If first login, redirect to change password page
+      // If first login or password reset, redirect to appropriate page
       if (response.isFirstLogin) {
+        // Check if user has a temp password (forgot password flow)
+        // If they logged in with temp password, redirect to reset password page
+        // Otherwise, redirect to change password page (first login after registration)
         await showInfo('Please set your new password to continue');
+        // For now, redirect to change-password (works for both first login and forgot password)
         navigate('/change-password', { replace: true });
         return;
       }
@@ -139,6 +143,15 @@ const Login = () => {
               >
                 {loading ? 'Signing in...' : 'Sign in'}
               </button>
+            </div>
+
+            <div className="text-center">
+              <Link
+                to="/forgot-password"
+                className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+              >
+                Forgot password?
+              </Link>
             </div>
 
           </form>

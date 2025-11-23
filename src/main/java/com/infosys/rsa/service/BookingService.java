@@ -567,4 +567,45 @@ public class BookingService {
                 bookingId, seatsToRestore, ride.getId());
         return updatedBooking;
     }
+
+    // ---------------- COMPLETE BOOKING ---------------- 
+    @Transactional
+    public Booking completeBooking(Long driverId, Long bookingId) {
+        logger.info("Driver ID: {} attempting to complete booking ID: {}", driverId, bookingId);
+
+        Booking booking = bookingRepository.findByIdWithRide(bookingId)
+                .orElseThrow(() -> {
+                    logger.error("Booking not found with ID: {}", bookingId);
+                    return new RideNotFoundException("Booking not found with ID: " + bookingId);
+                });
+
+        // Verify driver owns the ride
+        if (!booking.getRide().getDriver().getId().equals(driverId)) {
+            logger.error("Unauthorized booking completion attempt by driver ID: {}", driverId);
+            throw new PassengerNotFoundException("You can only complete bookings for your own rides.");
+        }
+
+        if (booking.getStatus() != Booking.BookingStatus.CONFIRMED) {
+            logger.error("Booking ID: {} is not in CONFIRMED status. Current status: {}", bookingId, booking.getStatus());
+            throw new InvalidLocationException("Only confirmed bookings can be marked as completed. Current status: " + booking.getStatus());
+        }
+
+        booking.setStatus(Booking.BookingStatus.COMPLETED);
+        Booking updatedBooking = bookingRepository.save(booking);
+
+        // Update ride status to COMPLETED if all bookings are completed
+        Ride ride = booking.getRide();
+        List<Booking> allBookings = bookingRepository.findByRideId(ride.getId());
+        boolean allCompleted = allBookings.stream()
+                .allMatch(b -> b.getStatus() == Booking.BookingStatus.COMPLETED || 
+                              b.getStatus() == Booking.BookingStatus.CANCELLED);
+        if (allCompleted) {
+            ride.setStatus(Ride.RideStatus.COMPLETED);
+            rideRepository.save(ride);
+            logger.info("Ride ID: {} marked as COMPLETED as all bookings are completed", ride.getId());
+        }
+
+        logger.info("Booking ID: {} marked as COMPLETED successfully", bookingId);
+        return updatedBooking;
+    }
 }

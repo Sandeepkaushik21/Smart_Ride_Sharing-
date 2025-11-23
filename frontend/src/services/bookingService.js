@@ -74,4 +74,9 @@ export const bookingService = {
     const response = await api.patch(`/bookings/${bookingId}/cancel-reschedule`);
     return response.data;
   },
+
+  completeBooking: async (bookingId) => {
+    const response = await api.patch(`/bookings/${bookingId}/complete`);
+    return response.data;
+  },
 };

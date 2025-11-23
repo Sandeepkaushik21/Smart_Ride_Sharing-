@@ -202,6 +202,19 @@ public class BookingController {
         return ResponseEntity.ok(cancelledBooking);
     }
 
+    // ---------------- COMPLETE BOOKING ---------------- 
+    @PatchMapping("/{id}/complete")
+    @PreAuthorize("hasRole('DRIVER')")
+    public ResponseEntity<?> completeBooking(@PathVariable Long id, Authentication authentication) {
+        logger.info("Entering completeBooking() for bookingId: {}", id);
+        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+        logger.debug("Driver ID: {} attempting to complete booking", userPrincipal.getId());
+
+        Booking completedBooking = bookingService.completeBooking(userPrincipal.getId(), id);
+        logger.info("Booking with ID: {} completed successfully", id);
+        return ResponseEntity.ok(completedBooking);
+    }
+
     // ✅ Response wrapper for cancel API
     private static class CancelBookingResponse {
         private Booking cancelledBooking;

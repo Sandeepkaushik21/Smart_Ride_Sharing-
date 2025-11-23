@@ -65,6 +65,32 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        logger.info("Entering forgotPassword() for email: {}", request.getEmail());
+        try {
+            authService.forgotPassword(request);
+            logger.info("Forgot password request processed successfully for email: {}", request.getEmail());
+            return ResponseEntity.ok(new MessageResponse("If the email exists, a temporary password has been sent."));
+        } catch (RuntimeException e) {
+            logger.error("Error processing forgot password for email {}: {}", request.getEmail(), e.getMessage(), e);
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        logger.info("Entering resetPassword() for email: {}", request.getEmail());
+        try {
+            authService.resetPassword(request);
+            logger.info("Password reset successfully for email: {}", request.getEmail());
+            return ResponseEntity.ok(new MessageResponse("Password reset successfully"));
+        } catch (RuntimeException e) {
+            logger.error("Error resetting password for email {}: {}", request.getEmail(), e.getMessage(), e);
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
     // Inner classes for responses
     private static class ErrorResponse {
         private String message;
