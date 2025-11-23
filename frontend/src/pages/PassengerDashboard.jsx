@@ -10,6 +10,7 @@ import { bookingService } from '../services/bookingService';
 import { paymentService } from '../services/paymentService';
 import { userService } from '../services/userService';
 import { authService } from '../services/authService';
+import { reviewService } from '../services/reviewService';
 import { showConfirm, showSuccess, showError } from '../utils/swal';
 
 const PassengerDashboard = () => {
@@ -278,6 +279,14 @@ const PassengerDashboard = () => {
     const [pendingBooking, setPendingBooking] = useState(null);
     const [paymentOrderData, setPaymentOrderData] = useState(null);
     const [paymentProcessing, setPaymentProcessing] = useState(false);
+    
+    // Rating modal state
+    const [showRatingModal, setShowRatingModal] = useState(false);
+    const [ratingBooking, setRatingBooking] = useState(null);
+    const [rating, setRating] = useState(0);
+    const [ratingComment, setRatingComment] = useState('');
+    const [submittingRating, setSubmittingRating] = useState(false);
+    const [hasReviewedMap, setHasReviewedMap] = useState({});
 
     const openPhotoViewer = useCallback((photos, index = 0) => {
         setPhotoViewer({ open: true, photos: photos, currentIndex: index });
@@ -666,6 +675,101 @@ const PassengerDashboard = () => {
             setLoading(false);
         }
     };
+
+    const handleOpenRatingModal = async (booking) => {
+        try {
+            // Check if already reviewed
+            const hasReviewed = await reviewService.hasReviewed(booking.id);
+            if (hasReviewed) {
+                await showError('You have already reviewed this ride');
+                return;
+            }
+            setRatingBooking(booking);
+            setRating(0);
+            setRatingComment('');
+            setShowRatingModal(true);
+        } catch (error) {
+            console.error('Error checking review status:', error);
+            // Still open modal, let backend handle duplicate check
+            setRatingBooking(booking);
+            setRating(0);
+            setRatingComment('');
+            setShowRatingModal(true);
+        }
+    };
+
+    const handleSubmitRating = async () => {
+        if (!ratingBooking || rating === 0) {
+            await showError('Please select a rating');
+            return;
+        }
+
+        setSubmittingRating(true);
+        try {
+            await reviewService.submitReview(ratingBooking.id, rating, ratingComment);
+            await showSuccess('Thank you for your review!');
+            
+            // Update hasReviewedMap immediately
+            setHasReviewedMap(prev => ({ ...prev, [ratingBooking.id]: true }));
+            
+            // Refresh bookings and history to get updated data
+            await Promise.all([
+                fetchMyBookings(bookingsPage, bookingsSize),
+                fetchHistoryPage(historyPage, historySize)
+            ]);
+            
+            // Re-check review status for all completed bookings to ensure consistency
+            const checkReviewStatus = async () => {
+                try {
+                    const hasReviewed = await reviewService.hasReviewed(ratingBooking.id);
+                    setHasReviewedMap(prev => ({ ...prev, [ratingBooking.id]: hasReviewed }));
+                } catch (error) {
+                    console.error('Error re-checking review status:', error);
+                }
+            };
+            await checkReviewStatus();
+            
+            setShowRatingModal(false);
+            setRatingBooking(null);
+            setRating(0);
+            setRatingComment('');
+        } catch (error) {
+            console.error('Error submitting review:', error);
+            await showError(error.message || 'Error submitting review');
+        } finally {
+            setSubmittingRating(false);
+        }
+    };
+
+    // Check review status for completed bookings on load (both from bookings and history)
+    useEffect(() => {
+        const checkReviews = async () => {
+            // Check bookings that are COMPLETED or CONFIRMED with date passed
+            const completedBookings = bookings.filter(b => 
+                b.status === 'COMPLETED' || 
+                (b.status === 'CONFIRMED' && b.ride?.date && isDatePassed(b.ride.date))
+            );
+            // Also check history bookings
+            const completedHistoryBookings = rideHistory.filter(b => 
+                b.status === 'COMPLETED' || 
+                (b.status === 'CONFIRMED' && b.ride?.date && isDatePassed(b.ride.date))
+            );
+            
+            const allCompletedBookings = [...completedBookings, ...completedHistoryBookings];
+            
+            for (const booking of allCompletedBookings) {
+                try {
+                    const hasReviewed = await reviewService.hasReviewed(booking.id);
+                    setHasReviewedMap(prev => ({ ...prev, [booking.id]: hasReviewed }));
+                } catch (error) {
+                    console.error(`Error checking review for booking ${booking.id}:`, error);
+                }
+            }
+        };
+        if (bookings.length > 0 || rideHistory.length > 0) {
+            checkReviews();
+        }
+    }, [bookings, rideHistory, isDatePassed]);
 
     const handlePrintReceipt = async (booking) => {
         if (!booking) {
@@ -1471,12 +1575,13 @@ const PassengerDashboard = () => {
                                                                 </div>
                                                             </div>
                                                             <span className={`px-4 py-2 rounded-xl text-sm font-bold shadow-md ${
-                                                                booking.status === 'CONFIRMED' ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white' :
-                                                                    booking.status === 'ACCEPTED' ? 'bg-gradient-to-r from-blue-400 to-cyan-500 text-white' :
-                                                                        booking.status === 'PENDING' ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white' :
-                                                                            'bg-gradient-to-r from-red-400 to-pink-500 text-white'
+                                                                (booking.status === 'COMPLETED' || (booking.status === 'CONFIRMED' && booking.ride?.date && isDatePassed(booking.ride.date))) ? 'bg-gradient-to-r from-purple-400 to-indigo-500 text-white' :
+                                                                    booking.status === 'CONFIRMED' ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white' :
+                                                                        booking.status === 'ACCEPTED' ? 'bg-gradient-to-r from-blue-400 to-cyan-500 text-white' :
+                                                                            booking.status === 'PENDING' ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white' :
+                                                                                'bg-gradient-to-r from-red-400 to-pink-500 text-white'
                                                             }`}>
-                                                                {booking.status}
+                                                                {(booking.status === 'CONFIRMED' && booking.ride?.date && isDatePassed(booking.ride.date)) ? 'COMPLETED' : booking.status}
                                                             </span>
                                                         </div>
                                                         {/* Other booking details... */}
@@ -1532,12 +1637,20 @@ const PassengerDashboard = () => {
                                                                 <button onClick={() => handleCancelBooking(booking.id)} className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm font-semibold">Cancel Booking</button>
                                                             </div>
                                                         )}
-                                                        {booking.status === 'CONFIRMED' && booking.status !== 'COMPLETED' && (
+                                                        {booking.status === 'CONFIRMED' && booking.ride?.date && !isDatePassed(booking.ride.date) && (
                                                             <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
                                                                 <p className="text-sm text-green-800 mb-2"><strong>Booking Confirmed!</strong></p>
                                                                 <div className="flex space-x-2">
                                                                     <button onClick={() => handlePrintReceipt(booking)} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold flex items-center space-x-1"><Printer className="h-4 w-4" /><span>Print Receipt</span></button>
                                                                     <button onClick={() => handleCancelBooking(booking.id)} className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-semibold">Cancel Booking</button>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                        {(booking.status === 'COMPLETED' || (booking.status === 'CONFIRMED' && booking.ride?.date && isDatePassed(booking.ride.date))) && (
+                                                            <div className="mt-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                                                                <p className="text-sm text-purple-800 mb-2"><strong>Ride Completed!</strong></p>
+                                                                <div className="flex space-x-2">
+                                                                    <button onClick={() => handlePrintReceipt(booking)} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold flex items-center space-x-1"><Printer className="h-4 w-4" /><span>Print Receipt</span></button>
                                                                 </div>
                                                             </div>
                                                         )}
@@ -1592,11 +1705,11 @@ const PassengerDashboard = () => {
                                                                         {booking.pickupLocation} <span className="text-gray-500">→</span> {booking.dropoffLocation}
                                                                     </h3>
                                                                     <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${
-                                                                        booking.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                                                                        (booking.status === 'COMPLETED' || (booking.status === 'CONFIRMED' && booking.ride?.date && isDatePassed(booking.ride.date))) ? 'bg-green-100 text-green-800' :
                                                                         booking.status === 'CONFIRMED' ? 'bg-blue-100 text-blue-800' :
                                                                         'bg-red-100 text-red-800'
                                                                     }`}>
-                                                                        {booking.status}
+                                                                        {(booking.status === 'CONFIRMED' && booking.ride?.date && isDatePassed(booking.ride.date)) ? 'COMPLETED' : booking.status}
                                                                     </span>
                                                                 </div>
                                                                 <div className="text-xs text-gray-600 mb-2">
@@ -1624,13 +1737,34 @@ const PassengerDashboard = () => {
                                                                 <div className="text-[11px] text-gray-500 leading-tight">Fare Amount</div>
                                                                 <div className="text-base md:text-lg font-bold text-green-600">₹{(booking.fareAmount ?? 0).toFixed(2)}</div>
                                                             </div>
-                                                            <button
-                                                                onClick={() => handlePrintReceipt(booking)}
-                                                                className="px-4 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-xl hover:from-gray-700 hover:to-gray-800 text-xs font-bold shadow-lg transform hover:scale-105 transition-all flex items-center space-x-2"
-                                                            >
-                                                                <Printer className="h-3.5 w-3.5" />
-                                                                <span>Print</span>
-                                                            </button>
+                                                            <div className="flex flex-row space-x-2">
+                                                                {(booking.status === 'COMPLETED' || (booking.status === 'CONFIRMED' && booking.ride?.date && isDatePassed(booking.ride.date))) && (
+                                                                    <>
+                                                                        {!hasReviewedMap[booking.id] && (
+                                                                            <button
+                                                                                onClick={() => handleOpenRatingModal(booking)}
+                                                                                className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl hover:from-yellow-600 hover:to-orange-600 text-xs font-bold shadow-lg transform hover:scale-105 transition-all flex items-center space-x-2"
+                                                                            >
+                                                                                <Star className="h-3.5 w-3.5" />
+                                                                                <span>Rate Driver</span>
+                                                                            </button>
+                                                                        )}
+                                                                        {hasReviewedMap[booking.id] && (
+                                                                            <span className="px-4 py-2 bg-gray-300 text-gray-700 rounded-xl text-xs font-bold flex items-center space-x-2">
+                                                                                <Star className="h-3.5 w-3.5" />
+                                                                                <span>Reviewed</span>
+                                                                            </span>
+                                                                        )}
+                                                                    </>
+                                                                )}
+                                                                <button
+                                                                    onClick={() => handlePrintReceipt(booking)}
+                                                                    className="px-4 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-xl hover:from-gray-700 hover:to-gray-800 text-xs font-bold shadow-lg transform hover:scale-105 transition-all flex items-center space-x-2"
+                                                                >
+                                                                    <Printer className="h-3.5 w-3.5" />
+                                                                    <span>Print</span>
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1688,6 +1822,124 @@ const PassengerDashboard = () => {
                     onPaymentSuccess={handlePaymentSuccess}
                     onPaymentFailure={handlePaymentFailure}
                 />
+            )}
+
+            {/* Rating Modal */}
+            {showRatingModal && ratingBooking && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-2xl font-bold text-gray-800 flex items-center space-x-2">
+                                <Star className="h-6 w-6 text-yellow-500" />
+                                <span>Rate Your Driver</span>
+                            </h2>
+                            <button
+                                onClick={() => {
+                                    setShowRatingModal(false);
+                                    setRatingBooking(null);
+                                    setRating(0);
+                                    setRatingComment('');
+                                }}
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                                <X className="h-6 w-6" />
+                            </button>
+                        </div>
+                        
+                        <div className="mb-4">
+                            <p className="text-sm text-gray-600 mb-2">
+                                Driver: <span className="font-semibold">{ratingBooking.ride?.driver?.name || ratingBooking.driver?.name || 'N/A'}</span>
+                            </p>
+                            <p className="text-sm text-gray-600">
+                                Route: <span className="font-semibold">{ratingBooking.pickupLocation} → {ratingBooking.dropoffLocation}</span>
+                            </p>
+                        </div>
+
+                        <div className="mb-6">
+                            <label className="block text-sm font-semibold text-gray-700 mb-3">
+                                Rating *
+                            </label>
+                            <div className="flex items-center space-x-2">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                        key={star}
+                                        type="button"
+                                        onClick={() => setRating(star)}
+                                        className={`transition-all transform hover:scale-110 ${
+                                            rating >= star
+                                                ? 'text-yellow-500'
+                                                : 'text-gray-300'
+                                        }`}
+                                    >
+                                        <Star
+                                            className={`h-10 w-10 ${
+                                                rating >= star ? 'fill-current' : ''
+                                            }`}
+                                        />
+                                    </button>
+                                ))}
+                            </div>
+                            {rating > 0 && (
+                                <p className="text-sm text-gray-600 mt-2">
+                                    {rating === 1 && 'Poor'}
+                                    {rating === 2 && 'Fair'}
+                                    {rating === 3 && 'Good'}
+                                    {rating === 4 && 'Very Good'}
+                                    {rating === 5 && 'Excellent'}
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="mb-6">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                Comments (Optional)
+                            </label>
+                            <textarea
+                                value={ratingComment}
+                                onChange={(e) => setRatingComment(e.target.value)}
+                                placeholder="Share your experience (comments are stored but not displayed)"
+                                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent resize-none"
+                                rows="4"
+                                maxLength={1000}
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                                {ratingComment.length}/1000 characters
+                            </p>
+                        </div>
+
+                        <div className="flex space-x-3">
+                            <button
+                                onClick={() => {
+                                    setShowRatingModal(false);
+                                    setRatingBooking(null);
+                                    setRating(0);
+                                    setRatingComment('');
+                                }}
+                                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold transition-colors"
+                                disabled={submittingRating}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSubmitRating}
+                                disabled={rating === 0 || submittingRating}
+                                className="flex-1 px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:from-yellow-600 hover:to-orange-600 font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                            >
+                                {submittingRating ? (
+                                    <>
+                                        <Loader className="h-4 w-4 animate-spin" />
+                                        <span>Submitting...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Star className="h-4 w-4" />
+                                        <span>Submit Review</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* Global Loading Overlay */}

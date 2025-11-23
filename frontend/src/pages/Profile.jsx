@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Mail, Phone, Car, Save } from 'lucide-react';
+import { User, Mail, Phone, Car, Save, Star } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import BackButton from '../components/BackButton';
@@ -84,12 +84,22 @@ const Profile = () => {
               <span className="text-base">{user?.email}</span>
             </div>
             {user?.roles && (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 mb-2">
                 <User className="h-5 w-5 text-blue-600" />
                 <span className="font-medium text-base">Role:</span>
                 <span className="px-2.5 py-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded text-sm font-semibold">
                   {user.roles[0]?.replace('ROLE_', '')}
                 </span>
+              </div>
+            )}
+            {isDriver && user?.driverRating !== null && user?.driverRating !== undefined && (
+              <div className="flex items-center space-x-2">
+                <Star className="h-5 w-5 text-yellow-500 fill-current" />
+                <span className="font-medium text-base">Average Rating:</span>
+                <span className="text-lg font-bold text-yellow-600">
+                  {user.driverRating > 0 ? user.driverRating.toFixed(1) : '0.0'}
+                </span>
+                <span className="text-sm text-gray-600">/ 5.0</span>
               </div>
             )}
           </div>

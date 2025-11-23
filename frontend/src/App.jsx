@@ -11,6 +11,8 @@ import PassengerDashboard from './pages/PassengerDashboard';
 import DriverDashboard from './pages/DriverDashboard';
 import Profile from './pages/Profile';
 import ChangePassword from './pages/ChangePassword';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 function App() {
   return (
@@ -28,6 +30,18 @@ function App() {
           path="/register"
           element={
             authService.isAuthenticated() ? <Navigate to="/" replace /> : <Register />
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            authService.isAuthenticated() ? <Navigate to="/" replace /> : <ForgotPassword />
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            authService.isAuthenticated() ? <Navigate to="/" replace /> : <ResetPassword />
           }
         />
 

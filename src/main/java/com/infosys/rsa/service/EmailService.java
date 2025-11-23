@@ -406,4 +406,33 @@ public class EmailService {
             logger.error("Failed to send reschedule refund notification to {}: {}", toEmail, e.getMessage());
         }
     }
+
+    public void sendForgotPasswordEmail(String toEmail, String tempPassword, String userName) {
+        logger.info("Preparing to send forgot password email to: {}", toEmail);
+
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(toEmail);
+            message.setSubject("Password Reset - Temporary Password");
+
+            String body = String.format(
+                    "Dear %s,\n\n" +
+                            "You have requested to reset your password.\n\n" +
+                            "Please use the following temporary password to reset your account:\n" +
+                            "Temporary Password: %s\n\n" +
+                            "Please use this temporary password on the reset password page to create a new password.\n\n" +
+                            "If you did not request this password reset, please ignore this email.\n\n" +
+                            "Best Regards,\n" +
+                            "Smart Ride Sharing Team",
+                    userName != null ? userName : "User", tempPassword
+            );
+
+            message.setText(body);
+            mailSender.send(message);
+            logger.info("Forgot password email successfully sent to {}", toEmail);
+        } catch (Exception e) {
+            logger.error("Failed to send forgot password email to {}: {}", toEmail, e.getMessage());
+        }
+    }
 }

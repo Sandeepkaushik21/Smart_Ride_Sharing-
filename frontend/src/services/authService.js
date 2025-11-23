@@ -50,5 +50,19 @@ export const authService = {
     const roleName = role.startsWith('ROLE_') ? role : `ROLE_${role.toUpperCase()}`;
     return user.roles.includes(roleName);
   },
+
+  forgotPassword: async (email) => {
+    const response = await api.post('/auth/forgot-password', { email });
+    return response.data;
+  },
+
+  resetPassword: async (email, tempPassword, newPassword) => {
+    const response = await api.post('/auth/reset-password', {
+      email,
+      tempPassword,
+      newPassword,
+    });
+    return response.data;
+  },
 };
 
