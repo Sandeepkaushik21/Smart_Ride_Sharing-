@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
+import { LogIn, Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { authService } from '../services/authService';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -11,6 +11,7 @@ const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -20,20 +21,13 @@ const Login = () => {
 
     try {
       const response = await authService.login(formData.email, formData.password);
-      
-      // If first login or password reset, redirect to appropriate page
+
       if (response.isFirstLogin) {
-        // Check if user has a temp password (forgot password flow)
-        // If they logged in with temp password, redirect to reset password page
-        // Otherwise, redirect to change password page (first login after registration)
         await showInfo('Please set your new password to continue');
-        // For now, redirect to change-password (works for both first login and forgot password)
         navigate('/change-password', { replace: true });
         return;
       }
-      
-      // Show 3-second auto-closing success alert and then redirect
-      // Determine redirect path based on role
+
       let path = '/';
       if (response.roles) {
         if (response.roles.includes('ROLE_ADMIN')) {
@@ -49,9 +43,11 @@ const Login = () => {
       navigate(path, { replace: true });
     } catch (err) {
       console.error('Login error:', err);
-      const errorMessage = err.message || err.response?.data?.message || 'Invalid email or password. Please check your credentials.';
-      
-      // Only show inline error, no SweetAlert for errors
+      const errorMessage =
+        err.message ||
+        err.response?.data?.message ||
+        'Invalid email or password. Please check your credentials.';
+
       if (err.message && err.message.includes('Network')) {
         setError('Cannot connect to server. Please make sure the backend is running on http://localhost:8080');
       } else {
@@ -65,11 +61,11 @@ const Login = () => {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <Navbar />
-      
+
       <main className="flex-grow flex items-center justify-center py-8 px-6 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-6 bg-white p-6 rounded-xl shadow-2xl border border-gray-100">
           <BackButton to="/" />
-          
+
           <div>
             <div className="flex justify-center">
               <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full p-2.5 shadow-lg">
@@ -121,16 +117,27 @@ const Login = () => {
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+
+                  {/* PASSWORD INPUT WITH TOGGLE */}
                   <input
                     id="password"
                     name="password"
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     required
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="pl-11 appearance-none relative block w-full px-3 py-2.5 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-base"
+                    className="pl-11 pr-12 appearance-none relative block w-full px-3 py-2.5 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-base"
                     placeholder="Enter your password"
                   />
+
+                  {/* SHOW/HIDE BUTTON */}
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
                 </div>
               </div>
             </div>
@@ -153,7 +160,6 @@ const Login = () => {
                 Forgot password?
               </Link>
             </div>
-
           </form>
         </div>
       </main>
