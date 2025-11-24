@@ -140,8 +140,76 @@ class UserServiceTest {
         u.setMasterVehicleDetailsJson(null);
         repo.save(u);
 
-        assertNull(userService.getMasterVehicleDetails(1L));
+//        assertNull(userService.getMasterVehicleDetails(1L));
+
+        Map<String, Object> result = userService.getMasterVehicleDetails(1L);
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+
     }
+
+    @Test
+    void testUpdateUserProfile_DoesNotOverrideWithBlankValues() {
+        User changes = new User();
+        changes.setName("");  // blank
+        changes.setPhone("   "); // spaces
+
+        User updated = userService.updateUserProfile(1L, changes);
+
+        // Original name should stay
+        assertEquals("John Driver", updated.getName());
+        // Original phone should stay
+        assertEquals("9999999999", updated.getPhone());
+    }
+
+
+    @Test
+    void testGetMasterVehicleDetails_ShouldReturnEmptyMapInsteadOfNull() {
+        User u = repo.findById(1L).get();
+        u.setMasterVehicleDetailsJson("");
+        repo.save(u);
+
+        Map<String, Object> result = userService.getMasterVehicleDetails(1L);
+
+        assertNotNull(result, "Expected empty map instead of null");
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void testSaveMasterVehicleDetails_WhenNullDetails_ShouldThrow() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            userService.saveMasterVehicleDetails(1L, null);
+        });
+    }
+
+    @Test
+    void testGetPendingDrivers_ShouldIgnoreApprovedDrivers() {
+        User u2 = new User();
+        u2.setId(2L);
+        u2.setEmail("driver2@mail.com");
+        u2.setPassword("pass");
+        u2.setName("Driver 2");
+        u2.setIsApproved(true); // approved driver
+        u2.setRoles(Set.of(new Role(2L, Role.ERole.ROLE_DRIVER)));
+
+        repo.save(u2);
+
+        List<User> list = userService.getPendingDrivers();
+
+        // Only the pending one should be returned
+        assertEquals(1, list.size());
+        assertEquals("John Driver", list.get(0).getName());
+    }
+
+
+    @Test
+    void testGetUserById_NullId_ShouldThrow() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            userService.getUserById(null);
+        });
+    }
+
+
 
     // =================================================================
     //   IN-MEMORY USER REPOSITORY IMPLEMENTATION

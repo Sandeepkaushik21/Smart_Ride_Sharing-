@@ -10,8 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class UserService {
@@ -27,6 +26,11 @@ public class UserService {
      * Fetch a user by ID
      */
     public User getUserById(Long userId) {
+        if (userId == null) {
+            logger.error("User ID cannot be null");
+            throw new IllegalArgumentException("User ID cannot be null");
+        }
+
         logger.info("Fetching user details for userId: {}", userId);
         return userRepository.findById(userId)
                 .orElseThrow(() -> {
@@ -43,19 +47,20 @@ public class UserService {
 
         User user = getUserById(userId);
 
-        if (userDetails.getName() != null) {
+        // Prevent overwriting with blank values
+        if (userDetails.getName() != null && !userDetails.getName().isBlank()) {
             logger.debug("Updating name for userId: {} from '{}' to '{}'", userId, user.getName(), userDetails.getName());
             user.setName(userDetails.getName());
         }
-        if (userDetails.getPhone() != null) {
+        if (userDetails.getPhone() != null && !userDetails.getPhone().isBlank()) {
             logger.debug("Updating phone for userId: {} to '{}'", userId, userDetails.getPhone());
             user.setPhone(userDetails.getPhone());
         }
-        if (userDetails.getVehicleModel() != null) {
+        if (userDetails.getVehicleModel() != null && !userDetails.getVehicleModel().isBlank()) {
             logger.debug("Updating vehicle model for userId: {} to '{}'", userId, userDetails.getVehicleModel());
             user.setVehicleModel(userDetails.getVehicleModel());
         }
-        if (userDetails.getLicensePlate() != null) {
+        if (userDetails.getLicensePlate() != null && !userDetails.getLicensePlate().isBlank()) {
             logger.debug("Updating license plate for userId: {} to '{}'", userId, userDetails.getLicensePlate());
             user.setLicensePlate(userDetails.getLicensePlate());
         }
@@ -85,10 +90,12 @@ public class UserService {
      */
     public List<User> getPendingDrivers() {
         logger.info("Fetching all pending drivers for admin review");
+
+        // Pending = isApproved = null OR false
         List<User> pendingDrivers = userRepository.findAll().stream()
                 .filter(user -> user.getRoles().stream()
                         .anyMatch(role -> role.getName().name().equals("ROLE_DRIVER")))
-                .filter(user -> user.getIsApproved() == null)
+                .filter(user -> user.getIsApproved() == null || !user.getIsApproved())
                 .toList();
 
         logger.debug("Pending drivers found: {}", pendingDrivers.size());
@@ -101,9 +108,14 @@ public class UserService {
     @Transactional
     public User saveMasterVehicleDetails(Long userId, Map<String, Object> masterDetails) {
         logger.info("Saving master vehicle details for userId: {}", userId);
-        
+
+        if (masterDetails == null) {
+            logger.error("Master vehicle details cannot be null");
+            throw new IllegalArgumentException("Master vehicle details cannot be null");
+        }
+
         User user = getUserById(userId);
-        
+
         try {
             String masterDetailsJson = objectMapper.writeValueAsString(masterDetails);
             user.setMasterVehicleDetailsJson(masterDetailsJson);
@@ -121,18 +133,20 @@ public class UserService {
      */
     public Map<String, Object> getMasterVehicleDetails(Long userId) {
         logger.info("Fetching master vehicle details for userId: {}", userId);
-        
+
         User user = getUserById(userId);
-        
-        if (user.getMasterVehicleDetailsJson() == null || user.getMasterVehicleDetailsJson().isEmpty()) {
+
+        String json = user.getMasterVehicleDetailsJson();
+
+        if (json == null || json.isBlank()) {
             logger.debug("No master vehicle details found for userId: {}", userId);
-            return null;
+            return new HashMap<>(); // Return empty map instead of null
         }
-        
+
         try {
             Map<String, Object> masterDetails = objectMapper.readValue(
-                user.getMasterVehicleDetailsJson(),
-                new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}
+                    json,
+                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}
             );
             logger.debug("Master vehicle details retrieved successfully for userId: {}", userId);
             return masterDetails;
