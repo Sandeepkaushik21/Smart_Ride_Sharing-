@@ -15,7 +15,7 @@ public class FareCalculationService {
     private static final Logger logger = LoggerFactory.getLogger(FareCalculationService.class);
 
     private static final double BASE_FARE = 50.0;
-    private static final double RATE_PER_KM = 3.0;
+    private static final double RATE_PER_KM = 5.0;
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
