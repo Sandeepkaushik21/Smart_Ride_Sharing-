@@ -24,6 +24,7 @@ const DriverDashboard = () => {
         vehicleModel: '',
         vehicleColor: '',
         otherFeatures: '',
+        baseFare: '',
     });
     const [vehiclePhotos, setVehiclePhotos] = useState([]);
     const [myRides, setMyRides] = useState([]);
@@ -128,8 +129,8 @@ const DriverDashboard = () => {
         const weeklyEarnings = bookings
             .filter(booking => {
                 const bookingDate = new Date(booking.createdAt || booking.ride?.date || 0);
-                return bookingDate >= weekAgo && 
-                       (booking.status === 'CONFIRMED' || booking.status === 'COMPLETED');
+                return bookingDate >= weekAgo &&
+                    (booking.status === 'CONFIRMED' || booking.status === 'COMPLETED');
             })
             .reduce((sum, booking) => {
                 const fare = booking.fareAmount || booking.totalPrice || 0;
@@ -486,7 +487,7 @@ const DriverDashboard = () => {
 
     const handleRescheduleSubmit = async (e) => {
         e.preventDefault();
-        
+
         if (!rescheduleForm.newDate || !rescheduleForm.newTime) {
             await showError('Please select both new date and time');
             return;
@@ -570,7 +571,7 @@ const DriverDashboard = () => {
                 setMyRides(Array.isArray(resp.myRides) ? resp.myRides : []);
             } else {
                 // fallback: remove cancelled ride locally
-                setMyRides(prev => prev.map(r => r.id === rideId ? ({...r, status: 'CANCELLED'}) : r));
+                setMyRides(prev => prev.map(r => r.id === rideId ? ({ ...r, status: 'CANCELLED' }) : r));
             }
 
             if (resp && resp.driverBookings) {
@@ -721,8 +722,13 @@ const DriverDashboard = () => {
         }
 
         // Validate basic ride details
-        if (!postForm.date || !postForm.time || !postForm.availableSeats) {
-            await showError('Please fill in all required fields (date, time, seats)');
+        // if (!postForm.date || !postForm.time || !postForm.availableSeats) {
+        //     await showError('Please fill in all required fields (date, time, seats)');
+        //     return;
+        // }
+
+        if (!postForm.date || !postForm.time || !postForm.availableSeats || !postForm.baseFare) {
+            await showError('Please fill in all required fields (date, time, seats, base fare)');
             return;
         }
 
@@ -751,6 +757,7 @@ const DriverDashboard = () => {
                 time: postForm.time,
                 availableSeats: parseInt(postForm.availableSeats),
                 useMasterDetails: true, // Always use master details
+                baseFare: parseFloat(postForm.baseFare),
             });
             await showSuccess('Ride posted successfully!');
             setShowPostForm(false);
@@ -847,168 +854,168 @@ const DriverDashboard = () => {
 
                             {/* Stats Cards */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                            {/* Weekly Earnings Card */}
-                            <div className="group relative bg-gradient-to-br from-green-500 via-emerald-600 to-teal-600 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-green-500/50 overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-                                <div className="relative z-10">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                                            <DollarSign className="h-6 w-6 text-white" />
+                                {/* Weekly Earnings Card */}
+                                <div className="group relative bg-gradient-to-br from-green-500 via-emerald-600 to-teal-600 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-green-500/50 overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                                    <div className="relative z-10">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                                                <DollarSign className="h-6 w-6 text-white" />
+                                            </div>
+                                            <div className="text-white/80 text-xs font-semibold">This Week</div>
                                         </div>
-                                        <div className="text-white/80 text-xs font-semibold">This Week</div>
+                                        <div className="text-white text-sm font-semibold mb-2 opacity-90">Weekly Earnings</div>
+                                        <div className="text-4xl font-bold text-white mb-2">₹{stats.weeklyEarnings}</div>
+                                        <div className="flex items-center text-green-100 text-sm">
+                                            <TrendingUp className="h-4 w-4 mr-1" />
+                                            <span>+12% vs last week</span>
+                                        </div>
                                     </div>
-                                    <div className="text-white text-sm font-semibold mb-2 opacity-90">Weekly Earnings</div>
-                                    <div className="text-4xl font-bold text-white mb-2">₹{stats.weeklyEarnings}</div>
-                                    <div className="flex items-center text-green-100 text-sm">
-                                        <TrendingUp className="h-4 w-4 mr-1" />
-                                        <span>+12% vs last week</span>
+                                </div>
+
+                                {/* Trips Completed Card */}
+                                <div className="group relative bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-600 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/50 overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                                    <div className="relative z-10">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                                                <CheckCircle2 className="h-6 w-6 text-white" />
+                                            </div>
+                                            <div className="text-white/80 text-xs font-semibold">This Week</div>
+                                        </div>
+                                        <div className="text-white text-sm font-semibold mb-2 opacity-90">Trips Completed</div>
+                                        <div className="text-4xl font-bold text-white mb-2">{stats.tripsCompleted}</div>
+                                        <div className="flex items-center text-blue-100 text-sm">
+                                            <Clock className="h-4 w-4 mr-1" />
+                                            <span>35 hours logged</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Overall Rating Card */}
+                                <div className="group relative bg-gradient-to-br from-amber-500 via-yellow-600 to-orange-600 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-amber-500/50 overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                                    <div className="relative z-10">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                                                <Star className="h-6 w-6 text-white fill-white" />
+                                            </div>
+                                            <div className="text-white/80 text-xs font-semibold">Rating</div>
+                                        </div>
+                                        <div className="text-white text-sm font-semibold mb-2 opacity-90">Overall Rating</div>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <div className="text-4xl font-bold text-white">{stats.overallRating}</div>
+                                            <Star className="h-7 w-7 text-white fill-white" />
+                                        </div>
+                                        <div className="flex items-center text-amber-100 text-sm">
+                                            <Users className="h-4 w-4 mr-1" />
+                                            <span>Based on {stats.ratingCount} ratings</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Acceptance Rate Card */}
+                                <div className="group relative bg-gradient-to-br from-purple-500 via-indigo-600 to-blue-600 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/50 overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                                    <div className="relative z-10">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                                                <CheckCircle className="h-6 w-6 text-white" />
+                                            </div>
+                                            <div className="text-white/80 text-xs font-semibold">Quality</div>
+                                        </div>
+                                        <div className="text-white text-sm font-semibold mb-2 opacity-90">Acceptance Rate</div>
+                                        <div className="text-4xl font-bold text-white mb-2">{stats.acceptanceRate}%</div>
+                                        <div className="flex items-center text-purple-100 text-sm">
+                                            <TrendingUp className="h-4 w-4 mr-1" />
+                                            <span>Maintaining high quality</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Trips Completed Card */}
-                            <div className="group relative bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-600 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/50 overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-                                <div className="relative z-10">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                                            <CheckCircle2 className="h-6 w-6 text-white" />
+                            {/* Navigation Buttons */}
+                            <div className="mb-8">
+                                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                                    <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">Driver Tools & Settings</span>
+                                </h2>
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+                                    <button
+                                        onClick={() => {
+                                            setCurrentView('post-ride');
+                                            setShowPostForm(true);
+                                        }}
+                                        className="group relative bg-white rounded-2xl shadow-lg p-8 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/30 border-2 border-transparent hover:border-purple-200 flex flex-col items-center justify-center gap-4 overflow-hidden"
+                                    >
+                                        <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-pink-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                        <div className="relative z-10 p-4 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+                                            <Plus className="h-10 w-10 text-white" />
                                         </div>
-                                        <div className="text-white/80 text-xs font-semibold">This Week</div>
-                                    </div>
-                                    <div className="text-white text-sm font-semibold mb-2 opacity-90">Trips Completed</div>
-                                    <div className="text-4xl font-bold text-white mb-2">{stats.tripsCompleted}</div>
-                                    <div className="flex items-center text-blue-100 text-sm">
-                                        <Clock className="h-4 w-4 mr-1" />
-                                        <span>35 hours logged</span>
-                                    </div>
+                                        <span className="relative z-10 font-bold text-gray-800 text-lg group-hover:text-purple-600 transition-colors duration-300">Post Ride</span>
+                                        <p className="relative z-10 text-sm text-gray-500 group-hover:text-gray-700">Create new ride</p>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setCurrentView('rides');
+                                            setActiveTab('rides');
+                                            fetchData();
+                                        }}
+                                        className="group relative bg-white rounded-2xl shadow-lg p-8 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/30 border-2 border-transparent hover:border-blue-200 flex flex-col items-center justify-center gap-4 overflow-hidden"
+                                    >
+                                        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-cyan-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                        <div className="relative z-10 p-4 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+                                            <Car className="h-10 w-10 text-white" />
+                                        </div>
+                                        <span className="relative z-10 font-bold text-gray-800 text-lg group-hover:text-blue-600 transition-colors duration-300">My Rides</span>
+                                        <p className="relative z-10 text-sm text-gray-500 group-hover:text-gray-700">Manage your rides</p>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setCurrentView('pending');
+                                            setActiveTab('pending');
+                                            fetchData();
+                                        }}
+                                        className="group relative bg-white rounded-2xl shadow-lg p-8 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-orange-500/30 border-2 border-transparent hover:border-orange-200 flex flex-col items-center justify-center gap-4 overflow-hidden"
+                                    >
+                                        <div className="absolute inset-0 bg-gradient-to-br from-orange-50 to-amber-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                        <div className="relative z-10 p-4 bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+                                            <Bell className="h-10 w-10 text-white" />
+                                        </div>
+                                        <span className="relative z-10 font-bold text-gray-800 text-lg group-hover:text-orange-600 transition-colors duration-300">Requests</span>
+                                        <p className="relative z-10 text-sm text-gray-500 group-hover:text-gray-700">Review bookings</p>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setCurrentView('history');
+                                            setActiveTab('history');
+                                            fetchData();
+                                        }}
+                                        className="group relative bg-white rounded-2xl shadow-lg p-8 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-indigo-500/30 border-2 border-transparent hover:border-indigo-200 flex flex-col items-center justify-center gap-4 overflow-hidden"
+                                    >
+                                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-purple-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                        <div className="relative z-10 p-4 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+                                            <History className="h-10 w-10 text-white" />
+                                        </div>
+                                        <span className="relative z-10 font-bold text-gray-800 text-lg group-hover:text-indigo-600 transition-colors duration-300">History</span>
+                                        <p className="relative z-10 text-sm text-gray-500 group-hover:text-gray-700">View past trips</p>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setCurrentView('vehicle-details');
+                                            setShowVehicleDetailsForm(true);
+                                            loadMasterDetails();
+                                        }}
+                                        className="group relative bg-white rounded-2xl shadow-lg p-8 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-teal-500/30 border-2 border-transparent hover:border-teal-200 flex flex-col items-center justify-center gap-4 overflow-hidden"
+                                    >
+                                        <div className="absolute inset-0 bg-gradient-to-br from-teal-50 to-cyan-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                        <div className="relative z-10 p-4 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-2xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+                                            <Car className="h-10 w-10 text-white" />
+                                        </div>
+                                        <span className="relative z-10 font-bold text-gray-800 text-lg group-hover:text-teal-600 transition-colors duration-300">Vehicle Details</span>
+                                        <p className="relative z-10 text-sm text-gray-500 group-hover:text-gray-700">Manage vehicle info</p>
+                                    </button>
                                 </div>
                             </div>
-
-                            {/* Overall Rating Card */}
-                            <div className="group relative bg-gradient-to-br from-amber-500 via-yellow-600 to-orange-600 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-amber-500/50 overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-                                <div className="relative z-10">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                                            <Star className="h-6 w-6 text-white fill-white" />
-                                        </div>
-                                        <div className="text-white/80 text-xs font-semibold">Rating</div>
-                                    </div>
-                                    <div className="text-white text-sm font-semibold mb-2 opacity-90">Overall Rating</div>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <div className="text-4xl font-bold text-white">{stats.overallRating}</div>
-                                        <Star className="h-7 w-7 text-white fill-white" />
-                                    </div>
-                                    <div className="flex items-center text-amber-100 text-sm">
-                                        <Users className="h-4 w-4 mr-1" />
-                                        <span>Based on {stats.ratingCount} ratings</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Acceptance Rate Card */}
-                            <div className="group relative bg-gradient-to-br from-purple-500 via-indigo-600 to-blue-600 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/50 overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-                                <div className="relative z-10">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                                            <CheckCircle className="h-6 w-6 text-white" />
-                                        </div>
-                                        <div className="text-white/80 text-xs font-semibold">Quality</div>
-                                    </div>
-                                    <div className="text-white text-sm font-semibold mb-2 opacity-90">Acceptance Rate</div>
-                                    <div className="text-4xl font-bold text-white mb-2">{stats.acceptanceRate}%</div>
-                                    <div className="flex items-center text-purple-100 text-sm">
-                                        <TrendingUp className="h-4 w-4 mr-1" />
-                                        <span>Maintaining high quality</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Navigation Buttons */}
-                        <div className="mb-8">
-                            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-                                <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">Driver Tools & Settings</span>
-                            </h2>
-                            <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-                                <button
-                                    onClick={() => {
-                                        setCurrentView('post-ride');
-                                        setShowPostForm(true);
-                                    }}
-                                    className="group relative bg-white rounded-2xl shadow-lg p-8 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/30 border-2 border-transparent hover:border-purple-200 flex flex-col items-center justify-center gap-4 overflow-hidden"
-                                >
-                                    <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-pink-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                    <div className="relative z-10 p-4 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
-                                        <Plus className="h-10 w-10 text-white" />
-                                    </div>
-                                    <span className="relative z-10 font-bold text-gray-800 text-lg group-hover:text-purple-600 transition-colors duration-300">Post Ride</span>
-                                    <p className="relative z-10 text-sm text-gray-500 group-hover:text-gray-700">Create new ride</p>
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setCurrentView('rides');
-                                        setActiveTab('rides');
-                                        fetchData();
-                                    }}
-                                    className="group relative bg-white rounded-2xl shadow-lg p-8 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/30 border-2 border-transparent hover:border-blue-200 flex flex-col items-center justify-center gap-4 overflow-hidden"
-                                >
-                                    <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-cyan-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                    <div className="relative z-10 p-4 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
-                                        <Car className="h-10 w-10 text-white" />
-                                    </div>
-                                    <span className="relative z-10 font-bold text-gray-800 text-lg group-hover:text-blue-600 transition-colors duration-300">My Rides</span>
-                                    <p className="relative z-10 text-sm text-gray-500 group-hover:text-gray-700">Manage your rides</p>
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setCurrentView('pending');
-                                        setActiveTab('pending');
-                                        fetchData();
-                                    }}
-                                    className="group relative bg-white rounded-2xl shadow-lg p-8 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-orange-500/30 border-2 border-transparent hover:border-orange-200 flex flex-col items-center justify-center gap-4 overflow-hidden"
-                                >
-                                    <div className="absolute inset-0 bg-gradient-to-br from-orange-50 to-amber-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                    <div className="relative z-10 p-4 bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
-                                        <Bell className="h-10 w-10 text-white" />
-                                    </div>
-                                    <span className="relative z-10 font-bold text-gray-800 text-lg group-hover:text-orange-600 transition-colors duration-300">Requests</span>
-                                    <p className="relative z-10 text-sm text-gray-500 group-hover:text-gray-700">Review bookings</p>
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setCurrentView('history');
-                                        setActiveTab('history');
-                                        fetchData();
-                                    }}
-                                    className="group relative bg-white rounded-2xl shadow-lg p-8 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-indigo-500/30 border-2 border-transparent hover:border-indigo-200 flex flex-col items-center justify-center gap-4 overflow-hidden"
-                                >
-                                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-purple-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                    <div className="relative z-10 p-4 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
-                                        <History className="h-10 w-10 text-white" />
-                                    </div>
-                                    <span className="relative z-10 font-bold text-gray-800 text-lg group-hover:text-indigo-600 transition-colors duration-300">History</span>
-                                    <p className="relative z-10 text-sm text-gray-500 group-hover:text-gray-700">View past trips</p>
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setCurrentView('vehicle-details');
-                                        setShowVehicleDetailsForm(true);
-                                        loadMasterDetails();
-                                    }}
-                                    className="group relative bg-white rounded-2xl shadow-lg p-8 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-teal-500/30 border-2 border-transparent hover:border-teal-200 flex flex-col items-center justify-center gap-4 overflow-hidden"
-                                >
-                                    <div className="absolute inset-0 bg-gradient-to-br from-teal-50 to-cyan-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                    <div className="relative z-10 p-4 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-2xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
-                                        <Car className="h-10 w-10 text-white" />
-                                    </div>
-                                    <span className="relative z-10 font-bold text-gray-800 text-lg group-hover:text-teal-600 transition-colors duration-300">Vehicle Details</span>
-                                    <p className="relative z-10 text-sm text-gray-500 group-hover:text-gray-700">Manage vehicle info</p>
-                                </button>
-                            </div>
-                        </div>
                         </div>
                     </div>
                 )}
@@ -1116,686 +1123,695 @@ const DriverDashboard = () => {
                 {(currentView === 'post-ride' || currentView === 'rides' || currentView === 'bookings' || currentView === 'pending' || currentView === 'history') && (
                     <>
                         {(currentView === 'post-ride' || showPostForm) && (
-                    <div className="bg-white rounded-xl shadow-2xl p-6 mb-6 border-2 border-purple-300/50 backdrop-blur-sm">
-                        <h2 className="text-2xl font-bold mb-6 flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                            <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg">
-                                <Plus className="h-5 w-5 text-white" />
-                            </div>
-                            <span>Post a New Ride</span>
-                        </h2>
+                            <div className="bg-white rounded-xl shadow-2xl p-6 mb-6 border-2 border-purple-300/50 backdrop-blur-sm">
+                                <h2 className="text-2xl font-bold mb-6 flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                                    <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg">
+                                        <Plus className="h-5 w-5 text-white" />
+                                    </div>
+                                    <span>Post a New Ride</span>
+                                </h2>
 
-                        {/* Stepper */}
-                        <div className="flex items-center justify-center space-x-4 mb-6">
-                            {[1,2,3].map((s) => (
-                                <div key={s} className="flex items-center">
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${postStep >= s ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'}`}>{s}</div>
-                                    {s !== 3 && <div className={`w-10 h-1 mx-2 ${postStep > s ? 'bg-purple-600' : 'bg-gray-200'}`}></div>}
+                                {/* Stepper */}
+                                <div className="flex items-center justify-center space-x-4 mb-6">
+                                    {[1, 2, 3].map((s) => (
+                                        <div key={s} className="flex items-center">
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${postStep >= s ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'}`}>{s}</div>
+                                            {s !== 3 && <div className={`w-10 h-1 mx-2 ${postStep > s ? 'bg-purple-600' : 'bg-gray-200'}`}></div>}
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
 
-                        {/* Step 1: From/To Cities (cities only) */}
-                         {postStep === 1 && (
-                             <div className="space-y-6">
-                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                     <div>
-                                         <label className="block text-sm font-semibold text-gray-700 mb-2">From City *</label>
-                                         <CityAutocomplete
-                                             value={fromCity}
-                                             onChange={(v) => {
-                                                 setFromCity(v);
-                                             }}
-                                             placeholder="Type a city (e.g., Chennai)"
-                                             mode="city"
-                                         />
-                                     </div>
-                                     <div>
-                                         <label className="block text-sm font-semibold text-gray-700 mb-2">To City *</label>
-                                         <CityAutocomplete
-                                             value={toCity}
-                                             onChange={(v) => {
-                                                 setToCity(v);
-                                             }}
-                                             placeholder="Type a city (e.g., Bengaluru)"
-                                             mode="city"
-                                         />
-                                     </div>
-                                 </div>
-                                 <div className="flex justify-end">
-                                     <button
-                                         onClick={() => setPostStep(2)}
-                                         disabled={!fromCity || !toCity || fromCity.trim().length < 2 || toCity.trim().length < 2}
-                                        className="px-6 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
-                                     >
-                                         Next
-                                     </button>
-                                 </div>
-                             </div>
-                         )}
-
-                        {/* Step 2: Pickup & Drop Locations (4 each) */}
-                        {postStep === 2 && (
-                            <>
-                                <div className="space-y-6">
-                                    {/* Review Selected Route - green card like in the reference */}
-                                    <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded-lg">
-                                        <h3 className="text-sm font-semibold text-green-800 mb-3">Review Your Route</h3>
+                                {/* Step 1: From/To Cities (cities only) */}
+                                {postStep === 1 && (
+                                    <div className="space-y-6">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
-                                                <label className="block text-xs font-semibold text-green-700 mb-1">From City</label>
-                                                <div className="text-sm font-medium text-gray-900">{fromCity}</div>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">From City *</label>
+                                                <CityAutocomplete
+                                                    value={fromCity}
+                                                    onChange={(v) => {
+                                                        setFromCity(v);
+                                                    }}
+                                                    placeholder="Type a city (e.g., Chennai)"
+                                                    mode="city"
+                                                />
                                             </div>
                                             <div>
-                                                <label className="block text-xs font-semibold text-green-700 mb-1">To City</label>
-                                                <div className="text-sm font-medium text-gray-900">{toCity}</div>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">To City *</label>
+                                                <CityAutocomplete
+                                                    value={toCity}
+                                                    onChange={(v) => {
+                                                        setToCity(v);
+                                                    }}
+                                                    placeholder="Type a city (e.g., Bengaluru)"
+                                                    mode="city"
+                                                />
                                             </div>
+                                        </div>
+                                        <div className="flex justify-end">
+                                            <button
+                                                onClick={() => setPostStep(2)}
+                                                disabled={!fromCity || !toCity || fromCity.trim().length < 2 || toCity.trim().length < 2}
+                                                className="px-6 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
+                                            >
+                                                Next
+                                            </button>
                                         </div>
                                     </div>
+                                )}
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-gray-700 mb-1">Select 4 Pickup Locations in {fromCity} *</h3>
-                                            <p className="text-xs text-gray-600 mb-3">
-                                                Choose 4 areas in {fromCity} where passengers can be picked up. You can search for any location within {fromCity}.
-                                            </p>
-                                            <div className="grid grid-cols-1 gap-3">
-                                                {pickupLocations.map((val, idx) => (
-                                                    <div key={`pickup-wrap-${idx}`} className="space-y-1">
-                                                        <label className="block text-xs font-semibold text-gray-700">
-                                                            Pickup Location {idx + 1} *
-                                                        </label>
-                                                        <CityAutocomplete
-                                                            key={`pickup-${idx}`}
-                                                            value={val}
-                                                            onChange={(v) => handlePickupChange(idx, v)}
-                                                            placeholder={`Search a place in ${fromCity}`}
-                                                            withinCity={fromCity}
-                                                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                                        />
+                                {/* Step 2: Pickup & Drop Locations (4 each) */}
+                                {postStep === 2 && (
+                                    <>
+                                        <div className="space-y-6">
+                                            {/* Review Selected Route - green card like in the reference */}
+                                            <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded-lg">
+                                                <h3 className="text-sm font-semibold text-green-800 mb-3">Review Your Route</h3>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="block text-xs font-semibold text-green-700 mb-1">From City</label>
+                                                        <div className="text-sm font-medium text-gray-900">{fromCity}</div>
                                                     </div>
-                                                ))}
+                                                    <div>
+                                                        <label className="block text-xs font-semibold text-green-700 mb-1">To City</label>
+                                                        <div className="text-sm font-medium text-gray-900">{toCity}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div>
+                                                    <h3 className="text-sm font-semibold text-gray-700 mb-1">Select 4 Pickup Locations in {fromCity} *</h3>
+                                                    <p className="text-xs text-gray-600 mb-3">
+                                                        Choose 4 areas in {fromCity} where passengers can be picked up. You can search for any location within {fromCity}.
+                                                    </p>
+                                                    <div className="grid grid-cols-1 gap-3">
+                                                        {pickupLocations.map((val, idx) => (
+                                                            <div key={`pickup-wrap-${idx}`} className="space-y-1">
+                                                                <label className="block text-xs font-semibold text-gray-700">
+                                                                    Pickup Location {idx + 1} *
+                                                                </label>
+                                                                <CityAutocomplete
+                                                                    key={`pickup-${idx}`}
+                                                                    value={val}
+                                                                    onChange={(v) => handlePickupChange(idx, v)}
+                                                                    placeholder={`Search a place in ${fromCity}`}
+                                                                    withinCity={fromCity}
+                                                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                                                />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-sm font-semibold text-gray-700 mb-1">Select 4 Drop Locations in {toCity} *</h3>
+                                                    <p className="text-xs text-gray-600 mb-3">
+                                                        Choose 4 areas in {toCity} where passengers can be dropped off. You can search for any location within {toCity}.
+                                                    </p>
+                                                    <div className="grid grid-cols-1 gap-3">
+                                                        {dropLocations.map((val, idx) => (
+                                                            <div key={`drop-wrap-${idx}`} className="space-y-1">
+                                                                <label className="block text-xs font-semibold text-gray-700">
+                                                                    Drop Location {idx + 1} *
+                                                                </label>
+                                                                <CityAutocomplete
+                                                                    key={`drop-${idx}`}
+                                                                    value={val}
+                                                                    onChange={(v) => handleDropChange(idx, v)}
+                                                                    placeholder={`Search a place in ${toCity}`}
+                                                                    withinCity={toCity}
+                                                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                                                />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-gray-700 mb-1">Select 4 Drop Locations in {toCity} *</h3>
-                                            <p className="text-xs text-gray-600 mb-3">
-                                                Choose 4 areas in {toCity} where passengers can be dropped off. You can search for any location within {toCity}.
-                                            </p>
-                                            <div className="grid grid-cols-1 gap-3">
-                                                {dropLocations.map((val, idx) => (
-                                                    <div key={`drop-wrap-${idx}`} className="space-y-1">
-                                                        <label className="block text-xs font-semibold text-gray-700">
-                                                            Drop Location {idx + 1} *
-                                                        </label>
-                                                        <CityAutocomplete
-                                                            key={`drop-${idx}`}
-                                                            value={val}
-                                                            onChange={(v) => handleDropChange(idx, v)}
-                                                            placeholder={`Search a place in ${toCity}`}
-                                                            withinCity={toCity}
-                                                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                                        />
-                                                    </div>
-                                                ))}
+
+                                        <div className="flex justify-between">
+                                            <button type="button" onClick={() => setPostStep(1)} className="px-8 py-3 bg-gray-200 rounded-lg">Back</button>
+                                            <div className="flex">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setPostStep(3)}
+                                                    disabled={pickupLocations.filter(Boolean).length !== 4 || dropLocations.filter(Boolean).length !== 4}
+                                                    className="px-6 py-2 bg-green-600 text-white rounded-lg disabled:opacity-50"
+                                                >
+                                                    Next
+                                                </button>
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
+                                    </>
+                                )}
 
-                                <div className="flex justify-between">
-                                    <button type="button" onClick={() => setPostStep(1)} className="px-8 py-3 bg-gray-200 rounded-lg">Back</button>
-                                    <div className="flex">
+                                {/* Step 3: Details (date, time, seats only) */}
+                                {postStep === 3 && (
+                                    <form onSubmit={handlePostRide} className="space-y-6">
+                                        {/* Review Selected Route */}
+                                        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
+                                            <h3 className="text-sm font-semibold text-blue-800 mb-3">Review Your Route</h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-blue-700 mb-1">From</label>
+                                                    <div className="text-sm font-medium text-gray-900">{fromCity}</div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-blue-700 mb-1">To</label>
+                                                    <div className="text-sm font-medium text-gray-900">{toCity}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Info about using master vehicle details */}
+                                        {hasMasterDetails && (
+                                            <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded-lg">
+                                                <p className="text-sm text-green-800">
+                                                    <strong>Note:</strong> Your saved vehicle details (photos, type, model, etc.) will be automatically used for this ride.
+                                                </p>
+                                            </div>
+                                        )}
+                                        {!hasMasterDetails && (
+                                            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
+                                                <p className="text-sm text-yellow-800">
+                                                    <strong>Note:</strong> Please add your vehicle details in the "Vehicle Details" section on the main dashboard before posting rides.
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">Date *</label>
+                                                <input
+                                                    type="date"
+                                                    required
+                                                    value={postForm.date}
+                                                    onChange={(e) => setPostForm({ ...postForm, date: e.target.value })}
+                                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                                    min={new Date().toISOString().split('T')[0]}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">Time *</label>
+                                                <input
+                                                    type="time"
+                                                    required
+                                                    value={postForm.time}
+                                                    onChange={(e) => setPostForm({ ...postForm, time: e.target.value })}
+                                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">Available Seats *</label>
+                                                <input
+                                                    type="number"
+                                                    required
+                                                    min={1}
+                                                    value={postForm.availableSeats}
+                                                    onChange={(e) => setPostForm({ ...postForm, availableSeats: e.target.value })}
+                                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                                    placeholder="4"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                    Base Fare (₹) *
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    required
+                                                    min={50}
+                                                    value={postForm.baseFare}
+                                                    onChange={(e) => setPostForm({ ...postForm, baseFare: e.target.value })}
+                                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                                    placeholder="e.g. 300"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex justify-between">
+                                            <button type="button" onClick={() => setPostStep(2)} className="px-8 py-3 bg-gray-200 rounded-lg">Back</button>
+                                            <div className="flex space-x-4">
+                                                <button type="submit" disabled={loading} className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg disabled:opacity-50 font-semibold shadow-lg">Post Ride</button>
+                                                <button type="button" onClick={() => { setCurrentView('main'); setShowPostForm(false); setPostStep(1); }} className="px-8 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-semibold shadow-md">Cancel</button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Tabs for Rides, Bookings, Pending, and History */}
+                        {(currentView === 'rides' || currentView === 'bookings' || currentView === 'pending' || currentView === 'history') && (
+                            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-2xl p-4 mb-8 border-2 border-purple-100/50 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-green-200/20 to-blue-200/20 rounded-full blur-3xl -mr-32 -mt-32"></div>
+                                <div className="relative z-10">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                         <button
-                                            type="button"
-                                            onClick={() => setPostStep(3)}
-                                            disabled={pickupLocations.filter(Boolean).length !== 4 || dropLocations.filter(Boolean).length !== 4}
-                                            className="px-6 py-2 bg-green-600 text-white rounded-lg disabled:opacity-50"
+                                            onClick={() => setActiveTab('rides')}
+                                            className={`px-4 py-2.5 rounded-xl font-bold transition-all duration-300 flex items-center justify-center space-x-2 text-sm ${activeTab === 'rides'
+                                                ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-xl transform scale-105 hover:scale-110'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 hover:scale-102'
+                                                }`}
                                         >
-                                            Next
+                                            <Car className="h-4 w-4" />
+                                            <span className="hidden sm:inline">My Rides</span>
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab('bookings')}
+                                            className={`px-4 py-2.5 rounded-xl font-bold transition-all duration-300 flex items-center justify-center space-x-2 text-sm ${activeTab === 'bookings'
+                                                ? 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white shadow-xl transform scale-105 hover:scale-110'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:scale-102'
+                                                }`}
+                                        >
+                                            <Ticket className="h-4 w-4" />
+                                            <span className="hidden sm:inline">My Bookings</span>
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab('pending')}
+                                            className={`px-4 py-2.5 rounded-xl font-bold transition-all duration-300 flex items-center justify-center space-x-2 text-sm ${activeTab === 'pending'
+                                                ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-xl transform scale-105 hover:scale-110'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 hover:scale-102'
+                                                }`}
+                                        >
+                                            <CheckCircle2 className="h-4 w-4" />
+                                            <span className="hidden sm:inline">Accept/Decline</span>
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab('history')}
+                                            className={`px-4 py-2.5 rounded-xl font-bold transition-all duration-300 flex items-center justify-center space-x-2 text-sm ${activeTab === 'history'
+                                                ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-xl transform scale-105 hover:scale-110'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gradient-to-r hover:from-purple-50 hover:to-indigo-50 hover:scale-102'
+                                                }`}
+                                        >
+                                            <History className="h-4 w-4" />
+                                            <span className="hidden sm:inline">History</span>
                                         </button>
                                     </div>
                                 </div>
-                            </>
-                        )}
 
-                        {/* Step 3: Details (date, time, seats only) */}
-                        {postStep === 3 && (
-                            <form onSubmit={handlePostRide} className="space-y-6">
-                             {/* Review Selected Route */}
-                             <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
-                                <h3 className="text-sm font-semibold text-blue-800 mb-3">Review Your Route</h3>
-                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                     <div>
-                                         <label className="block text-xs font-semibold text-blue-700 mb-1">From</label>
-                                         <div className="text-sm font-medium text-gray-900">{fromCity}</div>
-                                     </div>
-                                     <div>
-                                         <label className="block text-xs font-semibold text-blue-700 mb-1">To</label>
-                                         <div className="text-sm font-medium text-gray-900">{toCity}</div>
-                                     </div>
-                                 </div>
-                             </div>
-
-                                {/* Info about using master vehicle details */}
-                                {hasMasterDetails && (
-                                    <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded-lg">
-                                        <p className="text-sm text-green-800">
-                                            <strong>Note:</strong> Your saved vehicle details (photos, type, model, etc.) will be automatically used for this ride.
-                                        </p>
-                                    </div>
-                                )}
-                                {!hasMasterDetails && (
-                                    <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
-                                        <p className="text-sm text-yellow-800">
-                                            <strong>Note:</strong> Please add your vehicle details in the "Vehicle Details" section on the main dashboard before posting rides.
-                                        </p>
-                                    </div>
-                                )}
-
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Date *</label>
-                                        <input
-                                            type="date"
-                                            required
-                                            value={postForm.date}
-                                            onChange={(e) => setPostForm({ ...postForm, date: e.target.value })}
-                                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                            min={new Date().toISOString().split('T')[0]}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Time *</label>
-                                        <input
-                                            type="time"
-                                            required
-                                            value={postForm.time}
-                                            onChange={(e) => setPostForm({ ...postForm, time: e.target.value })}
-                                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Available Seats *</label>
-                                        <input
-                                            type="number"
-                                            required
-                                            min={1}
-                                            value={postForm.availableSeats}
-                                            onChange={(e) => setPostForm({ ...postForm, availableSeats: e.target.value })}
-                                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                            placeholder="4"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="flex justify-between">
-                                    <button type="button" onClick={() => setPostStep(2)} className="px-8 py-3 bg-gray-200 rounded-lg">Back</button>
-                                    <div className="flex space-x-4">
-                                        <button type="submit" disabled={loading} className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg disabled:opacity-50 font-semibold shadow-lg">Post Ride</button>
-                                        <button type="button" onClick={() => { setCurrentView('main'); setShowPostForm(false); setPostStep(1); }} className="px-8 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-semibold shadow-md">Cancel</button>
-                                    </div>
-                                </div>
-                            </form>
-                        )}
-                    </div>
-                )}
-
-                {/* Tabs for Rides, Bookings, Pending, and History */}
-                {(currentView === 'rides' || currentView === 'bookings' || currentView === 'pending' || currentView === 'history') && (
-                <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-2xl p-4 mb-8 border-2 border-purple-100/50 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-green-200/20 to-blue-200/20 rounded-full blur-3xl -mr-32 -mt-32"></div>
-                    <div className="relative z-10">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <button
-                                onClick={() => setActiveTab('rides')}
-                                className={`px-4 py-2.5 rounded-xl font-bold transition-all duration-300 flex items-center justify-center space-x-2 text-sm ${
-                                    activeTab === 'rides'
-                                        ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-xl transform scale-105 hover:scale-110'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 hover:scale-102'
-                                }`}
-                            >
-                                <Car className="h-4 w-4" />
-                                <span className="hidden sm:inline">My Rides</span>
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('bookings')}
-                                className={`px-4 py-2.5 rounded-xl font-bold transition-all duration-300 flex items-center justify-center space-x-2 text-sm ${
-                                    activeTab === 'bookings'
-                                        ? 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white shadow-xl transform scale-105 hover:scale-110'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:scale-102'
-                                }`}
-                            >
-                                <Ticket className="h-4 w-4" />
-                                <span className="hidden sm:inline">My Bookings</span>
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('pending')}
-                                className={`px-4 py-2.5 rounded-xl font-bold transition-all duration-300 flex items-center justify-center space-x-2 text-sm ${
-                                    activeTab === 'pending'
-                                        ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-xl transform scale-105 hover:scale-110'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 hover:scale-102'
-                                }`}
-                            >
-                                <CheckCircle2 className="h-4 w-4" />
-                                <span className="hidden sm:inline">Accept/Decline</span>
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('history')}
-                                className={`px-4 py-2.5 rounded-xl font-bold transition-all duration-300 flex items-center justify-center space-x-2 text-sm ${
-                                    activeTab === 'history'
-                                        ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-xl transform scale-105 hover:scale-110'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gradient-to-r hover:from-purple-50 hover:to-indigo-50 hover:scale-102'
-                                }`}
-                            >
-                                <History className="h-4 w-4" />
-                                <span className="hidden sm:inline">History</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Rides Tab Content */}
-                    {activeTab === 'rides' && (
-                        <div className="mt-6 relative z-10">
-                            <div className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border-2 border-purple-100/50 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-green-200/30 to-emerald-200/30 rounded-full blur-3xl -mr-32 -mt-32"></div>
-                                <div className="relative z-10">
-                                    <h2 className="text-2xl font-bold mb-8 flex items-center space-x-3 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                                        <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg">
-                                            <Car className="h-5 w-5 text-white" />
-                                        </div>
-                                        <span>My Rides ({filteredRides.length})</span>
-                                    </h2>
-                                    {filteredRides.length === 0 ? (
-                                        <div className="text-center py-16 relative z-10">
-                                            <div className="inline-block p-6 bg-gradient-to-br from-green-100 to-emerald-100 rounded-2xl mb-4">
-                                                <Car className="h-16 w-16 text-green-400 mx-auto" />
-                                            </div>
-                                            <p className="text-gray-700 text-lg font-semibold mb-2">No rides found.</p>
-                                            <p className="text-gray-500 text-sm">Consider posting a new ride!</p>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-5">
-                                            {displayedRides.map(ride => (
-                                                <div key={ride.id} className="bg-gradient-to-r from-green-50/90 to-emerald-50/90 rounded-2xl shadow-lg p-6 border-2 border-green-200/50 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 group relative overflow-hidden">
-                                                    <div className="flex items-start justify-between">
-                                                        <div className="flex items-start space-x-3 flex-1">
-                                                            <div className="h-10 w-10 rounded-full bg-green-100 text-green-700 flex items-center justify-center flex-shrink-0">
-                                                                <MapPin className="h-4 w-4" />
-                                                            </div>
-                                                            <div className="flex-1">
-                                                                <div className="flex items-center space-x-2 mb-2">
-                                                                    <h3 className="text-base md:text-lg font-semibold text-gray-800">
-                                                                        {(ride.citySource || ride.source)} <span className="text-gray-500">→</span> {(ride.cityDestination || ride.destination)}
-                                                                    </h3>
-                                                                    {ride.status && (
-                                                                        <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${ride.status === 'ACTIVE' || ride.status === 'SCHEDULED' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                                                            {ride.status === 'ACTIVE' ? 'SCHEDULED' : ride.status}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                                                                        <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
-                                                                            <Calendar className="h-3.5 w-3.5" />
-                                                                            <span>{new Date(ride.date).toLocaleDateString()}</span>
-                                                                        </span>
-                                                                        <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
-                                                                            <Clock className="h-3.5 w-3.5" />
-                                                                            <span>{new Date(`1970-01-01T${ride.time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                                        </span>
-                                                                        <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
-                                                                            <Users className="h-3.5 w-3.5" />
-                                                                            <span>{ride.availableSeats} seats</span>
-                                                                        </span>
+                                {/* Rides Tab Content */}
+                                {activeTab === 'rides' && (
+                                    <div className="mt-6 relative z-10">
+                                        <div className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border-2 border-purple-100/50 relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-green-200/30 to-emerald-200/30 rounded-full blur-3xl -mr-32 -mt-32"></div>
+                                            <div className="relative z-10">
+                                                <h2 className="text-2xl font-bold mb-8 flex items-center space-x-3 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                                                    <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg">
+                                                        <Car className="h-5 w-5 text-white" />
+                                                    </div>
+                                                    <span>My Rides ({filteredRides.length})</span>
+                                                </h2>
+                                                {filteredRides.length === 0 ? (
+                                                    <div className="text-center py-16 relative z-10">
+                                                        <div className="inline-block p-6 bg-gradient-to-br from-green-100 to-emerald-100 rounded-2xl mb-4">
+                                                            <Car className="h-16 w-16 text-green-400 mx-auto" />
+                                                        </div>
+                                                        <p className="text-gray-700 text-lg font-semibold mb-2">No rides found.</p>
+                                                        <p className="text-gray-500 text-sm">Consider posting a new ride!</p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-5">
+                                                        {displayedRides.map(ride => (
+                                                            <div key={ride.id} className="bg-gradient-to-r from-green-50/90 to-emerald-50/90 rounded-2xl shadow-lg p-6 border-2 border-green-200/50 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 group relative overflow-hidden">
+                                                                <div className="flex items-start justify-between">
+                                                                    <div className="flex items-start space-x-3 flex-1">
+                                                                        <div className="h-10 w-10 rounded-full bg-green-100 text-green-700 flex items-center justify-center flex-shrink-0">
+                                                                            <MapPin className="h-4 w-4" />
+                                                                        </div>
+                                                                        <div className="flex-1">
+                                                                            <div className="flex items-center space-x-2 mb-2">
+                                                                                <h3 className="text-base md:text-lg font-semibold text-gray-800">
+                                                                                    {(ride.citySource || ride.source)} <span className="text-gray-500">→</span> {(ride.cityDestination || ride.destination)}
+                                                                                </h3>
+                                                                                {ride.status && (
+                                                                                    <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${ride.status === 'ACTIVE' || ride.status === 'SCHEDULED' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                                                        {ride.status === 'ACTIVE' ? 'SCHEDULED' : ride.status}
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                                                                                <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
+                                                                                    <Calendar className="h-3.5 w-3.5" />
+                                                                                    <span>{new Date(ride.date).toLocaleDateString()}</span>
+                                                                                </span>
+                                                                                <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
+                                                                                    <Clock className="h-3.5 w-3.5" />
+                                                                                    <span>{new Date(`1970-01-01T${ride.time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                                                </span>
+                                                                                <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
+                                                                                    <Users className="h-3.5 w-3.5" />
+                                                                                    <span>{ride.availableSeats} seats</span>
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="text-right ml-4 flex flex-col items-end space-y-2">
+                                                                        <div>
+                                                                            <div className="text-[11px] text-gray-500 leading-tight">Estimated Fare</div>
+                                                                            <div className="text-lg md:text-xl font-bold text-green-600">₹{(ride.estimatedFare ?? 0).toFixed(2)}</div>
+                                                                        </div>
+                                                                        <div className="flex space-x-2">
+                                                                            <button
+                                                                                onClick={() => handleRescheduleClick(ride.id)}
+                                                                                className="px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-sm shadow-sm flex items-center space-x-1"
+                                                                            >
+                                                                                <Edit className="h-3.5 w-3.5" />
+                                                                                <span>Reschedule</span>
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => handleCancelRide(ride.id)}
+                                                                                className="px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-md text-sm shadow-sm"
+                                                                            >
+                                                                                Cancel
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                        <div className="text-right ml-4 flex flex-col items-end space-y-2">
-                                                            <div>
-                                                                <div className="text-[11px] text-gray-500 leading-tight">Estimated Fare</div>
-                                                                <div className="text-lg md:text-xl font-bold text-green-600">₹{(ride.estimatedFare ?? 0).toFixed(2)}</div>
-                                                            </div>
-                                                            <div className="flex space-x-2">
-                                                                <button
-                                                                    onClick={() => handleRescheduleClick(ride.id)}
-                                                                    className="px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-sm shadow-sm flex items-center space-x-1"
-                                                                >
-                                                                    <Edit className="h-3.5 w-3.5" />
-                                                                    <span>Reschedule</span>
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleCancelRide(ride.id)}
-                                                                    className="px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-md text-sm shadow-sm"
-                                                                >
-                                                                    Cancel
-                                                                </button>
-                                                            </div>
-                                                        </div>
+                                                        ))}
                                                     </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                    {/* Pagination Controls (for rides) */}
-                                    {ridesTotalPages > 0 && (
-                                        <div className="px-6 py-4 flex items-center justify-between bg-white/80 backdrop-blur-sm border-t mt-6 rounded-xl shadow-lg">
-                                            <div className="text-sm text-gray-600">
-                                                Showing page {ridesPage + 1}
-                                            </div>
-                                            <div className="flex items-center space-x-2">
-                                                <button onClick={() => fetchRidesPage(ridesPage - 1, ridesSize)} disabled={ridesPage === 0} className="px-3 py-1 rounded-md bg-white border hover:bg-gray-50 text-sm">Prev</button>
-                                                <button onClick={() => fetchRidesPage(ridesPage + 1, ridesSize)} className="px-3 py-1 rounded-md bg-white border hover:bg-gray-50 text-sm">Next</button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Bookings Tab Content */}
-                    {activeTab === 'bookings' && (
-                        <div className="mt-6 relative z-10">
-                            <div className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border-2 border-purple-100/50 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-200/30 to-cyan-200/30 rounded-full blur-3xl -mr-32 -mt-32"></div>
-                                <div className="relative z-10">
-                                    <h2 className="text-2xl font-bold mb-8 flex items-center space-x-3 bg-gradient-to-r from-blue-600 via-cyan-600 to-green-600 bg-clip-text text-transparent">
-                                        <div className="p-3 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl shadow-lg">
-                                            <Navigation className="h-5 w-5 text-white" />
-                                        </div>
-                                        <span>My Bookings ({filteredBookings.length})</span>
-                                    </h2>
-                                    {filteredBookings.length === 0 ? (
-                                        <div className="text-center py-16 relative z-10">
-                                            <div className="inline-block p-6 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-2xl mb-4">
-                                                <Ticket className="h-20 w-20 text-blue-400 mx-auto" />
-                                            </div>
-                                            <p className="text-gray-700 text-xl font-semibold mb-2">No bookings found.</p>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-5">
-                                            {displayedBookings.map(booking => (
-                                                <div key={booking.id} className="bg-gradient-to-r from-blue-50/90 to-cyan-50/90 rounded-2xl shadow-lg p-6 border-2 border-blue-200/50 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 group relative overflow-hidden">
-                                            <div className="flex items-start justify-between">
-                                                {/* Left: icon + route */}
-                                                <div className="flex items-start space-x-3">
-                                                    <div className="h-10 w-10 rounded-full bg-green-100 text-green-700 flex items-center justify-center flex-shrink-0">
-                                                        <MapPin className="h-5 w-5" />
-                                                    </div>
-                                                    <div>
+                                                )}
+                                                {/* Pagination Controls (for rides) */}
+                                                {ridesTotalPages > 0 && (
+                                                    <div className="px-6 py-4 flex items-center justify-between bg-white/80 backdrop-blur-sm border-t mt-6 rounded-xl shadow-lg">
+                                                        <div className="text-sm text-gray-600">
+                                                            Showing page {ridesPage + 1}
+                                                        </div>
                                                         <div className="flex items-center space-x-2">
-                                                            <h3 className="text-base md:text-lg font-semibold text-gray-800">
-                                                                {(booking.ride.citySource || booking.ride.source)} <span className="text-gray-500">→</span> {(booking.ride.cityDestination || booking.ride.destination)}
-                                                            </h3>
-                                                            <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${
-                                                                booking.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-                                                                booking.status === 'CONFIRMED' ? 'bg-blue-100 text-blue-800' :
-                                                                booking.status === 'ACCEPTED' ? 'bg-yellow-100 text-yellow-800' :
-                                                                booking.status === 'PENDING' ? 'bg-orange-100 text-orange-800' :
-                                                                'bg-red-100 text-red-800'
-                                                            }`}>
-                                                                {booking.status}
-                                                            </span>
-                                                        </div>
-                                                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                                                            <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
-                                                                <Calendar className="h-3.5 w-3.5" />
-                                                                <span>{new Date(booking.ride.date).toLocaleDateString()}</span>
-                                                            </span>
-                                                            <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
-                                                                <Clock className="h-3.5 w-3.5" />
-                                                                <span>{new Date(`1970-01-01T${booking.ride.time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                            </span>
-                                                            <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
-                                                                <Users className="h-3.5 w-3.5" />
-                                                                <span>{booking.seats} seats</span>
-                                                            </span>
+                                                            <button onClick={() => fetchRidesPage(ridesPage - 1, ridesSize)} disabled={ridesPage === 0} className="px-3 py-1 rounded-md bg-white border hover:bg-gray-50 text-sm">Prev</button>
+                                                            <button onClick={() => fetchRidesPage(ridesPage + 1, ridesSize)} className="px-3 py-1 rounded-md bg-white border hover:bg-gray-50 text-sm">Next</button>
                                                         </div>
                                                     </div>
-                                                </div>
-                                                {/* Right: fare */}
-                                                        <div className="text-right ml-4 flex flex-col items-end space-y-2">
-                                                            <div>
-                                                                <div className="text-[11px] text-gray-500 leading-tight">Estimated Fare</div>
-                                                                <div className="text-lg md:text-xl font-bold text-green-600">₹{(booking.totalPrice ?? booking.fareAmount ?? 0).toFixed(2)}</div>
-                                                            </div>
-                                                            {booking.status === 'COMPLETED' && (
-                                                                <span className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg text-sm font-semibold flex items-center space-x-2">
-                                                                    <CheckCircle className="h-4 w-4" />
-                                                                    <span>Completed</span>
-                                                                </span>
-                                                            )}
-                                                        </div>
+                                                )}
                                             </div>
-                                            </div>
-                                    ))}
-
-                                            {/* Pagination Controls (for bookings) */}
-                                            {bookingsTotalPages > 0 && (
-                                                <div className="px-6 py-4 flex items-center justify-between bg-white/80 backdrop-blur-sm border-t mt-6 rounded-xl shadow-lg">
-                                                    <div className="text-sm text-gray-600">
-                                                        Showing page {bookingsPage + 1}
-                                                    </div>
-                                                    <div className="flex items-center space-x-2">
-                                                        <button onClick={() => fetchBookingsPage(bookingsPage - 1, bookingsSize)} disabled={bookingsPage === 0} className="px-3 py-1 rounded-md bg-white border hover:bg-gray-50">Prev</button>
-                                                        <button onClick={() => fetchBookingsPage(bookingsPage + 1, bookingsSize)} className="px-3 py-1 rounded-md bg-white border hover:bg-gray-50">Next</button>
-                                                    </div>
-                                                </div>
-                                            )}
+                                        </div>
                                     </div>
                                 )}
-                        </div>
-                    </div>
-                </div>
-                    )}
 
-                    {/* Pending Bookings Tab Content */}
-                    {activeTab === 'pending' && (
-                        <div className="mt-6 relative z-10">
-                            <div className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border-2 border-purple-100/50 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-orange-200/30 to-amber-200/30 rounded-full blur-3xl -mr-32 -mt-32"></div>
-                                <div className="relative z-10">
-                                    <h2 className="text-2xl font-bold mb-8 flex items-center space-x-3 bg-gradient-to-r from-orange-600 via-amber-600 to-yellow-600 bg-clip-text text-transparent">
-                                        <div className="p-3 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl shadow-lg">
-                                            <CheckCircle2 className="h-5 w-5 text-white" />
-                                        </div>
-                                        <span>Pending Bookings ({pendingBookings.length})</span>
-                                    </h2>
-                                    {pendingBookings.length === 0 ? (
-                                        <div className="text-center py-16 relative z-10">
-                                            <div className="inline-block p-6 bg-gradient-to-br from-orange-100 to-amber-100 rounded-2xl mb-4">
-                                                <Bell className="h-20 w-20 text-orange-400 mx-auto" />
-                                            </div>
-                                            <p className="text-gray-700 text-xl font-semibold mb-2">No pending bookings found.</p>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className="space-y-5">
-                                                {displayedPendingBookings.map(booking => (
-                                                    <div key={booking.id} className="bg-gradient-to-r from-orange-50/90 to-amber-50/90 rounded-2xl shadow-lg p-6 border-2 border-orange-200/50 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 group relative overflow-hidden">
-                                                        <div className="flex items-start justify-between">
-                                                            <div className="flex items-start space-x-3 flex-1">
-                                                                <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0">
-                                                                    <MapPin className="h-5 w-5" />
-                                                                </div>
-                                                                <div className="flex-1">
-                                                                    <div className="flex items-center space-x-2 mb-2">
-                                                                        <h3 className="text-base md:text-lg font-semibold text-gray-800">
-                                                                            {booking.pickupLocation} <span className="text-gray-500">→</span> {booking.dropoffLocation}
-                                                                        </h3>
-                                                                        <span className="text-xs font-semibold rounded-full px-2 py-0.5 bg-yellow-100 text-yellow-800">
-                                                                            PENDING
-                                                                        </span>
-                                                                    </div>
-                                                                    <div className="text-sm text-gray-600 mb-2">
-                                                                        <p><strong>Passenger:</strong> {booking.passenger?.name || booking.passenger?.email || 'N/A'}</p>
-                                                                        <p><strong>Ride:</strong> {(booking.ride?.citySource || booking.ride?.source)} → {(booking.ride?.cityDestination || booking.ride?.destination)}</p>
-                                                                    </div>
-                                                                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                                                                        <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
-                                                                            <Calendar className="h-3.5 w-3.5" />
-                                                                            <span>{booking.ride?.date ? new Date(booking.ride.date).toLocaleDateString() : 'N/A'}</span>
-                                                                        </span>
-                                                                        <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
-                                                                            <Clock className="h-3.5 w-3.5" />
-                                                                            <span>{booking.ride?.time ? new Date(`1970-01-01T${booking.ride.time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
-                                                                        </span>
-                                                                        <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
-                                                                            <Users className="h-3.5 w-3.5" />
-                                                                            <span>{booking.numberOfSeats || 1} seat(s)</span>
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div className="text-right ml-4 flex flex-col items-end space-y-2">
-                                                                <div>
-                                                                    <div className="text-[11px] text-gray-500 leading-tight">Fare Amount</div>
-                                                                    <div className="text-lg md:text-xl font-bold text-green-600">₹{(booking.fareAmount ?? 0).toFixed(2)}</div>
-                                                                </div>
-                                                                <div className="flex space-x-2">
-                                                                    <button
-                                                                        onClick={() => handleAcceptBooking(booking.id)}
-                                                                        className="px-4 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-md text-sm shadow-sm flex items-center space-x-1"
-                                                                    >
-                                                                        <CheckCircle2 className="h-4 w-4" />
-                                                                        <span>Accept</span>
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleDeclineBooking(booking.id)}
-                                                                        className="px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-md text-sm shadow-sm flex items-center space-x-1"
-                                                                    >
-                                                                        <XCircle className="h-4 w-4" />
-                                                                        <span>Decline</span>
-                                                                    </button>
-                                                                </div>
-                                                            </div>
+                                {/* Bookings Tab Content */}
+                                {activeTab === 'bookings' && (
+                                    <div className="mt-6 relative z-10">
+                                        <div className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border-2 border-purple-100/50 relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-200/30 to-cyan-200/30 rounded-full blur-3xl -mr-32 -mt-32"></div>
+                                            <div className="relative z-10">
+                                                <h2 className="text-2xl font-bold mb-8 flex items-center space-x-3 bg-gradient-to-r from-blue-600 via-cyan-600 to-green-600 bg-clip-text text-transparent">
+                                                    <div className="p-3 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl shadow-lg">
+                                                        <Navigation className="h-5 w-5 text-white" />
+                                                    </div>
+                                                    <span>My Bookings ({filteredBookings.length})</span>
+                                                </h2>
+                                                {filteredBookings.length === 0 ? (
+                                                    <div className="text-center py-16 relative z-10">
+                                                        <div className="inline-block p-6 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-2xl mb-4">
+                                                            <Ticket className="h-20 w-20 text-blue-400 mx-auto" />
                                                         </div>
+                                                        <p className="text-gray-700 text-xl font-semibold mb-2">No bookings found.</p>
                                                     </div>
-                                                ))}
-                                            </div>
-                                            {/* Pagination Controls for Pending Bookings */}
-                                            {((pendingTotalPages > 0 && pendingTotalPages > 1) || (pendingTotalPages === 0 && pendingBookings.length > pendingSize)) && (
-                                                <div className="px-6 py-4 flex items-center justify-between bg-white/80 backdrop-blur-sm border-t mt-6 rounded-xl shadow-lg">
-                                                    <div className="text-sm text-gray-600">
-                                                        Showing page {pendingPage + 1}
-                                                    </div>
-                                                    <div className="flex items-center space-x-2">
-                                                        <button onClick={() => fetchPendingPage(Math.max(0, pendingPage - 1), pendingSize)} disabled={pendingPage <= 0} className="px-3 py-1 rounded-md bg-white border hover:bg-gray-50">Prev</button>
-                                                        <button onClick={() => fetchPendingPage(pendingPage + 1, pendingSize)} className="px-3 py-1 rounded-md bg-white border hover:bg-gray-50">Next</button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                    </>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                                                ) : (
+                                                    <div className="space-y-5">
+                                                        {displayedBookings.map(booking => (
+                                                            <div key={booking.id} className="bg-gradient-to-r from-blue-50/90 to-cyan-50/90 rounded-2xl shadow-lg p-6 border-2 border-blue-200/50 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 group relative overflow-hidden">
+                                                                <div className="flex items-start justify-between">
+                                                                    {/* Left: icon + route */}
+                                                                    <div className="flex items-start space-x-3">
+                                                                        <div className="h-10 w-10 rounded-full bg-green-100 text-green-700 flex items-center justify-center flex-shrink-0">
+                                                                            <MapPin className="h-5 w-5" />
+                                                                        </div>
+                                                                        <div>
+                                                                            <div className="flex items-center space-x-2">
+                                                                                <h3 className="text-base md:text-lg font-semibold text-gray-800">
+                                                                                    {(booking.ride.citySource || booking.ride.source)} <span className="text-gray-500">→</span> {(booking.ride.cityDestination || booking.ride.destination)}
+                                                                                </h3>
+                                                                                <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${booking.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                                                                                    booking.status === 'CONFIRMED' ? 'bg-blue-100 text-blue-800' :
+                                                                                        booking.status === 'ACCEPTED' ? 'bg-yellow-100 text-yellow-800' :
+                                                                                            booking.status === 'PENDING' ? 'bg-orange-100 text-orange-800' :
+                                                                                                'bg-red-100 text-red-800'
+                                                                                    }`}>
+                                                                                    {booking.status}
+                                                                                </span>
+                                                                            </div>
+                                                                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                                                                                <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
+                                                                                    <Calendar className="h-3.5 w-3.5" />
+                                                                                    <span>{new Date(booking.ride.date).toLocaleDateString()}</span>
+                                                                                </span>
+                                                                                <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
+                                                                                    <Clock className="h-3.5 w-3.5" />
+                                                                                    <span>{new Date(`1970-01-01T${booking.ride.time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                                                </span>
+                                                                                <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
+                                                                                    <Users className="h-3.5 w-3.5" />
+                                                                                    <span>{booking.seats} seats</span>
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    {/* Right: fare */}
+                                                                    <div className="text-right ml-4 flex flex-col items-end space-y-2">
+                                                                        <div>
+                                                                            <div className="text-[11px] text-gray-500 leading-tight">Estimated Fare</div>
+                                                                            <div className="text-lg md:text-xl font-bold text-green-600">₹{(booking.totalPrice ?? booking.fareAmount ?? 0).toFixed(2)}</div>
+                                                                        </div>
+                                                                        {booking.status === 'COMPLETED' && (
+                                                                            <span className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg text-sm font-semibold flex items-center space-x-2">
+                                                                                <CheckCircle className="h-4 w-4" />
+                                                                                <span>Completed</span>
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
 
-                    {/* History Tab Content */}
-                    {activeTab === 'history' && (
-                        <div className="mt-6 relative z-10">
-                            <div className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border-2 border-purple-100/50 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-200/30 to-purple-200/30 rounded-full blur-3xl -mr-32 -mt-32"></div>
-                                <div className="relative z-10">
-                                    <h2 className="text-2xl font-bold mb-8 flex items-center space-x-3 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 bg-clip-text text-transparent">
-                                        <div className="p-3 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl shadow-lg">
-                                            <History className="h-5 w-5 text-white" />
-                                        </div>
-                                        <span>Ride History ({rideHistory.length})</span>
-                                    </h2>
-                                    {rideHistory.length === 0 ? (
-                                        <div className="text-center py-16 relative z-10">
-                                            <div className="inline-block p-6 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl mb-4">
-                                                <History className="h-20 w-20 text-indigo-400 mx-auto" />
+                                                        {/* Pagination Controls (for bookings) */}
+                                                        {bookingsTotalPages > 0 && (
+                                                            <div className="px-6 py-4 flex items-center justify-between bg-white/80 backdrop-blur-sm border-t mt-6 rounded-xl shadow-lg">
+                                                                <div className="text-sm text-gray-600">
+                                                                    Showing page {bookingsPage + 1}
+                                                                </div>
+                                                                <div className="flex items-center space-x-2">
+                                                                    <button onClick={() => fetchBookingsPage(bookingsPage - 1, bookingsSize)} disabled={bookingsPage === 0} className="px-3 py-1 rounded-md bg-white border hover:bg-gray-50">Prev</button>
+                                                                    <button onClick={() => fetchBookingsPage(bookingsPage + 1, bookingsSize)} className="px-3 py-1 rounded-md bg-white border hover:bg-gray-50">Next</button>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
-                                            <p className="text-gray-700 text-xl font-semibold mb-2">No ride history found.</p>
                                         </div>
-                                    ) : (
-                                        <div className="space-y-5">
-                                            {displayedHistory.map(booking => (
-                                                <div key={booking.id} className="bg-gradient-to-r from-purple-50/90 to-blue-50/90 rounded-2xl shadow-lg p-6 border-2 border-purple-200/50 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 group relative overflow-hidden">
-                                                    <div className="flex items-start justify-between">
-                                                        <div className="flex items-start space-x-3 flex-1">
-                                                            <div className="h-10 w-10 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center flex-shrink-0">
-                                                                <MapPin className="h-5 w-5" />
-                                                            </div>
-                                                            <div className="flex-1">
-                                                                <div className="flex items-center space-x-2 mb-2">
-                                                                    <h3 className="text-base md:text-lg font-semibold text-gray-800">
-                                                                        {booking.pickupLocation} <span className="text-gray-500">→</span> {booking.dropoffLocation}
-                                                                    </h3>
-                                                                    <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${
-                                                                        booking.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-                                                                        booking.status === 'CONFIRMED' ? 'bg-blue-100 text-blue-800' :
-                                                                        'bg-red-100 text-red-800'
-                                                                    }`}>
-                                                                        {booking.status}
-                                                                    </span>
-                                                                </div>
-                                                                <div className="text-sm text-gray-600 mb-2">
-                                                                    <p><strong>Passenger:</strong> {booking.passenger?.name || booking.passenger?.email || 'N/A'}</p>
-                                                                    <p><strong>Ride:</strong> {(booking.ride?.citySource || booking.ride?.source)} → {(booking.ride?.cityDestination || booking.ride?.destination)}</p>
-                                                                </div>
-                                                                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                                                                    <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
-                                                                        <Calendar className="h-3.5 w-3.5" />
-                                                                        <span>{booking.ride?.date ? new Date(booking.ride.date).toLocaleDateString() : 'N/A'}</span>
-                                                                    </span>
-                                                                    <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
-                                                                        <Clock className="h-3.5 w-3.5" />
-                                                                        <span>{booking.ride?.time ? new Date(`1970-01-01T${booking.ride.time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
-                                                                    </span>
-                                                                    <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
-                                                                        <Users className="h-3.5 w-3.5" />
-                                                                        <span>{booking.numberOfSeats || 1} seat(s)</span>
-                                                                    </span>
-                                                                </div>
-                                                            </div>
+                                    </div>
+                                )}
+
+                                {/* Pending Bookings Tab Content */}
+                                {activeTab === 'pending' && (
+                                    <div className="mt-6 relative z-10">
+                                        <div className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border-2 border-purple-100/50 relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-orange-200/30 to-amber-200/30 rounded-full blur-3xl -mr-32 -mt-32"></div>
+                                            <div className="relative z-10">
+                                                <h2 className="text-2xl font-bold mb-8 flex items-center space-x-3 bg-gradient-to-r from-orange-600 via-amber-600 to-yellow-600 bg-clip-text text-transparent">
+                                                    <div className="p-3 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl shadow-lg">
+                                                        <CheckCircle2 className="h-5 w-5 text-white" />
+                                                    </div>
+                                                    <span>Pending Bookings ({pendingBookings.length})</span>
+                                                </h2>
+                                                {pendingBookings.length === 0 ? (
+                                                    <div className="text-center py-16 relative z-10">
+                                                        <div className="inline-block p-6 bg-gradient-to-br from-orange-100 to-amber-100 rounded-2xl mb-4">
+                                                            <Bell className="h-20 w-20 text-orange-400 mx-auto" />
                                                         </div>
-                                                        <div className="text-right ml-4 flex flex-col items-end space-y-2">
-                                                            <div>
-                                                                <div className="text-[11px] text-gray-500 leading-tight">Fare Amount</div>
-                                                                <div className="text-lg md:text-xl font-bold text-green-600">₹{(booking.fareAmount ?? 0).toFixed(2)}</div>
+                                                        <p className="text-gray-700 text-xl font-semibold mb-2">No pending bookings found.</p>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <div className="space-y-5">
+                                                            {displayedPendingBookings.map(booking => (
+                                                                <div key={booking.id} className="bg-gradient-to-r from-orange-50/90 to-amber-50/90 rounded-2xl shadow-lg p-6 border-2 border-orange-200/50 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 group relative overflow-hidden">
+                                                                    <div className="flex items-start justify-between">
+                                                                        <div className="flex items-start space-x-3 flex-1">
+                                                                            <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0">
+                                                                                <MapPin className="h-5 w-5" />
+                                                                            </div>
+                                                                            <div className="flex-1">
+                                                                                <div className="flex items-center space-x-2 mb-2">
+                                                                                    <h3 className="text-base md:text-lg font-semibold text-gray-800">
+                                                                                        {booking.pickupLocation} <span className="text-gray-500">→</span> {booking.dropoffLocation}
+                                                                                    </h3>
+                                                                                    <span className="text-xs font-semibold rounded-full px-2 py-0.5 bg-yellow-100 text-yellow-800">
+                                                                                        PENDING
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div className="text-sm text-gray-600 mb-2">
+                                                                                    <p><strong>Passenger:</strong> {booking.passenger?.name || booking.passenger?.email || 'N/A'}</p>
+                                                                                    <p><strong>Ride:</strong> {(booking.ride?.citySource || booking.ride?.source)} → {(booking.ride?.cityDestination || booking.ride?.destination)}</p>
+                                                                                </div>
+                                                                                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                                                                                    <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
+                                                                                        <Calendar className="h-3.5 w-3.5" />
+                                                                                        <span>{booking.ride?.date ? new Date(booking.ride.date).toLocaleDateString() : 'N/A'}</span>
+                                                                                    </span>
+                                                                                    <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
+                                                                                        <Clock className="h-3.5 w-3.5" />
+                                                                                        <span>{booking.ride?.time ? new Date(`1970-01-01T${booking.ride.time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
+                                                                                    </span>
+                                                                                    <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
+                                                                                        <Users className="h-3.5 w-3.5" />
+                                                                                        <span>{booking.numberOfSeats || 1} seat(s)</span>
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="text-right ml-4 flex flex-col items-end space-y-2">
+                                                                            <div>
+                                                                                <div className="text-[11px] text-gray-500 leading-tight">Fare Amount</div>
+                                                                                <div className="text-lg md:text-xl font-bold text-green-600">₹{(booking.fareAmount ?? 0).toFixed(2)}</div>
+                                                                            </div>
+                                                                            <div className="flex space-x-2">
+                                                                                <button
+                                                                                    onClick={() => handleAcceptBooking(booking.id)}
+                                                                                    className="px-4 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-md text-sm shadow-sm flex items-center space-x-1"
+                                                                                >
+                                                                                    <CheckCircle2 className="h-4 w-4" />
+                                                                                    <span>Accept</span>
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => handleDeclineBooking(booking.id)}
+                                                                                    className="px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-md text-sm shadow-sm flex items-center space-x-1"
+                                                                                >
+                                                                                    <XCircle className="h-4 w-4" />
+                                                                                    <span>Decline</span>
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        {/* Pagination Controls for Pending Bookings */}
+                                                        {((pendingTotalPages > 0 && pendingTotalPages > 1) || (pendingTotalPages === 0 && pendingBookings.length > pendingSize)) && (
+                                                            <div className="px-6 py-4 flex items-center justify-between bg-white/80 backdrop-blur-sm border-t mt-6 rounded-xl shadow-lg">
+                                                                <div className="text-sm text-gray-600">
+                                                                    Showing page {pendingPage + 1}
+                                                                </div>
+                                                                <div className="flex items-center space-x-2">
+                                                                    <button onClick={() => fetchPendingPage(Math.max(0, pendingPage - 1), pendingSize)} disabled={pendingPage <= 0} className="px-3 py-1 rounded-md bg-white border hover:bg-gray-50">Prev</button>
+                                                                    <button onClick={() => fetchPendingPage(pendingPage + 1, pendingSize)} className="px-3 py-1 rounded-md bg-white border hover:bg-gray-50">Next</button>
+                                                                </div>
                                                             </div>
-                                                            {booking.status === 'CONFIRMED' && booking.ride?.date && isDatePassed(booking.ride.date) && (
-                                                                <button
-                                                                    onClick={() => handleCompleteBooking(booking.id)}
-                                                                    className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg text-sm font-semibold shadow-lg transform hover:scale-105 transition-all flex items-center space-x-2 hover:from-green-600 hover:to-emerald-700"
-                                                                >
-                                                                    <CheckCircle className="h-4 w-4" />
-                                                                    <span>Mark Complete</span>
-                                                                </button>
-                                                            )}
-                                                            {booking.status === 'COMPLETED' && (
-                                                                <span className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg text-sm font-semibold flex items-center space-x-2">
-                                                                    <CheckCircle className="h-4 w-4" />
-                                                                    <span>Completed</span>
-                                                                </span>
-                                                            )}
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* History Tab Content */}
+                                {activeTab === 'history' && (
+                                    <div className="mt-6 relative z-10">
+                                        <div className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border-2 border-purple-100/50 relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-200/30 to-purple-200/30 rounded-full blur-3xl -mr-32 -mt-32"></div>
+                                            <div className="relative z-10">
+                                                <h2 className="text-2xl font-bold mb-8 flex items-center space-x-3 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 bg-clip-text text-transparent">
+                                                    <div className="p-3 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl shadow-lg">
+                                                        <History className="h-5 w-5 text-white" />
+                                                    </div>
+                                                    <span>Ride History ({rideHistory.length})</span>
+                                                </h2>
+                                                {rideHistory.length === 0 ? (
+                                                    <div className="text-center py-16 relative z-10">
+                                                        <div className="inline-block p-6 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl mb-4">
+                                                            <History className="h-20 w-20 text-indigo-400 mx-auto" />
+                                                        </div>
+                                                        <p className="text-gray-700 text-xl font-semibold mb-2">No ride history found.</p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-5">
+                                                        {displayedHistory.map(booking => (
+                                                            <div key={booking.id} className="bg-gradient-to-r from-purple-50/90 to-blue-50/90 rounded-2xl shadow-lg p-6 border-2 border-purple-200/50 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 group relative overflow-hidden">
+                                                                <div className="flex items-start justify-between">
+                                                                    <div className="flex items-start space-x-3 flex-1">
+                                                                        <div className="h-10 w-10 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center flex-shrink-0">
+                                                                            <MapPin className="h-5 w-5" />
+                                                                        </div>
+                                                                        <div className="flex-1">
+                                                                            <div className="flex items-center space-x-2 mb-2">
+                                                                                <h3 className="text-base md:text-lg font-semibold text-gray-800">
+                                                                                    {booking.pickupLocation} <span className="text-gray-500">→</span> {booking.dropoffLocation}
+                                                                                </h3>
+                                                                                <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${booking.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                                                                                    booking.status === 'CONFIRMED' ? 'bg-blue-100 text-blue-800' :
+                                                                                        'bg-red-100 text-red-800'
+                                                                                    }`}>
+                                                                                    {booking.status}
+                                                                                </span>
+                                                                            </div>
+                                                                            <div className="text-sm text-gray-600 mb-2">
+                                                                                <p><strong>Passenger:</strong> {booking.passenger?.name || booking.passenger?.email || 'N/A'}</p>
+                                                                                <p><strong>Ride:</strong> {(booking.ride?.citySource || booking.ride?.source)} → {(booking.ride?.cityDestination || booking.ride?.destination)}</p>
+                                                                            </div>
+                                                                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                                                                                <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
+                                                                                    <Calendar className="h-3.5 w-3.5" />
+                                                                                    <span>{booking.ride?.date ? new Date(booking.ride.date).toLocaleDateString() : 'N/A'}</span>
+                                                                                </span>
+                                                                                <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
+                                                                                    <Clock className="h-3.5 w-3.5" />
+                                                                                    <span>{booking.ride?.time ? new Date(`1970-01-01T${booking.ride.time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
+                                                                                </span>
+                                                                                <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
+                                                                                    <Users className="h-3.5 w-3.5" />
+                                                                                    <span>{booking.numberOfSeats || 1} seat(s)</span>
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="text-right ml-4 flex flex-col items-end space-y-2">
+                                                                        <div>
+                                                                            <div className="text-[11px] text-gray-500 leading-tight">Fare Amount</div>
+                                                                            <div className="text-lg md:text-xl font-bold text-green-600">₹{(booking.fareAmount ?? 0).toFixed(2)}</div>
+                                                                        </div>
+                                                                        {booking.status === 'CONFIRMED' && booking.ride?.date && isDatePassed(booking.ride.date) && (
+                                                                            <button
+                                                                                onClick={() => handleCompleteBooking(booking.id)}
+                                                                                className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg text-sm font-semibold shadow-lg transform hover:scale-105 transition-all flex items-center space-x-2 hover:from-green-600 hover:to-emerald-700"
+                                                                            >
+                                                                                <CheckCircle className="h-4 w-4" />
+                                                                                <span>Mark Complete</span>
+                                                                            </button>
+                                                                        )}
+                                                                        {booking.status === 'COMPLETED' && (
+                                                                            <span className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg text-sm font-semibold flex items-center space-x-2">
+                                                                                <CheckCircle className="h-4 w-4" />
+                                                                                <span>Completed</span>
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {/* Pagination Controls for History */}
+                                                {((historyTotalPages > 0 && historyTotalPages > 1) || (historyTotalPages === 0 && rideHistory.length > historySize)) && (
+                                                    <div className="px-6 py-4 flex items-center justify-between bg-white/80 backdrop-blur-sm border-t mt-6 rounded-xl shadow-lg">
+                                                        <div className="text-sm text-gray-600">
+                                                            Showing page {historyPage + 1}
+                                                        </div>
+                                                        <div className="flex items-center space-x-2">
+                                                            <button onClick={() => fetchHistoryPage(Math.max(0, historyPage - 1), historySize)} disabled={historyPage <= 0} className="px-3 py-1 rounded-md bg-white border hover:bg-gray-50">Prev</button>
+                                                            <button onClick={() => fetchHistoryPage(historyPage + 1, historySize)} className="px-3 py-1 rounded-md bg-white border hover:bg-gray-50">Next</button>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                    {/* Pagination Controls for History */}
-                                    {((historyTotalPages > 0 && historyTotalPages > 1) || (historyTotalPages === 0 && rideHistory.length > historySize)) && (
-                                        <div className="px-6 py-4 flex items-center justify-between bg-white/80 backdrop-blur-sm border-t mt-6 rounded-xl shadow-lg">
-                                            <div className="text-sm text-gray-600">
-                                                Showing page {historyPage + 1}
-                                            </div>
-                                            <div className="flex items-center space-x-2">
-                                                <button onClick={() => fetchHistoryPage(Math.max(0, historyPage - 1), historySize)} disabled={historyPage <= 0} className="px-3 py-1 rounded-md bg-white border hover:bg-gray-50">Prev</button>
-                                                <button onClick={() => fetchHistoryPage(historyPage + 1, historySize)} className="px-3 py-1 rounded-md bg-white border hover:bg-gray-50">Next</button>
+                                                )}
                                             </div>
                                         </div>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
                             </div>
-                        </div>
-                    )}
-                </div>
-                )}
+                        )}
 
                         {/* Reschedule Modal */}
                         {showRescheduleModal && (
