@@ -14,6 +14,12 @@ import { reviewService } from '../services/reviewService';
 import { showConfirm, showSuccess, showError } from '../utils/swal';
 
 const PassengerDashboard = () => {
+
+    const [showCarDetails, setShowCarDetails] = useState(false);
+    const [selectedCar, setSelectedCar] = useState(null);
+
+
+
     const [currentView, setCurrentView] = useState('main'); // 'main', 'search', 'bookings', 'history'
 
     // Helper: format LocalDate (ISO string "yyyy-MM-dd" or Java time object) to human-friendly string
@@ -279,7 +285,7 @@ const PassengerDashboard = () => {
     const [pendingBooking, setPendingBooking] = useState(null);
     const [paymentOrderData, setPaymentOrderData] = useState(null);
     const [paymentProcessing, setPaymentProcessing] = useState(false);
-    
+
     // Rating modal state
     const [showRatingModal, setShowRatingModal] = useState(false);
     const [ratingBooking, setRatingBooking] = useState(null);
@@ -363,7 +369,7 @@ const PassengerDashboard = () => {
             .filter(booking => {
                 const bookingDate = new Date(booking.createdAt || booking.ride?.date || 0);
                 return bookingDate >= weekAgo &&
-                       (booking.status === 'CONFIRMED' || booking.status === 'COMPLETED');
+                    (booking.status === 'CONFIRMED' || booking.status === 'COMPLETED');
             })
             .reduce((sum, booking) => {
                 const fare = booking.fareAmount || booking.totalPrice || 0;
@@ -660,7 +666,7 @@ const PassengerDashboard = () => {
             if (resp && resp.myBookings) {
                 setBookings(Array.isArray(resp.myBookings) ? resp.myBookings : []);
             } else {
-                setBookings(prev => prev.map(b => b.id === bookingId ? ({...b, status: 'CANCELLED'}) : b));
+                setBookings(prev => prev.map(b => b.id === bookingId ? ({ ...b, status: 'CANCELLED' }) : b));
             }
 
             if (resp && resp.updatedRide && Array.isArray(rides)) {
@@ -708,16 +714,16 @@ const PassengerDashboard = () => {
         try {
             await reviewService.submitReview(ratingBooking.id, rating, ratingComment);
             await showSuccess('Thank you for your review!');
-            
+
             // Update hasReviewedMap immediately
             setHasReviewedMap(prev => ({ ...prev, [ratingBooking.id]: true }));
-            
+
             // Refresh bookings and history to get updated data
             await Promise.all([
                 fetchMyBookings(bookingsPage, bookingsSize),
                 fetchHistoryPage(historyPage, historySize)
             ]);
-            
+
             // Re-check review status for all completed bookings to ensure consistency
             const checkReviewStatus = async () => {
                 try {
@@ -728,7 +734,7 @@ const PassengerDashboard = () => {
                 }
             };
             await checkReviewStatus();
-            
+
             setShowRatingModal(false);
             setRatingBooking(null);
             setRating(0);
@@ -745,18 +751,18 @@ const PassengerDashboard = () => {
     useEffect(() => {
         const checkReviews = async () => {
             // Check bookings that are COMPLETED or CONFIRMED with date passed
-            const completedBookings = bookings.filter(b => 
-                b.status === 'COMPLETED' || 
+            const completedBookings = bookings.filter(b =>
+                b.status === 'COMPLETED' ||
                 (b.status === 'CONFIRMED' && b.ride?.date && isDatePassed(b.ride.date))
             );
             // Also check history bookings
-            const completedHistoryBookings = rideHistory.filter(b => 
-                b.status === 'COMPLETED' || 
+            const completedHistoryBookings = rideHistory.filter(b =>
+                b.status === 'COMPLETED' ||
                 (b.status === 'CONFIRMED' && b.ride?.date && isDatePassed(b.ride.date))
             );
-            
+
             const allCompletedBookings = [...completedBookings, ...completedHistoryBookings];
-            
+
             for (const booking of allCompletedBookings) {
                 try {
                     const hasReviewed = await reviewService.hasReviewed(booking.id);
@@ -906,129 +912,129 @@ const PassengerDashboard = () => {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                            {/* Stats Cards... same as before */}
-                            <div className="group relative bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/50 overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-                                <div className="relative z-10">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                                            <DollarSign className="h-6 w-6 text-white" />
+                                {/* Stats Cards... same as before */}
+                                <div className="group relative bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/50 overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                                    <div className="relative z-10">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                                                <DollarSign className="h-6 w-6 text-white" />
+                                            </div>
+                                            <div className="text-white/80 text-xs font-semibold">This Week</div>
                                         </div>
-                                        <div className="text-white/80 text-xs font-semibold">This Week</div>
+                                        <div className="text-white text-sm font-semibold mb-2 opacity-90">Weekly Spending</div>
+                                        <div className="text-4xl font-bold text-white mb-2">₹{stats.weeklySpending}</div>
+                                        <div className="flex items-center text-green-200 text-sm">
+                                            <TrendingUp className="h-4 w-4 mr-1" />
+                                            <span>Track your expenses</span>
+                                        </div>
                                     </div>
-                                    <div className="text-white text-sm font-semibold mb-2 opacity-90">Weekly Spending</div>
-                                    <div className="text-4xl font-bold text-white mb-2">₹{stats.weeklySpending}</div>
-                                    <div className="flex items-center text-green-200 text-sm">
-                                        <TrendingUp className="h-4 w-4 mr-1" />
-                                        <span>Track your expenses</span>
+                                </div>
+                                <div className="group relative bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-600 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/50 overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                                    <div className="relative z-10">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                                                <CheckCircle className="h-6 w-6 text-white" />
+                                            </div>
+                                            <div className="text-white/80 text-xs font-semibold">All Time</div>
+                                        </div>
+                                        <div className="text-white text-sm font-semibold mb-2 opacity-90">Trips Completed</div>
+                                        <div className="text-4xl font-bold text-white mb-2">{stats.tripsCompleted}</div>
+                                        <div className="flex items-center text-blue-100 text-sm">
+                                            <Car className="h-4 w-4 mr-1" />
+                                            <span>Total completed rides</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="group relative bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-600 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-emerald-500/50 overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                                    <div className="relative z-10">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                                                <Calendar className="h-6 w-6 text-white" />
+                                            </div>
+                                            <div className="text-white/80 text-xs font-semibold">Scheduled</div>
+                                        </div>
+                                        <div className="text-white text-sm font-semibold mb-2 opacity-90">Upcoming Rides</div>
+                                        <div className="text-4xl font-bold text-white mb-2">{stats.upcomingRides}</div>
+                                        <div className="flex items-center text-emerald-100 text-sm">
+                                            <Clock className="h-4 w-4 mr-1" />
+                                            <span>Scheduled rides</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="group relative bg-gradient-to-br from-orange-500 via-amber-600 to-yellow-600 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-orange-500/50 overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                                    <div className="relative z-10">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                                                <Ticket className="h-6 w-6 text-white" />
+                                            </div>
+                                            <div className="text-white/80 text-xs font-semibold">All Time</div>
+                                        </div>
+                                        <div className="text-white text-sm font-semibold mb-2 opacity-90">Total Rides Booked</div>
+                                        <div className="text-4xl font-bold text-white mb-2">{stats.totalRidesBooked}</div>
+                                        <div className="flex items-center text-orange-100 text-sm">
+                                            <Users className="h-4 w-4 mr-1" />
+                                            <span>All time bookings</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                             <div className="group relative bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-600 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/50 overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-                                <div className="relative z-10">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                                            <CheckCircle className="h-6 w-6 text-white" />
-                                        </div>
-                                        <div className="text-white/80 text-xs font-semibold">All Time</div>
-                                    </div>
-                                    <div className="text-white text-sm font-semibold mb-2 opacity-90">Trips Completed</div>
-                                    <div className="text-4xl font-bold text-white mb-2">{stats.tripsCompleted}</div>
-                                    <div className="flex items-center text-blue-100 text-sm">
-                                        <Car className="h-4 w-4 mr-1" />
-                                        <span>Total completed rides</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="group relative bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-600 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-emerald-500/50 overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-                                <div className="relative z-10">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                                            <Calendar className="h-6 w-6 text-white" />
-                                        </div>
-                                        <div className="text-white/80 text-xs font-semibold">Scheduled</div>
-                                    </div>
-                                    <div className="text-white text-sm font-semibold mb-2 opacity-90">Upcoming Rides</div>
-                                    <div className="text-4xl font-bold text-white mb-2">{stats.upcomingRides}</div>
-                                    <div className="flex items-center text-emerald-100 text-sm">
-                                        <Clock className="h-4 w-4 mr-1" />
-                                        <span>Scheduled rides</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="group relative bg-gradient-to-br from-orange-500 via-amber-600 to-yellow-600 rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-orange-500/50 overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-                                <div className="relative z-10">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                                            <Ticket className="h-6 w-6 text-white" />
-                                        </div>
-                                        <div className="text-white/80 text-xs font-semibold">All Time</div>
-                                    </div>
-                                    <div className="text-white text-sm font-semibold mb-2 opacity-90">Total Rides Booked</div>
-                                    <div className="text-4xl font-bold text-white mb-2">{stats.totalRidesBooked}</div>
-                                    <div className="flex items-center text-orange-100 text-sm">
-                                        <Users className="h-4 w-4 mr-1" />
-                                        <span>All time bookings</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
-                        {/* Navigation Buttons */}
-                        <div className="mb-8">
-                            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-                                <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">Passenger Tools</span>
-                            </h2>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <button
-                                    onClick={() => {
-                                        setCurrentView('search');
-                                        setActiveTab('search');
-                                    }}
-                                    className="group relative bg-white rounded-2xl shadow-lg p-8 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/30 border-2 border-transparent hover:border-purple-200 flex flex-col items-center justify-center gap-4 overflow-hidden"
-                                >
-                                    <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-blue-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                    <div className="relative z-10 p-4 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
-                                        <Search className="h-10 w-10 text-white" />
-                                    </div>
-                                    <span className="relative z-10 font-bold text-gray-800 text-lg group-hover:text-purple-600 transition-colors duration-300">Search Rides</span>
-                                    <p className="relative z-10 text-sm text-gray-500 group-hover:text-gray-700">Find your perfect ride</p>
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setCurrentView('bookings');
-                                        setActiveTab('bookings');
-                                        fetchMyBookings(0, bookingsSize);
-                                    }}
-                                    className="group relative bg-white rounded-2xl shadow-lg p-8 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/30 border-2 border-transparent hover:border-blue-200 flex flex-col items-center justify-center gap-4 overflow-hidden"
-                                >
-                                    <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-cyan-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                    <div className="relative z-10 p-4 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
-                                        <CheckCircle className="h-10 w-10 text-white" />
-                                    </div>
-                                    <span className="relative z-10 font-bold text-gray-800 text-lg group-hover:text-blue-600 transition-colors duration-300">My Bookings</span>
-                                    <p className="relative z-10 text-sm text-gray-500 group-hover:text-gray-700">Manage your rides</p>
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setCurrentView('history');
-                                        setActiveTab('history');
-                                        fetchHistoryPage(0, historySize);
-                                    }}
-                                    className="group relative bg-white rounded-2xl shadow-lg p-8 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-indigo-500/30 border-2 border-transparent hover:border-indigo-200 flex flex-col items-center justify-center gap-4 overflow-hidden"
-                                >
-                                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-purple-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                    <div className="relative z-10 p-4 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
-                                        <History className="h-10 w-10 text-white" />
-                                    </div>
-                                    <span className="relative z-10 font-bold text-gray-800 text-lg group-hover:text-indigo-600 transition-colors duration-300">History</span>
-                                    <p className="relative z-10 text-sm text-gray-500 group-hover:text-gray-700">View past trips</p>
-                                </button>
+                            {/* Navigation Buttons */}
+                            <div className="mb-8">
+                                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                                    <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">Passenger Tools</span>
+                                </h2>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <button
+                                        onClick={() => {
+                                            setCurrentView('search');
+                                            setActiveTab('search');
+                                        }}
+                                        className="group relative bg-white rounded-2xl shadow-lg p-8 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/30 border-2 border-transparent hover:border-purple-200 flex flex-col items-center justify-center gap-4 overflow-hidden"
+                                    >
+                                        <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-blue-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                        <div className="relative z-10 p-4 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+                                            <Search className="h-10 w-10 text-white" />
+                                        </div>
+                                        <span className="relative z-10 font-bold text-gray-800 text-lg group-hover:text-purple-600 transition-colors duration-300">Search Rides</span>
+                                        <p className="relative z-10 text-sm text-gray-500 group-hover:text-gray-700">Find your perfect ride</p>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setCurrentView('bookings');
+                                            setActiveTab('bookings');
+                                            fetchMyBookings(0, bookingsSize);
+                                        }}
+                                        className="group relative bg-white rounded-2xl shadow-lg p-8 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/30 border-2 border-transparent hover:border-blue-200 flex flex-col items-center justify-center gap-4 overflow-hidden"
+                                    >
+                                        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-cyan-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                        <div className="relative z-10 p-4 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+                                            <CheckCircle className="h-10 w-10 text-white" />
+                                        </div>
+                                        <span className="relative z-10 font-bold text-gray-800 text-lg group-hover:text-blue-600 transition-colors duration-300">My Bookings</span>
+                                        <p className="relative z-10 text-sm text-gray-500 group-hover:text-gray-700">Manage your rides</p>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setCurrentView('history');
+                                            setActiveTab('history');
+                                            fetchHistoryPage(0, historySize);
+                                        }}
+                                        className="group relative bg-white rounded-2xl shadow-lg p-8 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-indigo-500/30 border-2 border-transparent hover:border-indigo-200 flex flex-col items-center justify-center gap-4 overflow-hidden"
+                                    >
+                                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-purple-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                        <div className="relative z-10 p-4 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+                                            <History className="h-10 w-10 text-white" />
+                                        </div>
+                                        <span className="relative z-10 font-bold text-gray-800 text-lg group-hover:text-indigo-600 transition-colors duration-300">History</span>
+                                        <p className="relative z-10 text-sm text-gray-500 group-hover:text-gray-700">View past trips</p>
+                                    </button>
+                                </div>
                             </div>
-                        </div>
                         </div>
                     </div>
                 )}
@@ -1039,33 +1045,30 @@ const PassengerDashboard = () => {
                         <div className="flex space-x-3 mb-6 bg-white/80 backdrop-blur-lg rounded-2xl shadow-2xl p-2 border-2 border-purple-100/50">
                             <button
                                 onClick={() => setActiveTab('search')}
-                                className={`flex-1 px-4 py-2.5 font-bold rounded-xl transition-all duration-300 text-sm flex items-center justify-center space-x-2 ${
-                                    activeTab === 'search'
-                                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-xl transform scale-105 hover:scale-110'
-                                        : 'text-gray-600 hover:bg-gradient-to-r hover:from-purple-50 hover:to-blue-50 hover:scale-102'
-                                }`}
+                                className={`flex-1 px-4 py-2.5 font-bold rounded-xl transition-all duration-300 text-sm flex items-center justify-center space-x-2 ${activeTab === 'search'
+                                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-xl transform scale-105 hover:scale-110'
+                                    : 'text-gray-600 hover:bg-gradient-to-r hover:from-purple-50 hover:to-blue-50 hover:scale-102'
+                                    }`}
                             >
                                 <Search className="h-4 w-4" />
                                 <span>Search Rides</span>
                             </button>
                             <button
                                 onClick={() => setActiveTab('bookings')}
-                                className={`flex-1 px-4 py-2.5 font-bold rounded-xl transition-all duration-300 text-sm flex items-center justify-center space-x-2 ${
-                                    activeTab === 'bookings'
-                                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-xl transform scale-105 hover:scale-110'
-                                        : 'text-gray-600 hover:bg-gradient-to-r hover:from-purple-50 hover:to-blue-50 hover:scale-102'
-                                }`}
+                                className={`flex-1 px-4 py-2.5 font-bold rounded-xl transition-all duration-300 text-sm flex items-center justify-center space-x-2 ${activeTab === 'bookings'
+                                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-xl transform scale-105 hover:scale-110'
+                                    : 'text-gray-600 hover:bg-gradient-to-r hover:from-purple-50 hover:to-blue-50 hover:scale-102'
+                                    }`}
                             >
                                 <CheckCircle className="h-4 w-4" />
                                 <span>My Bookings ({filteredBookings.length})</span>
                             </button>
                             <button
                                 onClick={() => setActiveTab('history')}
-                                className={`flex-1 px-4 py-2.5 font-bold rounded-xl transition-all duration-300 text-sm flex items-center justify-center space-x-2 ${
-                                    activeTab === 'history'
-                                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-xl transform scale-105 hover:scale-110'
-                                        : 'text-gray-600 hover:bg-gradient-to-r hover:from-purple-50 hover:to-blue-50 hover:scale-102'
-                                }`}
+                                className={`flex-1 px-4 py-2.5 font-bold rounded-xl transition-all duration-300 text-sm flex items-center justify-center space-x-2 ${activeTab === 'history'
+                                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-xl transform scale-105 hover:scale-110'
+                                    : 'text-gray-600 hover:bg-gradient-to-r hover:from-purple-50 hover:to-blue-50 hover:scale-102'
+                                    }`}
                             >
                                 <History className="h-4 w-4" />
                                 <span>History ({rideHistory.length})</span>
@@ -1085,21 +1088,19 @@ const PassengerDashboard = () => {
 
                                     {/* Stepper */}
                                     <div className="flex items-center justify-center space-x-4 mb-8">
-                                        {[1,2,3].map((step) => (
+                                        {[1, 2, 3].map((step) => (
                                             <div key={step} className="flex items-center">
-                                                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-base font-bold transition-all duration-300 ${
-                                                    wizardStep >= step
-                                                        ? 'bg-gradient-to-br from-purple-600 to-blue-600 text-white shadow-lg scale-110'
-                                                        : 'bg-gray-200 text-gray-700'
-                                                }`}>
+                                                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-base font-bold transition-all duration-300 ${wizardStep >= step
+                                                    ? 'bg-gradient-to-br from-purple-600 to-blue-600 text-white shadow-lg scale-110'
+                                                    : 'bg-gray-200 text-gray-700'
+                                                    }`}>
                                                     {step}
                                                 </div>
                                                 {step !== 3 && (
-                                                    <div className={`w-16 h-2 mx-3 rounded-full transition-all duration-300 ${
-                                                        wizardStep > step
-                                                            ? 'bg-gradient-to-r from-purple-600 to-blue-600'
-                                                            : 'bg-gray-200'
-                                                    }`}></div>
+                                                    <div className={`w-16 h-2 mx-3 rounded-full transition-all duration-300 ${wizardStep > step
+                                                        ? 'bg-gradient-to-r from-purple-600 to-blue-600'
+                                                        : 'bg-gray-200'
+                                                        }`}></div>
                                                 )}
                                             </div>
                                         ))}
@@ -1352,10 +1353,26 @@ const PassengerDashboard = () => {
                                                                                 })()}
                                                                             </span>
                                                                         </div>
+
+                                                                        {/* Button beside rating */}
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setSelectedCar(ride);
+                                                                                setShowCarDetails(true);
+                                                                            }}
+                                                                            className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium 
+               rounded-full bg-purple-100 text-purple-700 hover:bg-purple-200 
+               transition"
+                                                                        >
+                                                                            <Car className="h-3 w-3" />
+                                                                            View Car
+                                                                        </button>
+
                                                                     </div>
 
                                                                     {/* Vehicle Photos */}
-                                                                    {ride.vehiclePhotosJson && (() => {
+                                                                    {/* {ride.vehiclePhotosJson && (() => {
                                                                         try {
                                                                             const photos = JSON.parse(ride.vehiclePhotosJson);
                                                                             return photos.length > 0 ? (
@@ -1395,10 +1412,10 @@ const PassengerDashboard = () => {
                                                                         } catch (e) {
                                                                             return null;
                                                                         }
-                                                                    })()}
+                                                                    })()} */}
 
                                                                     {/* Vehicle Condition Details */}
-                                                                    {(ride.hasAC !== null || ride.vehicleType || ride.vehicleModel || ride.vehicleColor) && (
+                                                                    {/* {(ride.hasAC !== null || ride.vehicleType || ride.vehicleModel || ride.vehicleColor) && (
                                                                         <div className="bg-gray-50 rounded-lg p-3 mb-3">
                                                                             <div className="text-xs font-semibold text-gray-600 mb-2">Vehicle Details:</div>
                                                                             <div className="grid grid-cols-2 gap-2 text-xs">
@@ -1435,7 +1452,13 @@ const PassengerDashboard = () => {
                                                                                 </div>
                                                                             )}
                                                                         </div>
-                                                                    )}
+                                                                    )} */}
+
+                                                                    {/* Button to open car details modal */}
+
+
+
+
                                                                 </div>
                                                                 <div className="ml-6 flex flex-col items-end space-y-2">
                                                                     <div className="text-right">
@@ -1490,11 +1513,10 @@ const PassengerDashboard = () => {
                                                                                 handleBook(ride.id);
                                                                             }}
                                                                             disabled={ride.availableSeats === 0 || bookingLoading[ride.id]}
-                                                                            className={`px-6 py-3 rounded-lg font-semibold shadow-lg transform hover:scale-105 transition-all ${
-                                                                                ride.availableSeats === 0 || bookingLoading[ride.id]
-                                                                                    ? 'bg-gray-400 text-white cursor-not-allowed'
-                                                                                    : 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700'
-                                                                            }`}
+                                                                            className={`px-6 py-3 rounded-lg font-semibold shadow-lg transform hover:scale-105 transition-all ${ride.availableSeats === 0 || bookingLoading[ride.id]
+                                                                                ? 'bg-gray-400 text-white cursor-not-allowed'
+                                                                                : 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700'
+                                                                                }`}
                                                                         >
                                                                             {ride.availableSeats === 0 ? 'Full' : bookingLoading[ride.id] ? (
                                                                                 <>
@@ -1533,7 +1555,7 @@ const PassengerDashboard = () => {
                                                                 onChange={(e) => { setResultsPage(0); setResultsSize(parseInt(e.target.value, 10)); }}
                                                                 className="ml-2 px-2 py-1 border rounded-md bg-white text-sm"
                                                             >
-                                                                {[5,10,20].map(s => (<option key={s} value={s}>{s} / page</option>))}
+                                                                {[5, 10, 20].map(s => (<option key={s} value={s}>{s} / page</option>))}
                                                             </select>
                                                         </div>
                                                     </div>
@@ -1574,13 +1596,12 @@ const PassengerDashboard = () => {
                                                                     <span className="font-bold text-xl text-gray-900">{booking.dropoffLocation || booking.ride?.destination}</span>
                                                                 </div>
                                                             </div>
-                                                            <span className={`px-4 py-2 rounded-xl text-sm font-bold shadow-md ${
-                                                                (booking.status === 'COMPLETED' || (booking.status === 'CONFIRMED' && booking.ride?.date && isDatePassed(booking.ride.date))) ? 'bg-gradient-to-r from-purple-400 to-indigo-500 text-white' :
-                                                                    booking.status === 'CONFIRMED' ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white' :
-                                                                        booking.status === 'ACCEPTED' ? 'bg-gradient-to-r from-blue-400 to-cyan-500 text-white' :
-                                                                            booking.status === 'PENDING' ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white' :
-                                                                                'bg-gradient-to-r from-red-400 to-pink-500 text-white'
-                                                            }`}>
+                                                            <span className={`px-4 py-2 rounded-xl text-sm font-bold shadow-md ${(booking.status === 'COMPLETED' || (booking.status === 'CONFIRMED' && booking.ride?.date && isDatePassed(booking.ride.date))) ? 'bg-gradient-to-r from-purple-400 to-indigo-500 text-white' :
+                                                                booking.status === 'CONFIRMED' ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white' :
+                                                                    booking.status === 'ACCEPTED' ? 'bg-gradient-to-r from-blue-400 to-cyan-500 text-white' :
+                                                                        booking.status === 'PENDING' ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white' :
+                                                                            'bg-gradient-to-r from-red-400 to-pink-500 text-white'
+                                                                }`}>
                                                                 {(booking.status === 'CONFIRMED' && booking.ride?.date && isDatePassed(booking.ride.date)) ? 'COMPLETED' : booking.status}
                                                             </span>
                                                         </div>
@@ -1704,11 +1725,10 @@ const PassengerDashboard = () => {
                                                                     <h3 className="text-base md:text-lg font-semibold text-gray-800">
                                                                         {booking.pickupLocation} <span className="text-gray-500">→</span> {booking.dropoffLocation}
                                                                     </h3>
-                                                                    <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${
-                                                                        (booking.status === 'COMPLETED' || (booking.status === 'CONFIRMED' && booking.ride?.date && isDatePassed(booking.ride.date))) ? 'bg-green-100 text-green-800' :
+                                                                    <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${(booking.status === 'COMPLETED' || (booking.status === 'CONFIRMED' && booking.ride?.date && isDatePassed(booking.ride.date))) ? 'bg-green-100 text-green-800' :
                                                                         booking.status === 'CONFIRMED' ? 'bg-blue-100 text-blue-800' :
-                                                                        'bg-red-100 text-red-800'
-                                                                    }`}>
+                                                                            'bg-red-100 text-red-800'
+                                                                        }`}>
                                                                         {(booking.status === 'CONFIRMED' && booking.ride?.date && isDatePassed(booking.ride.date)) ? 'COMPLETED' : booking.status}
                                                                     </span>
                                                                 </div>
@@ -1845,7 +1865,7 @@ const PassengerDashboard = () => {
                                 <X className="h-6 w-6" />
                             </button>
                         </div>
-                        
+
                         <div className="mb-4">
                             <p className="text-sm text-gray-600 mb-2">
                                 Driver: <span className="font-semibold">{ratingBooking.ride?.driver?.name || ratingBooking.driver?.name || 'N/A'}</span>
@@ -1865,16 +1885,14 @@ const PassengerDashboard = () => {
                                         key={star}
                                         type="button"
                                         onClick={() => setRating(star)}
-                                        className={`transition-all transform hover:scale-110 ${
-                                            rating >= star
-                                                ? 'text-yellow-500'
-                                                : 'text-gray-300'
-                                        }`}
+                                        className={`transition-all transform hover:scale-110 ${rating >= star
+                                            ? 'text-yellow-500'
+                                            : 'text-gray-300'
+                                            }`}
                                     >
                                         <Star
-                                            className={`h-10 w-10 ${
-                                                rating >= star ? 'fill-current' : ''
-                                            }`}
+                                            className={`h-10 w-10 ${rating >= star ? 'fill-current' : ''
+                                                }`}
                                         />
                                     </button>
                                 ))}
@@ -1941,6 +1959,95 @@ const PassengerDashboard = () => {
                     </div>
                 </div>
             )}
+
+            {/* Car Details Modal */}
+            {showCarDetails && selectedCar && (
+                <div className="fixed inset-0 z-[55] bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full mx-4 relative">
+                        {/* Close button */}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setShowCarDetails(false);
+                                setSelectedCar(null);
+                            }}
+                            className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100"
+                        >
+                            <X className="h-5 w-5 text-gray-600" />
+                        </button>
+
+                        <div className="p-6">
+                            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                <Car className="h-5 w-5 text-purple-600" />
+                                <span>Vehicle Details</span>
+                            </h2>
+
+                            {/* Photos */}
+                            {(() => {
+                                try {
+                                    const raw = selectedCar.vehiclePhotosJson;
+                                    const photos = Array.isArray(raw) ? raw : raw ? JSON.parse(raw) : [];
+                                    return photos.length ? (
+                                        <div className="mb-6">
+                                            <div className="text-xs font-semibold text-gray-600 mb-2">
+                                                Photos
+                                            </div>
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                                {photos.map((photo, idx) => (
+                                                    <img
+                                                        key={idx}
+                                                        src={photo}
+                                                        alt={`Vehicle ${idx + 1}`}
+                                                        className="w-full h-32 object-cover rounded-lg border"
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ) : null;
+                                } catch (e) {
+                                    return null;
+                                }
+                            })()}
+
+                            {/* Text details */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                                {selectedCar.vehicleType && (
+                                    <p>
+                                        <span className="font-medium text-gray-600">Type: </span>
+                                        {selectedCar.vehicleType}
+                                    </p>
+                                )}
+                                {selectedCar.vehicleModel && (
+                                    <p>
+                                        <span className="font-medium text-gray-600">Model: </span>
+                                        {selectedCar.vehicleModel}
+                                    </p>
+                                )}
+                                {(selectedCar.hasAC !== null && selectedCar.hasAC !== undefined) && (
+                                    <p className="flex items-center">
+                                        <Snowflake className="h-4 w-4 mr-1 text-blue-500" />
+                                        <span className="font-medium text-gray-600">AC: </span>
+                                        <span className="ml-1">{selectedCar.hasAC ? 'Yes' : 'No'}</span>
+                                    </p>
+                                )}
+                                {selectedCar.vehicleColor && (
+                                    <p>
+                                        <span className="font-medium text-gray-600">Color: </span>
+                                        {selectedCar.vehicleColor}
+                                    </p>
+                                )}
+                                {selectedCar.otherFeatures && (
+                                    <p className="sm:col-span-2">
+                                        <span className="font-medium text-gray-600">Features: </span>
+                                        {selectedCar.otherFeatures}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
 
             {/* Global Loading Overlay */}
             {(loading || paymentProcessing || Object.values(bookingLoading).some(v => v)) && (
