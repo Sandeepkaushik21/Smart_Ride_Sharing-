@@ -90,5 +90,10 @@ public class User {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
+
+    public boolean getIsOnHold() {
+        return !this.isActive || !this.isApproved;
+    }
 }
 

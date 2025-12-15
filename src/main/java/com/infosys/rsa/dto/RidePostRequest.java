@@ -45,13 +45,16 @@ public class RidePostRequest {
     @Positive(message = "Available seats must be positive")
     private Integer availableSeats;
 
-    // Flag to use master vehicle details
+    // Vehicle chosen by driver for this ride
+    // Can be null if useMasterDetails is true - validation handled in service layer
+    private Long vehicleId;
+
+    // Legacy fields (no longer used now that rides are tied to a Vehicle entity)
+    // Kept for backward compatibility with older clients, but ignored in service layer.
     private Boolean useMasterDetails = false;
 
-    // Vehicle photos (base64 encoded strings) - optional if useMasterDetails is true
     private List<String> vehiclePhotos;
 
-    // Vehicle condition details - optional if useMasterDetails is true
     private Boolean hasAC;
 
     private String vehicleType; // Car, Bike, etc.
