@@ -33,6 +33,7 @@ public class DataInitializer implements CommandLineRunner {
         logger.info("Running DataInitializer...");
 
         try {
+            Thread.sleep(5000);
             if (roleRepository.count() == 0) {
                 logger.info("No roles found in database. Creating default roles...");
 
