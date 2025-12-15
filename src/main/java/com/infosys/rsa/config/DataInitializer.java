@@ -32,52 +32,55 @@ public class DataInitializer implements CommandLineRunner {
     public void run(String... args) {
         logger.info("Running DataInitializer...");
 
-        // Create roles if they don't exist
-        if (roleRepository.count() == 0) {
-            logger.info("No roles found in database. Creating default roles...");
+        try {
+            if (roleRepository.count() == 0) {
+                logger.info("No roles found in database. Creating default roles...");
 
-            Role adminRole = new Role();
-            adminRole.setName(Role.ERole.ROLE_ADMIN);
-            roleRepository.save(adminRole);
+                Role adminRole = new Role();
+                adminRole.setName(Role.ERole.ROLE_ADMIN);
+                roleRepository.save(adminRole);
 
-            Role driverRole = new Role();
-            driverRole.setName(Role.ERole.ROLE_DRIVER);
-            roleRepository.save(driverRole);
+                Role driverRole = new Role();
+                driverRole.setName(Role.ERole.ROLE_DRIVER);
+                roleRepository.save(driverRole);
 
-            Role passengerRole = new Role();
-            passengerRole.setName(Role.ERole.ROLE_PASSENGER);
-            roleRepository.save(passengerRole);
+                Role passengerRole = new Role();
+                passengerRole.setName(Role.ERole.ROLE_PASSENGER);
+                roleRepository.save(passengerRole);
 
-            logger.info("Default roles created successfully: ADMIN, DRIVER, PASSENGER");
-        } else {
-            logger.info("Roles already exist. Skipping role creation.");
+                logger.info("Default roles created successfully: ADMIN, DRIVER, PASSENGER");
+            } else {
+                logger.info("Roles already exist. Skipping role creation.");
+            }
+
+            // Create default admin user if it doesn't exist
+            String adminEmail = "admin@rideshare.com";
+            if (!userRepository.existsByEmail(adminEmail)) {
+                logger.info("No admin user found. Creating default admin with email: {}", adminEmail);
+
+                User adminUser = new User();
+                adminUser.setEmail(adminEmail);
+                adminUser.setName("Administrator");
+                adminUser.setPassword(passwordEncoder.encode("adminpass"));
+                adminUser.setIsActive(true);
+                adminUser.setIsApproved(true);
+                adminUser.setIsFirstLogin(false);
+
+                Role adminRole = roleRepository.findByName(Role.ERole.ROLE_ADMIN)
+                        .orElseThrow(() -> new RuntimeException("Admin role not found!"));
+                Set<Role> roles = new HashSet<>();
+                roles.add(adminRole);
+                adminUser.setRoles(roles);
+
+                userRepository.save(adminUser);
+                logger.info("Default admin user initialized successfully with email: {}", adminEmail);
+            } else {
+                logger.info("Admin user already exists in database.");
+            }
         }
-
-        // Create default admin user if it doesn't exist
-        String adminEmail = "admin@rideshare.com";
-        if (!userRepository.existsByEmail(adminEmail)) {
-            logger.info("No admin user found. Creating default admin with email: {}", adminEmail);
-
-            User adminUser = new User();
-            adminUser.setEmail(adminEmail);
-            adminUser.setName("Administrator");
-            adminUser.setPassword(passwordEncoder.encode("adminpass"));
-            adminUser.setIsActive(true);
-            adminUser.setIsApproved(true);
-            adminUser.setIsFirstLogin(false);
-
-            Role adminRole = roleRepository.findByName(Role.ERole.ROLE_ADMIN)
-                    .orElseThrow(() -> new RuntimeException("Admin role not found!"));
-            Set<Role> roles = new HashSet<>();
-            roles.add(adminRole);
-            adminUser.setRoles(roles);
-
-            userRepository.save(adminUser);
-            logger.info("Default admin user initialized successfully with email: {}", adminEmail);
-        } else {
-            logger.info("Admin user already exists in database.");
+        catch(Exception e){
+            logger.error("Error during DataInitializer execution: {}", e.getMessage());
         }
-
         logger.info("DataInitializer execution completed.");
     }
 }
