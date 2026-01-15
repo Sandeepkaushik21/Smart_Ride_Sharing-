@@ -1,9 +1,20 @@
-# 🚗 Smart Ride Sharing System
-[🌐 **SMART RIDE SYSTEM LIVE DEMO!**](https://www.smartrideapp.online/)
+<div align="center">
+  <h1>🚗 Smart Ride Sharing System</h1>
+  <p><b>A modern, secure, and scalable solution for urban carpooling and ride-sharing.</b></p>
 
-A full-stack web application designed to facilitate ride-sharing. It features a robust **Spring Boot** backend and a modern **React** frontend, providing distinct dashboards for administrators, drivers, and passengers.
+  [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white)](https://spring.io/projects/spring-boot)
+  [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
+  [![MySQL](https://img.shields.io/badge/MySQL-005C84?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com/)
+  [![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+  [![Razorpay](https://img.shields.io/badge/Razorpay-02042B?style=for-the-badge&logo=razorpay&logoColor=3399FF)](https://razorpay.com/)
+
+  <h4>
+    <a href="https://www.smartrideapp.online/">🌐 Live Demo</a>
+  </h4>
+</div>
 
 ---
+
 
 ## ✨ Features
 
