@@ -165,7 +165,15 @@ const DriverDashboard = () => {
     const loadMasterDetails = async () => {
         try {
             const details = await userService.getMasterVehicleDetails();
-            if (details) {
+            // Check if details exist and have required fields (vehicleType and vehiclePhotos)
+            const hasRequiredFields = details && 
+                details.vehicleType && 
+                details.vehicleType.trim() !== '' &&
+                details.vehiclePhotos && 
+                Array.isArray(details.vehiclePhotos) && 
+                details.vehiclePhotos.length >= 4;
+            
+            if (hasRequiredFields) {
                 setMasterDetails(details);
                 setHasMasterDetails(true);
                 // Populate form with existing details
@@ -189,7 +197,30 @@ const DriverDashboard = () => {
                     setMasterVehiclePhotos([]);
                 }
             } else {
+                // Even if details object exists but doesn't have required fields, treat as no details
                 setHasMasterDetails(false);
+                if (details) {
+                    // Still populate form with any existing partial data
+                    setVehicleDetailsForm({
+                        vehicleType: details.vehicleType || '',
+                        vehicleModel: details.vehicleModel || '',
+                        vehicleColor: details.vehicleColor || '',
+                        hasAC: details.hasAC !== null && details.hasAC !== undefined ? details.hasAC : null,
+                        otherFeatures: details.otherFeatures || '',
+                    });
+                    if (details.vehiclePhotos && Array.isArray(details.vehiclePhotos)) {
+                        setMasterVehiclePhotos(details.vehiclePhotos);
+                    } else if (details.vehiclePhotosJson) {
+                        try {
+                            const photos = JSON.parse(details.vehiclePhotosJson);
+                            setMasterVehiclePhotos(photos);
+                        } catch (e) {
+                            setMasterVehiclePhotos([]);
+                        }
+                    } else {
+                        setMasterVehiclePhotos([]);
+                    }
+                }
             }
         } catch (error) {
             console.log('No master details found or error loading:', error);
@@ -701,6 +732,17 @@ const DriverDashboard = () => {
                 otherFeatures: vehicleDetailsForm.otherFeatures,
             });
             await showSuccess('Vehicle details saved successfully!');
+            // Update master details state immediately since we know the data is valid
+            setMasterDetails({
+                vehiclePhotos: masterVehiclePhotos,
+                hasAC: vehicleDetailsForm.hasAC,
+                vehicleType: vehicleDetailsForm.vehicleType,
+                vehicleModel: vehicleDetailsForm.vehicleModel,
+                vehicleColor: vehicleDetailsForm.vehicleColor,
+                otherFeatures: vehicleDetailsForm.otherFeatures,
+            });
+            setHasMasterDetails(true);
+            // Also reload from backend to ensure consistency
             await loadMasterDetails();
             setShowVehicleDetailsForm(false);
         } catch (error) {
@@ -743,21 +785,39 @@ const DriverDashboard = () => {
         setLoading(true);
 
         try {
+            // Validate that all 4 pickup and drop locations are filled
+            const validPickupLocations = pickupLocations.filter(x => x && x.trim().length > 0);
+            const validDropLocations = dropLocations.filter(x => x && x.trim().length > 0);
+            
+            if (validPickupLocations.length !== 4) {
+                await showError('Please select exactly 4 pickup locations');
+                return;
+            }
+            
+            if (validDropLocations.length !== 4) {
+                await showError('Please select exactly 4 drop locations');
+                return;
+            }
+            
             // Use city names for both city-level and specific locations
             // Always use master details for vehicle information
+            // Filter out empty strings to ensure only valid locations are sent
+            const filteredPickupLocations = pickupLocations.filter(x => x && x.trim().length > 0);
+            const filteredDropLocations = dropLocations.filter(x => x && x.trim().length > 0);
+            
             await rideService.postRide({
                 citySource: fromCity,
                 cityDestination: toCity,
                 source: fromCity,
                 destination: toCity,
-                // include any pickup/drop locations (filter out empty entries)
-                pickupLocations: pickupLocations.filter(x => x && x.trim().length > 0),
-                dropLocations: dropLocations.filter(x => x && x.trim().length > 0),
+                // Send exactly 4 pickup and drop locations (already validated above)
+                pickupLocations: filteredPickupLocations,
+                dropLocations: filteredDropLocations,
                 date: postForm.date,
                 time: postForm.time,
                 availableSeats: parseInt(postForm.availableSeats),
                 useMasterDetails: true, // Always use master details
-                baseFare: parseFloat(postForm.baseFare),
+                baseFare: postForm.baseFare ? parseFloat(postForm.baseFare) : null,
             });
             await showSuccess('Ride posted successfully!');
             setShowPostForm(false);
@@ -765,6 +825,7 @@ const DriverDashboard = () => {
                 date: '',
                 time: '',
                 availableSeats: '',
+                baseFare: '',
                 hasAC: null,
                 vehicleType: '',
                 vehicleModel: '',

@@ -162,12 +162,35 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ErrorResponse> handleRuntimeException(RuntimeException ex) {
+        logger.error("Runtime error: {}", ex.getMessage(), ex);
+        // Return the actual error message for better debugging
+        return new ResponseEntity<>(
+                new ErrorResponse(400, ex.getMessage(), LocalDateTime.now()),
+                HttpStatus.BAD_REQUEST
+        );
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneral(Exception ex) {
         logger.error("Unexpected error: {}", ex.getMessage(), ex);
-        // Log stack trace for debugging but don't expose it to client
+        logger.error("Stack trace: ", ex);
+        
+        // Provide more helpful error messages for common issues
+        String message = "Internal server error. Please contact support.";
+        if (ex.getMessage() != null) {
+            if (ex.getMessage().contains("Google") || ex.getMessage().contains("OAuth")) {
+                message = "Google authentication failed. Please try again or contact support.";
+            } else if (ex.getMessage().contains("token")) {
+                message = "Authentication token error. Please try logging in again.";
+            } else if (ex.getMessage().contains("database") || ex.getMessage().contains("SQL")) {
+                message = "Database error. Please contact support.";
+            }
+        }
+        
         return new ResponseEntity<>(
-                new ErrorResponse(500, "Internal server error. Please contact support.", LocalDateTime.now()),
+                new ErrorResponse(500, message, LocalDateTime.now()),
                 HttpStatus.INTERNAL_SERVER_ERROR
         );
     }

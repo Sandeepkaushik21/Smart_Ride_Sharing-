@@ -1,18 +1,27 @@
 spring:
-  datasource:
-    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
-    username: ${DB_USER}
-    password: ${DB_PASS}
-    driver-class-name: org.postgresql.Driver
+  application:
+    name: Ride-Sharing-Application
 
+  datasource:
+    url: jdbc:mariadb://ridesharing-db.ctkoqosawblj.eu-north-1.rds.amazonaws.com:3306/ridesharing
+    username: rideuser
+    password: Ride@123
+    driver-class-name: org.mariadb.jdbc.Driver
 
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
-        format_sql: false
+        format_sql: true
+
+  session:
+    store-type: none
 
 server:
   port: 8080
+
+logging:
+  level:
+    root: INFO

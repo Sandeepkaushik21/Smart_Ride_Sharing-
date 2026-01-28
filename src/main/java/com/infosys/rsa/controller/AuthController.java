@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,6 +30,12 @@ public class AuthController {
             JwtResponse response = authService.register(request);
             logger.info("User registered successfully with email: {}", request.getEmail());
             return ResponseEntity.ok(response);
+        } catch (com.infosys.rsa.exception.EmailAlreadyTakenException e) {
+            logger.warn("Registration attempt with existing email: {}", request.getEmail());
+            return ResponseEntity.status(409).body(new ErrorResponse("This email is already registered. Please login instead."));
+        } catch (com.infosys.rsa.exception.PhoneAlreadyTakenException e) {
+            logger.warn("Registration attempt with existing phone: {}", request.getPhone());
+            return ResponseEntity.status(409).body(new ErrorResponse("This phone number is already registered. Please login instead."));
         } catch (RuntimeException e) {
             logger.error("Error during user registration for email {}: {}", request.getEmail(), e.getMessage(), e);
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
@@ -42,9 +49,17 @@ public class AuthController {
             JwtResponse response = authService.login(request);
             logger.info("User login successful for email: {}", request.getEmail());
             return ResponseEntity.ok(response);
+        } catch (BadCredentialsException e) {
+            logger.warn("Login failed for email {}: {}", request.getEmail(), e.getMessage());
+            // Check if user exists to provide better error message
+            if (e.getMessage() != null && (e.getMessage().contains("Invalid email or password") || 
+                e.getMessage().contains("Account is inactive"))) {
+                return ResponseEntity.status(401).body(new ErrorResponse(e.getMessage()));
+            }
+            return ResponseEntity.status(401).body(new ErrorResponse("Invalid email or password. Please check your credentials or register if you don't have an account."));
         } catch (Exception e) {
             logger.error("Login failed for email {}: {}", request.getEmail(), e.getMessage(), e);
-            return ResponseEntity.badRequest().body(new ErrorResponse("Invalid email or password"));
+            return ResponseEntity.status(401).body(new ErrorResponse("Invalid email or password. Please check your credentials or register if you don't have an account."));
         }
     }
 
@@ -88,6 +103,40 @@ public class AuthController {
         } catch (RuntimeException e) {
             logger.error("Error resetting password for email {}: {}", request.getEmail(), e.getMessage(), e);
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/google-login")
+    public ResponseEntity<?> googleLogin(@Valid @RequestBody GoogleLoginRequest request) {
+        logger.info("Entering googleLogin()");
+        try {
+            JwtResponse response = authService.loginWithGoogle(request);
+            logger.info("Google login successful");
+            return ResponseEntity.ok(response);
+        } catch (BadCredentialsException e) {
+            logger.error("Google login failed - BadCredentials: {}", e.getMessage(), e);
+            return ResponseEntity.status(401).body(new ErrorResponse(e.getMessage()));
+        } catch (RuntimeException e) {
+            logger.error("Google login failed - RuntimeException: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(new ErrorResponse("Google authentication failed: " + e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Google login failed - Exception: {} | Type: {} | Cause: {}", 
+                e.getMessage(), 
+                e.getClass().getName(),
+                e.getCause() != null ? e.getCause().getMessage() : "none", 
+                e);
+            // Return a more specific error message instead of throwing
+            String errorMessage = "Google authentication failed. Please try again.";
+            if (e.getMessage() != null) {
+                if (e.getMessage().contains("Invalid Google token") || e.getMessage().contains("token")) {
+                    errorMessage = "Invalid Google token. Please try signing in again.";
+                } else if (e.getMessage().contains("not properly configured")) {
+                    errorMessage = "Google OAuth is not properly configured. Please contact administrator.";
+                } else {
+                    errorMessage = "Google authentication failed: " + e.getMessage();
+                }
+            }
+            return ResponseEntity.status(500).body(new ErrorResponse(errorMessage));
         }
     }
 

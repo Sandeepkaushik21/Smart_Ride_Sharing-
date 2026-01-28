@@ -16,7 +16,7 @@ public class HomeController {
 
     private static final Logger logger = LoggerFactory.getLogger(HomeController.class);
 
-    @GetMapping("/")
+    @GetMapping("/api")
     public ResponseEntity<?> home() {
         logger.info("Entering home() endpoint");
         Map<String, Object> response = new HashMap<>();

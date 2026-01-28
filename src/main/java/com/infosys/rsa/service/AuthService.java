@@ -18,14 +18,16 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 
 @Service
 public class AuthService {
@@ -33,235 +35,344 @@ public class AuthService {
     private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
 
     @Autowired
-    UserRepository userRepository;
+    private UserRepository userRepository;
 
     @Autowired
-    RoleRepository roleRepository;
+    private RoleRepository roleRepository;
 
     @Autowired
-    PasswordEncoder passwordEncoder;
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
-    AuthenticationManager authenticationManager;
+    private AuthenticationManager authenticationManager;
 
     @Autowired
-    JwtUtils jwtUtils;
+    private JwtUtils jwtUtils;
 
     @Autowired
-    EmailService emailService;
+    private EmailService emailService;
+
+    @Value("${google.client.id}")
+    private String googleClientId;
+
+    // ========================= GOOGLE LOGIN =========================
+
+    @Transactional
+    public JwtResponse loginWithGoogle(GoogleLoginRequest request) {
+        logger.info("Google login attempt");
+
+        try {
+            // Validate Google Client ID is configured
+            if (googleClientId == null || googleClientId.isEmpty() || googleClientId.contains("YOUR_GOOGLE_CLIENT_ID")) {
+                logger.error("Google Client ID is not configured properly");
+                throw new RuntimeException("Google OAuth is not properly configured. Please contact administrator.");
+            }
+
+            logger.debug("Verifying Google token with client ID: {}", googleClientId.substring(0, Math.min(20, googleClientId.length())) + "...");
+
+            // Verify Google ID token
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
+                    new NetHttpTransport(), 
+                    GsonFactory.getDefaultInstance()
+            )
+            .setAudience(Collections.singletonList(googleClientId))
+            .build();
+
+            GoogleIdToken idToken = verifier.verify(request.getIdToken());
+            if (idToken == null) {
+                throw new BadCredentialsException("Invalid Google token");
+            }
+
+            GoogleIdToken.Payload payload = idToken.getPayload();
+            String googleId = payload.getSubject();
+            String email = payload.getEmail();
+            String name = (String) payload.get("name");
+
+            logger.info("Google login verified for email: {}", email);
+
+            // Check if user exists
+            User user = userRepository.findByEmail(email).orElse(null);
+
+            if (user == null) {
+                // Create new user
+                user = new User();
+                user.setEmail(email);
+                user.setName(name != null ? name : email);
+                user.setProvider("google");
+                user.setProviderId(googleId);
+                // Generate a random password for OAuth users (they won't use it)
+                user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+                user.setIsFirstLogin(false);
+                user.setIsActive(true);
+
+                // Set role
+                Set<Role> roles = new HashSet<>();
+                String roleStr = (request.getRole() == null || request.getRole().isEmpty()) 
+                        ? "PASSENGER" 
+                        : request.getRole().toUpperCase();
+
+                if ("DRIVER".equals(roleStr)) {
+                    Role driverRole = roleRepository.findByName(Role.ERole.ROLE_DRIVER)
+                            .orElseThrow(() -> new RuntimeException("Driver role not found"));
+                    roles.add(driverRole);
+                    user.setIsApproved(null);
+                } else {
+                    Role passengerRole = roleRepository.findByName(Role.ERole.ROLE_PASSENGER)
+                            .orElseThrow(() -> new RuntimeException("Passenger role not found"));
+                    roles.add(passengerRole);
+                    user.setIsApproved(true);
+                }
+
+                user.setRoles(roles);
+                user = userRepository.save(user);
+                logger.info("New user created via Google OAuth: {}", email);
+            } else {
+                // Existing user - check if it's a Google user or convert it
+                if (!"google".equals(user.getProvider())) {
+                    // User exists with local account but logging in with Google
+                    // Update to Google provider
+                    user.setProvider("google");
+                    user.setProviderId(googleId);
+                    user.setName(name != null ? name : user.getName());
+                    user = userRepository.save(user);
+                    logger.info("User account linked to Google: {}", email);
+                } else {
+                    // Update name in case it changed
+                    if (name != null && !name.equals(user.getName())) {
+                        user.setName(name);
+                        user = userRepository.save(user);
+                    }
+                }
+
+                if (Boolean.FALSE.equals(user.getIsActive())) {
+                    throw new BadCredentialsException("Account is inactive");
+                }
+            }
+
+            // Create authentication
+            UserPrincipal principal = UserPrincipal.create(user);
+            Authentication authentication = new UsernamePasswordAuthenticationToken(
+                    principal,
+                    null,
+                    principal.getAuthorities()
+            );
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            // Generate JWT
+            String jwt = jwtUtils.generateToken(principal);
+            return buildJwtResponse(jwt, principal, user);
+
+        } catch (BadCredentialsException e) {
+            logger.error("Google login failed (BadCredentials): {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            logger.error("Google login failed with exception: {}", e.getMessage(), e);
+            // Log the full stack trace for debugging
+            logger.error("Exception type: {}", e.getClass().getName());
+            if (e.getCause() != null) {
+                logger.error("Caused by: {}", e.getCause().getMessage());
+            }
+            throw new RuntimeException("Google authentication failed: " + e.getMessage(), e);
+        }
+    }
+
+    // ========================= REGISTER =========================
 
     @Transactional
     public JwtResponse register(RegisterRequest request) {
-        logger.info("Attempting to register new user with email: {}", request.getEmail());
+        logger.info("Registering user with email {}", request.getEmail());
 
         if (userRepository.existsByEmail(request.getEmail())) {
-            logger.error("Registration failed - Email {} is already taken", request.getEmail());
-            throw new EmailAlreadyTakenException("Error: Email is already taken!");
+            throw new EmailAlreadyTakenException("Email already taken");
         }
 
-        if (request.getPhone() != null && !request.getPhone().isEmpty() && userRepository.existsByPhone(request.getPhone())) {
-            logger.error("Registration failed - Phone {} is already taken", request.getPhone());
-            throw new PhoneAlreadyTakenException("Error: Phone is already taken!");
+        if (request.getPhone() != null && userRepository.existsByPhone(request.getPhone())) {
+            throw new PhoneAlreadyTakenException("Phone already taken");
         }
 
         User user = new User();
         user.setName(request.getName());
         user.setEmail(request.getEmail());
         user.setPhone(request.getPhone());
+        user.setProvider("local");
 
-        // Generate temporary password
+        // Temporary password
         String tempPassword = UUID.randomUUID().toString().substring(0, 10);
         user.setPassword(passwordEncoder.encode(tempPassword));
         user.setTempPassword(tempPassword);
         user.setIsFirstLogin(true);
+        user.setIsActive(true);
 
-        logger.debug("Temporary password generated for user {}: [hidden for security]", request.getEmail());
-
-        // Set roles
+        // Roles
         Set<Role> roles = new HashSet<>();
-        String roleStr = request.getRole() != null ? request.getRole().toUpperCase() : "PASSENGER";
-        logger.info("Assigning role '{}' to user {}", roleStr, request.getEmail());
+        String roleStr = request.getRole() == null ? "PASSENGER" : request.getRole().toUpperCase();
 
-        if (roleStr.equals("DRIVER")) {
+        if ("DRIVER".equals(roleStr)) {
             Role driverRole = roleRepository.findByName(Role.ERole.ROLE_DRIVER)
-                    .orElseThrow(() -> {
-                        logger.error("Driver role not found in database");
-                        return new RuntimeException("Error: Role is not found.");
-                    });
+                    .orElseThrow(() -> new RuntimeException("Driver role not found"));
             roles.add(driverRole);
+
             user.setVehicleModel(request.getVehicleModel());
             user.setLicensePlate(request.getLicensePlate());
             user.setVehicleCapacity(request.getVehicleCapacity());
             user.setIsApproved(null);
-            logger.debug("Driver registration details set for {}", request.getEmail());
         } else {
             Role passengerRole = roleRepository.findByName(Role.ERole.ROLE_PASSENGER)
-                    .orElseThrow(() -> {
-                        logger.error("Passenger role not found in database");
-                        return new RuntimeException("Error: Role is not found.");
-                    });
+                    .orElseThrow(() -> new RuntimeException("Passenger role not found"));
             roles.add(passengerRole);
             user.setIsApproved(true);
         }
 
         user.setRoles(roles);
-        user.setIsActive(true);
-
         User savedUser = userRepository.save(user);
-        logger.info("User {} registered successfully with role {}", savedUser.getEmail(), roleStr);
 
-        // Send email with temporary credentials
-        String userType = roleStr.equals("DRIVER") ? "Driver" : "Passenger";
-        emailService.sendTempCredentials(savedUser.getEmail(), tempPassword, userType);
-        logger.info("Temporary credentials email sent to {}", savedUser.getEmail());
+        // Send email
+        emailService.sendTempCredentials(
+                savedUser.getEmail(),
+                tempPassword,
+                roleStr.equals("DRIVER") ? "Driver" : "Passenger"
+        );
 
-        // Generate JWT token
-        UserPrincipal userPrincipal = UserPrincipal.create(savedUser);
-        String jwt = jwtUtils.generateToken(userPrincipal);
-        logger.debug("JWT token generated for new user {}", savedUser.getEmail());
+        // JWT
+        UserPrincipal principal = UserPrincipal.create(savedUser);
+        String jwt = jwtUtils.generateToken(principal);
 
-        List<String> roleNames = savedUser.getRoles().stream()
-                .map(role -> role.getName().name())
-                .collect(Collectors.toList());
-
-        logger.info("Registration process completed for user {}", savedUser.getEmail());
-
-        return new JwtResponse(jwt, "Bearer", savedUser.getId(), savedUser.getEmail(),
-                savedUser.getName(), roleNames, savedUser.getIsFirstLogin());
+        return buildJwtResponse(jwt, principal, savedUser);
     }
+
+    // ========================= LOGIN =========================
 
     public JwtResponse login(LoginRequest request) {
-        logger.info("User attempting to log in with email: {}", request.getEmail());
+        logger.info("Login attempt for {}", request.getEmail());
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> {
-                    logger.error("Login failed - Invalid email: {}", request.getEmail());
-                    return new BadCredentialsException("Invalid email or password");
-                });
+                .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
 
-        String passwordToCheck = request.getPassword();
-        boolean isTempPassword = user.getIsFirstLogin() && user.getTempPassword() != null &&
-                passwordToCheck.equals(user.getTempPassword());
-
-        if (!isTempPassword && !passwordEncoder.matches(passwordToCheck, user.getPassword())) {
-            logger.error("Login failed - Invalid credentials for {}", request.getEmail());
-            throw new BadCredentialsException("Invalid email or password");
+        if (Boolean.FALSE.equals(user.getIsActive())) {
+            throw new BadCredentialsException("Account is inactive");
         }
 
-        UserPrincipal userPrincipal;
-        if (isTempPassword) {
-            logger.debug("User {} logging in with temporary password", request.getEmail());
-            userPrincipal = UserPrincipal.create(user);
-            Authentication authentication = new UsernamePasswordAuthenticationToken(
-                    userPrincipal, null, userPrincipal.getAuthorities());
+        boolean isTempPassword =
+                Boolean.TRUE.equals(user.getIsFirstLogin()) &&
+                        user.getTempPassword() != null &&
+                        request.getPassword().equals(user.getTempPassword());
+
+        if (!isTempPassword) {
+            // Normal authentication
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()
+                    )
+            );
             SecurityContextHolder.getContext().setAuthentication(authentication);
         } else {
-            logger.debug("Authenticating user {} through authentication manager", request.getEmail());
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+            // Temp password authentication
+            UserPrincipal tempPrincipal = UserPrincipal.create(user);
+            Authentication authentication =
+                    new UsernamePasswordAuthenticationToken(
+                            tempPrincipal,
+                            null,
+                            tempPrincipal.getAuthorities()
+                    );
             SecurityContextHolder.getContext().setAuthentication(authentication);
-            userPrincipal = (UserPrincipal) authentication.getPrincipal();
         }
 
-        String jwt = jwtUtils.generateToken(userPrincipal);
-        logger.info("JWT token generated successfully for {}", request.getEmail());
+        // ALWAYS create principal from DB (safe)
+        UserPrincipal principal = UserPrincipal.create(user);
+        String jwt = jwtUtils.generateToken(principal);
 
-        List<String> roles = userPrincipal.getAuthorities().stream()
-                .map(item -> item.getAuthority())
-                .collect(Collectors.toList());
-
-        logger.info("User {} logged in successfully with roles: {}", request.getEmail(), roles);
-
-        return new JwtResponse(jwt, "Bearer", userPrincipal.getId(),
-                userPrincipal.getUsername(), user.getName(), roles, user.getIsFirstLogin());
+        return buildJwtResponse(jwt, principal, user);
     }
+
+    // ========================= CHANGE PASSWORD =========================
 
     @Transactional
     public void changePassword(Long userId, ChangePasswordRequest request) {
-        logger.info("User ID {} attempting to change password", userId);
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> {
-                    logger.error("Password change failed - User ID {} not found", userId);
-                    return new RuntimeException("User not found");
-                });
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        boolean isTempPassword = user.getIsFirstLogin() && user.getTempPassword() != null &&
-                request.getCurrentPassword().equals(user.getTempPassword());
+        boolean isTempPassword =
+                Boolean.TRUE.equals(user.getIsFirstLogin()) &&
+                        user.getTempPassword() != null &&
+                        request.getCurrentPassword().equals(user.getTempPassword());
 
-        if (!isTempPassword && !passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
-            logger.error("Password change failed - Incorrect current password for user ID {}", userId);
-            throw new RuntimeException("Current password is incorrect");
+        if (!isTempPassword &&
+                !passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new RuntimeException("Current password incorrect");
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        user.setIsFirstLogin(false);
         user.setTempPassword(null);
-        userRepository.save(user);
+        user.setIsFirstLogin(false);
 
-        logger.info("Password changed successfully for user ID {}", userId);
+        userRepository.save(user);
     }
+
+    // ========================= FORGOT PASSWORD =========================
 
     @Transactional
     public void forgotPassword(ForgotPasswordRequest request) {
-        logger.info("Processing forgot password request for email: {}", request.getEmail());
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> {
-                    logger.error("Forgot password failed - Email {} not found", request.getEmail());
-                    // Don't reveal if email exists or not for security
-                    return new RuntimeException("If the email exists, a temporary password has been sent.");
-                });
+                .orElseThrow(() -> new RuntimeException("If email exists, password sent"));
 
-        // Only allow password reset for users who have logged in at least once
-        // (i.e., isFirstLogin should be false)
-        if (user.getIsFirstLogin() != null && user.getIsFirstLogin()) {
-            logger.error("Forgot password failed - User {} has not completed first login", request.getEmail());
-            throw new RuntimeException("Please complete your first login before resetting password.");
+        if (Boolean.TRUE.equals(user.getIsFirstLogin())) {
+            throw new RuntimeException("Complete first login before reset");
         }
 
-        // Generate temporary password
         String tempPassword = UUID.randomUUID().toString().substring(0, 10);
         user.setTempPassword(tempPassword);
-        // Set isFirstLogin to true temporarily so they can use temp password
         user.setIsFirstLogin(true);
         userRepository.save(user);
 
-        logger.info("Temporary password generated for user {}", request.getEmail());
-
-        // Send email with temporary password
-        emailService.sendForgotPasswordEmail(user.getEmail(), tempPassword, user.getName());
-        logger.info("Forgot password email sent to {}", request.getEmail());
+        emailService.sendForgotPasswordEmail(
+                user.getEmail(),
+                tempPassword,
+                user.getName()
+        );
     }
+
+    // ========================= RESET PASSWORD =========================
 
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
-        logger.info("Processing reset password request for email: {}", request.getEmail());
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> {
-                    logger.error("Reset password failed - Email {} not found", request.getEmail());
-                    return new RuntimeException("Invalid email or temporary password");
-                });
+                .orElseThrow(() -> new RuntimeException("Invalid request"));
 
-        // Verify temporary password
-        if (user.getTempPassword() == null || !user.getTempPassword().equals(request.getTempPassword())) {
-            logger.error("Reset password failed - Invalid temporary password for {}", request.getEmail());
-            throw new RuntimeException("Invalid email or temporary password");
+        if (!Objects.equals(user.getTempPassword(), request.getTempPassword())) {
+            throw new RuntimeException("Invalid temporary password");
         }
 
-        // Check if user is in password reset state (isFirstLogin should be true with temp password)
-        if (user.getIsFirstLogin() == null || !user.getIsFirstLogin()) {
-            logger.error("Reset password failed - User {} is not in password reset state", request.getEmail());
-            throw new RuntimeException("Invalid password reset request. Please request a new temporary password.");
+        if (!Boolean.TRUE.equals(user.getIsFirstLogin())) {
+            throw new RuntimeException("Invalid reset state");
         }
 
-        // Set new password
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        user.setIsFirstLogin(false);
         user.setTempPassword(null);
-        userRepository.save(user);
+        user.setIsFirstLogin(false);
 
-        logger.info("Password reset successfully for user {}", request.getEmail());
+        userRepository.save(user);
+    }
+
+    // ========================= HELPER =========================
+
+    private JwtResponse buildJwtResponse(String jwt, UserPrincipal principal, User user) {
+
+        List<String> roles = principal.getAuthorities().stream()
+                .map(a -> a.getAuthority())
+                .collect(Collectors.toList());
+
+        return new JwtResponse(
+                jwt,
+                "Bearer",
+                principal.getId(),
+                principal.getUsername(),
+                user.getName(),
+                roles,
+                user.getIsFirstLogin()
+        );
     }
 }

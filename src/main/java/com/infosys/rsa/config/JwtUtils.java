@@ -30,7 +30,7 @@ public class JwtUtils {
     }
 
     public Date extractExpiration(String token) {
-        return extractClaim(token, Claims::getExpiration);
+        return extractClaim(token, claims ->  claims.getExpiration());
     }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
@@ -65,9 +65,14 @@ public class JwtUtils {
                 .compact();
     }
 
-    public Boolean validateToken(String token, UserDetails userDetails) {
-        final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+    public boolean validateToken(String token) {
+        try {
+            extractUsername(token);   // ensures token is valid
+            return !isTokenExpired(token);
+        } catch (Exception e) {
+            return false;
+        }
     }
+
 }
 

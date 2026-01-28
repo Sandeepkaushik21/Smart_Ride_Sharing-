@@ -1,56 +1,51 @@
-import axios from 'axios';
+import axios from "axios";
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = "http://localhost:8081/api";
+
+console.log("API Base URL:", API_BASE_URL);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
+    Accept: "application/json",
   },
+  timeout: 15000,
 });
 
-// Add token to requests
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Handle responses
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Log error for debugging
-    console.error('API Error:', error);
-    
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+    console.error("API Error:", error);
+
+    if (!error.response || error.code === "ERR_NETWORK") {
+      error.message = "Backend server not reachable";
+      return Promise.reject(error);
     }
-    
-    // Better error handling
-    if (!error.response) {
-      // Network error
-      error.message = 'Network error. Please check if the backend server is running.';
-    } else if (error.response.data?.message) {
+
+    if (error.response.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/login";
+    }
+
+    if (error.response.data?.message) {
       error.message = error.response.data.message;
-    } else if (error.response.data?.error) {
-      error.message = error.response.data.error;
-    } else {
-      error.message = error.message || 'An error occurred';
     }
-    
+
     return Promise.reject(error);
   }
 );
 
 export default api;
-

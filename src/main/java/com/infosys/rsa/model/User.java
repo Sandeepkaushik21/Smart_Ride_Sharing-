@@ -50,6 +50,12 @@ public class User {
     @Column(name = "temp_password")
     private String tempPassword;
 
+    @Column(name = "provider", nullable = false)
+    private String provider = "local"; // "local" or "google"
+
+    @Column(name = "provider_id")
+    private String providerId; // Google user ID
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -84,6 +90,10 @@ public class User {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        // Ensure provider has a default value
+        if (provider == null) {
+            provider = "local";
+        }
     }
 
     @PreUpdate

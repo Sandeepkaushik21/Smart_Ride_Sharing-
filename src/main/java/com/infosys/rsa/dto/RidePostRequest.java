@@ -45,9 +45,12 @@ public class RidePostRequest {
     @Positive(message = "Available seats must be positive")
     private Integer availableSeats;
 
+    // Base fare for the ride (optional, defaults to 50.0 if not provided)
+    private Double baseFare;
+
     // Vehicle chosen by driver for this ride
     // Can be null if useMasterDetails is true - validation handled in service layer
-    private Long vehicleId;
+    //private Long vehicleId;
 
     // Legacy fields (no longer used now that rides are tied to a Vehicle entity)
     // Kept for backward compatibility with older clients, but ignored in service layer.

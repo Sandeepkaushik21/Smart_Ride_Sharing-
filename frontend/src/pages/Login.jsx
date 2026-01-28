@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { LogIn, Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { authService } from '../services/authService';
@@ -12,7 +12,9 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const navigate = useNavigate();
+  const googleButtonRef = useRef(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -57,6 +59,101 @@ const Login = () => {
       setLoading(false);
     }
   };
+
+  const handleGoogleSignIn = async (credentialResponse) => {
+    setError('');
+    setGoogleLoading(true);
+
+    try {
+      const response = await authService.googleLogin(credentialResponse.credential);
+
+      let path = '/';
+      if (response.roles) {
+        if (response.roles.includes('ROLE_ADMIN')) {
+          path = '/admin/dashboard';
+        } else if (response.roles.includes('ROLE_DRIVER')) {
+          path = '/driver/dashboard';
+        } else if (response.roles.includes('ROLE_PASSENGER')) {
+          path = '/passenger/dashboard';
+        }
+      }
+
+      await showSuccessAuto('Google login successful!', 3000);
+      navigate(path, { replace: true });
+    } catch (err) {
+      console.error('Google login error:', err);
+      console.error('Error details:', err.response?.data);
+      let errorMessage = 'Google authentication failed. Please try again.';
+      
+      if (err.response?.data) {
+        // Check different possible error response formats
+        if (err.response.data.message) {
+          errorMessage = err.response.data.message;
+        } else if (typeof err.response.data === 'string') {
+          errorMessage = err.response.data;
+        } else if (err.response.data.error) {
+          errorMessage = err.response.data.error;
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Initialize Google Sign-In when the script is loaded
+    const initializeGoogleSignIn = () => {
+      if (window.google && googleButtonRef.current) {
+        window.google.accounts.id.initialize({
+          client_id: '273206418595-in0iq257brvi7jvrpv1d8isq1qg3788n.apps.googleusercontent.com', // Replace with your actual Google Client ID
+          callback: (credentialResponse) => {
+            handleGoogleSignIn(credentialResponse);
+          },
+        });
+
+        window.google.accounts.id.renderButton(
+          googleButtonRef.current,
+          {
+            theme: 'outline',
+            size: 'large',
+            width: '100%',
+            text: 'signin_with',
+            locale: 'en',
+          }
+        );
+      }
+    };
+
+    // Check if Google script is already loaded
+    if (window.google) {
+      initializeGoogleSignIn();
+    } else {
+      // Wait for script to load
+      const checkInterval = setInterval(() => {
+        if (window.google) {
+          clearInterval(checkInterval);
+          initializeGoogleSignIn();
+        }
+      }, 100);
+
+      // Cleanup interval after 10 seconds
+      setTimeout(() => clearInterval(checkInterval), 10000);
+    }
+
+    // Cleanup function
+    return () => {
+      if (window.google && window.google.accounts) {
+        // Google library doesn't provide a cleanup method, but we can clear the button
+        if (googleButtonRef.current) {
+          googleButtonRef.current.innerHTML = '';
+        }
+      }
+    };
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -145,11 +242,24 @@ const Login = () => {
             <div>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || googleLoading}
                 className="w-full flex justify-center py-2.5 px-5 border border-transparent rounded-lg shadow-lg text-base font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-300 transform hover:scale-105"
               >
                 {loading ? 'Signing in...' : 'Sign in'}
               </button>
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+              </div>
+            </div>
+
+            <div className="w-full">
+              <div ref={googleButtonRef} className="flex justify-center"></div>
             </div>
 
             <div className="text-center">

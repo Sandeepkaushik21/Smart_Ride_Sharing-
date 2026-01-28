@@ -490,9 +490,7 @@ public class BookingService {
         // Send confirmation email to passenger
         try {
             User passenger = booking.getPassenger();
-            User driver = booking.getRide().getDriver();
             String passengerName = passenger.getName() != null ? passenger.getName() : passenger.getEmail();
-            String driverName = driver.getName() != null ? driver.getName() : driver.getEmail();
             String dateStr = booking.getRide().getDate() != null ? booking.getRide().getDate().toString() : "N/A";
             String timeStr = booking.getRide().getTime() != null ? booking.getRide().getTime().toString() : "N/A";
 

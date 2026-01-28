@@ -13,6 +13,8 @@ import com.razorpay.Order;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,8 @@ import java.util.Optional;
 
 @Service
 public class RazorpayPaymentService {
+
+    private static final Logger logger = LoggerFactory.getLogger(RazorpayPaymentService.class);
 
     @Value("${razorpay.key.id}")
     private String razorpayKeyId;
@@ -64,7 +68,7 @@ public class RazorpayPaymentService {
             // Prefer the fare stored on the Booking (saved during booking creation) so the
             // Razorpay order always matches what the passenger confirmed. If Booking isn't found
             // or fareAmount is null, fall back to the amount provided in the request.
-            System.out.println("Creating Razorpay order - Requested Amount: " + request.getAmount() + " INR, BookingId: " + request.getBookingId());
+            logger.info("Creating Razorpay order - Requested Amount: {} INR, BookingId: {}", request.getAmount(), request.getBookingId());
 
             RazorpayClient razorpay = new RazorpayClient(razorpayKeyId, razorpayKeySecret);
 
@@ -84,10 +88,10 @@ public class RazorpayPaymentService {
             double amountRupeesToUse = 0.0;
             if (booking.getFareAmount() != null) {
                 amountRupeesToUse = booking.getFareAmount();
-                System.out.println("Using booking.fareAmount for Razorpay order: " + amountRupeesToUse + " INR (BookingId: " + request.getBookingId() + ")");
+                logger.info("Using booking.fareAmount for Razorpay order: {} INR (BookingId: {})", amountRupeesToUse, request.getBookingId());
             } else if (request.getAmount() != null) {
                 amountRupeesToUse = request.getAmount();
-                System.out.println("Booking fare missing; falling back to request.amount: " + amountRupeesToUse + " INR");
+                logger.info("Booking fare missing; falling back to request.amount: {} INR", amountRupeesToUse);
             } else {
                 throw new RuntimeException("Amount is required to create Razorpay order");
             }
@@ -131,12 +135,10 @@ public class RazorpayPaymentService {
 
             return response;
         } catch (RazorpayException e) {
-            System.err.println("Razorpay order creation error: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Razorpay order creation error: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to create Razorpay order: " + e.getMessage() + ". Please check Razorpay keys configuration.", e);
         } catch (Exception e) {
-            System.err.println("Unexpected error creating order: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Unexpected error creating order: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to create payment order: " + e.getMessage(), e);
         }
     }
@@ -164,18 +166,14 @@ public class RazorpayPaymentService {
             String generatedSignature = hexString.toString();
             boolean isValid = generatedSignature.equals(signature);
             
-            // Log for debugging (remove in production)
+            // Log for debugging
             if (!isValid) {
-                System.err.println("Signature verification failed:");
-                System.err.println("Expected: " + signature);
-                System.err.println("Generated: " + generatedSignature);
-                System.err.println("Text: " + text);
+                logger.warn("Signature verification failed - Expected: {}, Generated: {}, Text: {}", signature, generatedSignature, text);
             }
             
             return isValid;
         } catch (Exception e) {
-            System.err.println("Error in signature verification: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error in signature verification: {}", e.getMessage(), e);
             return false;
         }
     }
@@ -186,11 +184,11 @@ public class RazorpayPaymentService {
     @Transactional
     public Payment verifyPayment(String orderId, String paymentId, String signature) {
         // Log payment verification attempt
-        System.out.println("Verifying payment - OrderId: " + orderId + ", PaymentId: " + paymentId);
+        logger.info("Verifying payment - OrderId: {}, PaymentId: {}", orderId, paymentId);
         
         // Verify signature
         if (!verifySignature(orderId, paymentId, signature)) {
-            System.err.println("Signature verification failed for order: " + orderId);
+            logger.error("Signature verification failed for order: {}", orderId);
             throw new RuntimeException("Invalid payment signature. Please contact support if payment was deducted.");
         }
 
@@ -245,7 +243,7 @@ public class RazorpayPaymentService {
             );
         } catch (Exception e) {
             // Log error but don't fail payment verification
-            System.err.println("Failed to send confirmation emails: " + e.getMessage());
+            logger.error("Failed to send confirmation emails: {}", e.getMessage(), e);
         }
 
         // Save payment

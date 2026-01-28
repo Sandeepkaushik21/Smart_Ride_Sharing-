@@ -4,6 +4,7 @@ import com.infosys.rsa.dto.RidePostRequest;
 import com.infosys.rsa.dto.RideRescheduleRequest;
 import com.infosys.rsa.dto.RideSearchRequest;
 import com.infosys.rsa.dto.RideResponse;
+import com.infosys.rsa.exception.ErrorResponse;
 import com.infosys.rsa.model.Booking;
 import com.infosys.rsa.model.Ride;
 import com.infosys.rsa.security.UserDetailsServiceImpl.UserPrincipal;
@@ -18,6 +19,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -47,7 +49,10 @@ public class RideController {
             return ResponseEntity.ok(ride);
         } catch (RuntimeException e) {
             logger.error("Error posting ride: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+            return ResponseEntity.badRequest().body(new ErrorResponse(400, e.getMessage(), LocalDateTime.now()));
+        } catch (Exception e) {
+            logger.error("Unexpected error posting ride: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(new ErrorResponse(500, "Internal server error. Please contact support.", LocalDateTime.now()));
         }
     }
 
@@ -61,7 +66,7 @@ public class RideController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Error searching rides: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(new ErrorResponse("Failed to search rides: " + e.getMessage()));
+            return ResponseEntity.badRequest().body(new ErrorResponse(400, "Failed to search rides: " + e.getMessage(), LocalDateTime.now()));
         }
     }
 
@@ -85,7 +90,10 @@ public class RideController {
             return ResponseEntity.ok(ride);
         } catch (RuntimeException e) {
             logger.error("Error fetching ride by ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+            return ResponseEntity.badRequest().body(new ErrorResponse(400, e.getMessage(), LocalDateTime.now()));
+        } catch (Exception e) {
+            logger.error("Unexpected error fetching ride by ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(500).body(new ErrorResponse(500, "Internal server error. Please contact support.", LocalDateTime.now()));
         }
     }
 
@@ -108,7 +116,10 @@ public class RideController {
             return ResponseEntity.ok(resp);
         } catch (RuntimeException e) {
             logger.error("Error cancelling ride ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+            return ResponseEntity.badRequest().body(new ErrorResponse(400, e.getMessage(), LocalDateTime.now()));
+        } catch (Exception e) {
+            logger.error("Unexpected error cancelling ride ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(500).body(new ErrorResponse(500, "Internal server error. Please contact support.", LocalDateTime.now()));
         }
     }
 
@@ -134,18 +145,10 @@ public class RideController {
             return ResponseEntity.ok(resp);
         } catch (RuntimeException e) {
             logger.error("Error rescheduling ride ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
-        }
-    }
-
-    private static class ErrorResponse {
-        private String message;
-        public ErrorResponse(String message) {
-            this.message = message;
-        }
-        @SuppressWarnings("unused") // Used by Jackson for JSON serialization
-        public String getMessage() {
-            return message;
+            return ResponseEntity.badRequest().body(new ErrorResponse(400, e.getMessage(), LocalDateTime.now()));
+        } catch (Exception e) {
+            logger.error("Unexpected error rescheduling ride ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(500).body(new ErrorResponse(500, "Internal server error. Please contact support.", LocalDateTime.now()));
         }
     }
 
