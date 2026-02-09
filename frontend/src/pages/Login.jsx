@@ -51,7 +51,7 @@ const Login = () => {
         'Invalid email or password. Please check your credentials.';
 
       if (err.message && err.message.includes('Network')) {
-        setError('Cannot connect to server. Please make sure the backend is running on http://localhost:8080');
+        setError('Cannot connect to server. Please make sure the backend is running on http://localhost:8081');
       } else {
         setError(errorMessage);
       }

@@ -55,7 +55,7 @@ const Register = () => {
       
       // Only show inline error, no SweetAlert for errors
       if (err.message && err.message.includes('Network')) {
-        errorMessage = 'Cannot connect to server. Please make sure the backend is running on http://localhost:8080';
+        errorMessage = 'Cannot connect to server. Please make sure the backend is running on http://localhost:8081';
       }
       setError(errorMessage);
     } finally {

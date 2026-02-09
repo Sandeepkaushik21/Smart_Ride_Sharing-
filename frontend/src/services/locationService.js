@@ -14,7 +14,7 @@ import axios from 'axios';
 
 const LOCATIONIQ_API_KEY = import.meta.env.VITE_LOCATIONIQ_API_KEY || '';
 const LOCATIONIQ_BASE_URL = 'https://us1.locationiq.com/v1';
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'http://localhost:8081/api';
 
 export const locationService = {
   /**
