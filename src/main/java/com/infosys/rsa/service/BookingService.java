@@ -309,6 +309,12 @@ public class BookingService {
             throw new InsufficientSeatsException("Not enough seats available. Only " + ride.getAvailableSeats() + " seat(s) remaining.");
         }
 
+        // Decrement available seats when booking is accepted
+        ride.setAvailableSeats(ride.getAvailableSeats() - booking.getNumberOfSeats());
+        rideRepository.save(ride);
+        logger.debug("Decremented {} seat(s) from ride ID: {}. Remaining seats: {}", 
+                booking.getNumberOfSeats(), ride.getId(), ride.getAvailableSeats());
+
         booking.setStatus(Booking.BookingStatus.ACCEPTED);
         Booking updatedBooking = bookingRepository.save(booking);
 

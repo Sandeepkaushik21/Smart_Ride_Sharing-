@@ -211,15 +211,12 @@ public class RazorpayPaymentService {
         payment.setRazorpaySignature(signature);
         payment.setStatus(Payment.PaymentStatus.SUCCESS);
 
-        // Update booking status to CONFIRMED and update ride seats
+        // Update booking status to CONFIRMED
+        // Note: Seats are already decremented when driver accepts the booking, so no need to decrement again here
         booking.setStatus(Booking.BookingStatus.CONFIRMED);
-        
-        // Update ride available seats
-        Ride ride = booking.getRide();
-        ride.setAvailableSeats(ride.getAvailableSeats() - booking.getNumberOfSeats());
-        rideRepository.save(ride);
-        
         bookingRepository.save(booking);
+        
+        Ride ride = booking.getRide();
 
         // Send confirmation emails
         try {

@@ -17,8 +17,12 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
     @Query("SELECT r FROM Ride r LEFT JOIN FETCH r.driver WHERE r.driver.id = :driverId")
     List<Ride> findAllByDriverId(@Param("driverId") Long driverId);
     
-    // Search by city-level route (not specific locations)
-    @Query("SELECT DISTINCT r FROM Ride r LEFT JOIN FETCH r.driver WHERE r.citySource LIKE %:source% AND r.cityDestination LIKE %:destination% AND r.date = :date AND r.status = 'SCHEDULED' AND r.availableSeats > 0")
+    // Search by city-level route (not specific locations) - case-insensitive and includes driver approval check
+    @Query("SELECT DISTINCT r FROM Ride r LEFT JOIN FETCH r.driver WHERE " +
+           "UPPER(r.citySource) LIKE UPPER(CONCAT('%', :source, '%')) AND " +
+           "UPPER(r.cityDestination) LIKE UPPER(CONCAT('%', :destination, '%')) AND " +
+           "r.date = :date AND r.status = 'SCHEDULED' AND r.availableSeats > 0 AND " +
+           "r.driver.isApproved = true AND r.driver.isActive = true")
     List<Ride> searchRides(@Param("source") String source, @Param("destination") String destination, @Param("date") LocalDate date);
     
     @Query("SELECT DISTINCT r.source FROM Ride r WHERE r.source LIKE %:query%")
