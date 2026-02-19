@@ -28,9 +28,6 @@ public class PaymentController {
     @Autowired
     private RazorpayPaymentService paymentService;
 
-    /**
-     * Create Razorpay order for payment
-     */
     @PostMapping("/create-order")
     @PreAuthorize("hasRole('PASSENGER')")
     public ResponseEntity<?> createOrder(@Valid @RequestBody RazorpayOrderRequest request,
@@ -48,10 +45,6 @@ public class PaymentController {
             return ResponseEntity.badRequest().body(new ErrorResponse("Failed to create payment order: " + e.getMessage()));
         }
     }
-
-    /**
-     * Verify Razorpay payment
-     */
     @PostMapping("/verify")
     @PreAuthorize("hasRole('PASSENGER')")
     public ResponseEntity<?> verifyPayment(@Valid @RequestBody PaymentVerificationRequest request,
@@ -80,9 +73,6 @@ public class PaymentController {
         }
     }
 
-    /**
-     * Get payment history for passenger
-     */
     @GetMapping("/passenger/history")
     @PreAuthorize("hasRole('PASSENGER')")
     public ResponseEntity<?> getPassengerPaymentHistory(Authentication authentication) {
@@ -99,9 +89,6 @@ public class PaymentController {
         }
     }
 
-    /**
-     * Get payment history for driver
-     */
     @GetMapping("/driver/history")
     @PreAuthorize("hasRole('DRIVER')")
     public ResponseEntity<?> getDriverPaymentHistory(Authentication authentication) {
@@ -118,9 +105,6 @@ public class PaymentController {
         }
     }
 
-    /**
-     * Get driver wallet balance and earnings
-     */
     @GetMapping("/driver/wallet")
     @PreAuthorize("hasRole('DRIVER')")
     public ResponseEntity<?> getDriverWallet(Authentication authentication) {
@@ -137,9 +121,6 @@ public class PaymentController {
         }
     }
 
-    /**
-     * Transfer payment to driver after ride completion
-     */
     @PostMapping("/driver/transfer/{bookingId}")
     @PreAuthorize("hasRole('DRIVER')")
     public ResponseEntity<?> transferToDriver(@PathVariable Long bookingId,

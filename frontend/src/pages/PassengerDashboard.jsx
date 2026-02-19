@@ -470,7 +470,50 @@ const PassengerDashboard = () => {
             const data = await rideService.searchRides(searchData);
             const list = Array.isArray(data) ? data : (data && Array.isArray(data.content) ? data.content : []);
 
-            const normalized = list.map((r) => {
+            // Ensure rides actually support the selected pickup & drop locations
+            const desiredPickup = searchForm.source;
+            const desiredDrop = searchForm.destination;
+
+            const filtered = list.filter((ride) => {
+                if (!ride || typeof ride !== 'object') return false;
+
+                // Parse pickup locations (JSON string or array)
+                let pickupLocationsData = ride.pickupLocationsJson || ride.pickupLocations;
+                let pickupLocations = [];
+                if (pickupLocationsData) {
+                    try {
+                        if (Array.isArray(pickupLocationsData)) {
+                            pickupLocations = pickupLocationsData;
+                        } else if (typeof pickupLocationsData === 'string') {
+                            pickupLocations = JSON.parse(pickupLocationsData);
+                        }
+                    } catch {
+                        pickupLocations = [];
+                    }
+                }
+
+                // Parse drop locations
+                let dropLocationsData = ride.dropLocationsJson || ride.dropLocations;
+                let dropLocations = [];
+                if (dropLocationsData) {
+                    try {
+                        if (Array.isArray(dropLocationsData)) {
+                            dropLocations = dropLocationsData;
+                        } else if (typeof dropLocationsData === 'string') {
+                            dropLocations = JSON.parse(dropLocationsData);
+                        }
+                    } catch {
+                        dropLocations = [];
+                    }
+                }
+
+                const pickupOk = !desiredPickup || pickupLocations.includes(desiredPickup);
+                const dropOk = !desiredDrop || dropLocations.includes(desiredDrop);
+
+                return pickupOk && dropOk;
+            });
+
+            const normalized = filtered.map((r) => {
                 if (!r || typeof r !== 'object') return r;
                 if (r.driver && typeof r.driver === 'object') return { ...r, driver: r.driver };
                 if (r.driverInfo && typeof r.driverInfo === 'object') return { ...r, driver: r.driverInfo };
@@ -1306,9 +1349,16 @@ const PassengerDashboard = () => {
                                         </div>
                                     ) : (
                                         (() => {
-                                            const totalPages = Math.max(1, Math.ceil(rides.length / resultsSize));
+                                            // Only show rides from today onwards in Available Rides tab
+                                            const futureRides = rides.filter((ride) => {
+                                                if (!ride || !ride.date) return false;
+                                                // Reuse isDatePassed helper so both string dates and Java LocalDate objects work
+                                                return !isDatePassed(ride.date);
+                                            });
+
+                                            const totalPages = Math.max(1, Math.ceil(futureRides.length / resultsSize));
                                             const start = resultsPage * resultsSize;
-                                            const displayed = rides.slice(start, start + resultsSize);
+                                            const displayed = futureRides.slice(start, start + resultsSize);
                                             return (
                                                 <>
                                                     {displayed.map((ride) => (
@@ -1372,10 +1422,10 @@ const PassengerDashboard = () => {
                                                                     </div>
 
                                                                     {/* Vehicle Photos */}
-                                                                    {/* {ride.vehiclePhotosJson && (() => {
+                                                                    {ride.vehiclePhotosJson && (() => {
                                                                         try {
                                                                             const photos = JSON.parse(ride.vehiclePhotosJson);
-                                                                            return photos.length > 0 ? (
+                                                                            return Array.isArray(photos) && photos.length > 0 ? (
                                                                                 <div className="mb-3">
                                                                                     <div className="text-xs font-semibold text-gray-600 mb-2 flex items-center">
                                                                                         <ZoomIn className="h-3 w-3 mr-1" />
@@ -1412,7 +1462,7 @@ const PassengerDashboard = () => {
                                                                         } catch (e) {
                                                                             return null;
                                                                         }
-                                                                    })()} */}
+                                                                    })()}
 
                                                                     {/* Vehicle Condition Details */}
                                                                     {/* {(ride.hasAC !== null || ride.vehicleType || ride.vehicleModel || ride.vehicleColor) && (

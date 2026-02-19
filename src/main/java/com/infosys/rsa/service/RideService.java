@@ -138,9 +138,15 @@ public class RideService {
 
         String source = request.getSource() != null ? request.getSource() : "";
         String destination = request.getDestination() != null ? request.getDestination() : "";
-        LocalDate date = request.getDate() != null ? request.getDate() : LocalDate.now();
+        LocalDate date = request.getDate();
 
         List<Ride> rides = rideRepository.searchRides(source, destination, date);
+
+        // Only expose rides from today onwards (no past rides)
+        LocalDate today = LocalDate.now();
+        rides = rides.stream()
+                .filter(r -> r.getDate() != null && !r.getDate().isBefore(today))
+                .collect(Collectors.toList());
 
         if (request.getMinPrice() != null) {
             rides = rides.stream()
