@@ -6,6 +6,7 @@ import com.infosys.rsa.repository.RideRepository;
 import com.infosys.rsa.repository.BookingRepository;
 import com.infosys.rsa.repository.PaymentRepository;
 import com.infosys.rsa.repository.ReviewRepository;
+import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,7 +56,6 @@ public class AdminService {
         // Send approval email
         emailService.sendDriverApprovalNotification(driver.getEmail(), driver.getName(), true);
         logger.info("Approval email sent to driver: {}", driver.getEmail());
-
         return savedDriver;
     }
 

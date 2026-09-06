@@ -8,7 +8,6 @@ import RazorpayPaymentModal from '../components/RazorpayPaymentModal';
 import { rideService } from '../services/rideService';
 import { bookingService } from '../services/bookingService';
 import { paymentService } from '../services/paymentService';
-import { userService } from '../services/userService';
 import { authService } from '../services/authService';
 import { reviewService } from '../services/reviewService';
 import { showConfirm, showSuccess, showError } from '../utils/swal';
@@ -88,7 +87,6 @@ const PassengerDashboard = () => {
 
     const [driverPickupLocations, setDriverPickupLocations] = useState([]); // Aggregated pickup locations from all drivers
     const [driverDropLocations, setDriverDropLocations] = useState([]); // Aggregated drop locations from all drivers
-    const [availableRides, setAvailableRides] = useState([]); // Rides for current search to get pickup locations
     const [loading, setLoading] = useState(false);
 
     const goNext = useCallback(async () => {
@@ -188,7 +186,6 @@ const PassengerDashboard = () => {
 
                 setDriverPickupLocations(Array.from(allPickupLocations));
                 setDriverDropLocations(Array.from(allDropLocations));
-                setAvailableRides(allRides);
             } catch (error) {
                 console.error('Error fetching rides for locations:', error);
                 setDriverPickupLocations([]);
@@ -344,22 +341,10 @@ const PassengerDashboard = () => {
         }
     };
 
-    const [userProfile, setUserProfile] = useState(null);
-
     useEffect(() => {
         fetchMyBookings(0, bookingsSize);
         fetchHistoryPage(0, historySize);
-        loadUserProfile();
     }, []);
-
-    const loadUserProfile = async () => {
-        try {
-            const profile = await userService.getProfile();
-            setUserProfile(profile);
-        } catch (error) {
-            console.error('Error loading user profile:', error);
-        }
-    };
 
     // Calculate stats for main dashboard
     const stats = useMemo(() => {
@@ -535,7 +520,6 @@ const PassengerDashboard = () => {
             });
 
             setRides(normalized);
-            setAvailableRides(normalized);
             setResultsPage(0);
             setActiveTab('results');
         } catch (error) {

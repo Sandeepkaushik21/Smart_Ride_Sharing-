@@ -44,7 +44,7 @@ const Register = () => {
         registrationData.vehicleCapacity = parseInt(formData.vehicleCapacity);
       }
 
-      const response = await authService.register(registrationData);
+      await authService.register(registrationData);
       
       // Only show success alert, no error alerts
       await showSuccess('Registration successful! Check your email for temporary password.');
@@ -151,10 +151,11 @@ const Register = () => {
     }
 
     // Cleanup function
+    const buttonNode = googleButtonRef.current;
     return () => {
       if (window.google && window.google.accounts) {
-        if (googleButtonRef.current) {
-          googleButtonRef.current.innerHTML = '';
+        if (buttonNode) {
+          buttonNode.innerHTML = '';
         }
       }
     };

@@ -145,11 +145,12 @@ const Login = () => {
     }
 
     // Cleanup function
+    const buttonNode = googleButtonRef.current;
     return () => {
       if (window.google && window.google.accounts) {
         // Google library doesn't provide a cleanup method, but we can clear the button
-        if (googleButtonRef.current) {
-          googleButtonRef.current.innerHTML = '';
+        if (buttonNode) {
+          buttonNode.innerHTML = '';
         }
       }
     };

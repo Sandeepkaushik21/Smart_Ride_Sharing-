@@ -26,7 +26,6 @@ const DriverDashboard = () => {
         otherFeatures: '',
         baseFare: '',
     });
-    const [vehiclePhotos, setVehiclePhotos] = useState([]);
     const [myRides, setMyRides] = useState([]);
     // Support paginated bookings for drivers
     const [bookings, setBookings] = useState([]);
@@ -65,9 +64,6 @@ const DriverDashboard = () => {
     // Restore: arrays for up to 4 pickup & 4 drop locations (step 2 of wizard)
     const [pickupLocations, setPickupLocations] = useState(['', '', '', '']);
     const [dropLocations, setDropLocations] = useState(['', '', '', '']);
-    // Master vehicle details
-    const [useMasterDetails, setUseMasterDetails] = useState(false);
-    const [masterDetails, setMasterDetails] = useState(null);
     const [hasMasterDetails, setHasMasterDetails] = useState(false);
     // Vehicle details management
     const [showVehicleDetailsForm, setShowVehicleDetailsForm] = useState(false);
@@ -93,13 +89,11 @@ const DriverDashboard = () => {
     };
 
     const [userProfile, setUserProfile] = useState(null);
-    const [walletData, setWalletData] = useState(null);
 
     useEffect(() => {
         fetchData();
         loadMasterDetails();
         loadUserProfile();
-        loadWalletData();
     }, []);
 
     const loadUserProfile = async () => {
@@ -108,16 +102,6 @@ const DriverDashboard = () => {
             setUserProfile(profile);
         } catch (error) {
             console.error('Error loading user profile:', error);
-        }
-    };
-
-    const loadWalletData = async () => {
-        try {
-            const { paymentService } = await import('../services/paymentService');
-            const wallet = await paymentService.getDriverWallet();
-            setWalletData(wallet);
-        } catch (error) {
-            console.error('Error loading wallet data:', error);
         }
     };
 
@@ -174,7 +158,6 @@ const DriverDashboard = () => {
                 details.vehiclePhotos.length >= 4;
             
             if (hasRequiredFields) {
-                setMasterDetails(details);
                 setHasMasterDetails(true);
                 // Populate form with existing details
                 setVehicleDetailsForm({
@@ -625,41 +608,6 @@ const DriverDashboard = () => {
         }
     };
 
-    const handlePhotoUpload = (e) => {
-        const files = Array.from(e.target.files);
-        const imageFiles = files.filter(file => file.type.startsWith('image/'));
-
-        if (imageFiles.length === 0) {
-            showError('Please select valid image files');
-            return;
-        }
-
-        const promises = imageFiles.map((file) => {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    resolve(reader.result);
-                };
-                reader.onerror = () => {
-                    resolve(null);
-                };
-                reader.readAsDataURL(file);
-            });
-        });
-
-        Promise.all(promises).then((base64Strings) => {
-            const validPhotos = base64Strings.filter(photo => photo !== null);
-            const updatedPhotos = [...vehiclePhotos, ...validPhotos].slice(0, 5); // Max 5 photos
-            setVehiclePhotos(updatedPhotos);
-            // Reset file input
-            e.target.value = '';
-        });
-    };
-
-    const removePhoto = (index) => {
-        setVehiclePhotos(vehiclePhotos.filter((_, i) => i !== index));
-    };
-
     // Vehicle details photo handlers
     const handleMasterPhotoUpload = (e) => {
         const files = Array.from(e.target.files);
@@ -732,15 +680,6 @@ const DriverDashboard = () => {
                 otherFeatures: vehicleDetailsForm.otherFeatures,
             });
             await showSuccess('Vehicle details saved successfully!');
-            // Update master details state immediately since we know the data is valid
-            setMasterDetails({
-                vehiclePhotos: masterVehiclePhotos,
-                hasAC: vehicleDetailsForm.hasAC,
-                vehicleType: vehicleDetailsForm.vehicleType,
-                vehicleModel: vehicleDetailsForm.vehicleModel,
-                vehicleColor: vehicleDetailsForm.vehicleColor,
-                otherFeatures: vehicleDetailsForm.otherFeatures,
-            });
             setHasMasterDetails(true);
             // Also reload from backend to ensure consistency
             await loadMasterDetails();
@@ -837,8 +776,6 @@ const DriverDashboard = () => {
             setPickupLocations(['', '', '', '']);
             setDropLocations(['', '', '', '']);
             setPostStep(1);
-            setVehiclePhotos([]);
-            setUseMasterDetails(false);
             // Refresh data to show newly posted ride
             await fetchData();
             // Switch to rides tab to show updated list

@@ -1458,7 +1458,7 @@ function LineChart({ data, height = 200, stroke = '#6366f1' }) {
 function DonutChart({ segments }) {
     const total = segments.reduce((s, x) => s + Math.max(0, x.value), 0) || 1;
     let acc = 0;
-    const arcs = segments.map((seg, idx) => {
+    const arcs = segments.map((seg) => {
         const start = (acc / total) * 360; acc += Math.max(0, seg.value);
         const end = (acc / total) * 360;
         return { start, end, color: seg.color, label: seg.label, value: seg.value };
@@ -1549,13 +1549,7 @@ function ToggleRow({ label, description, defaultChecked = false, onToggle }) {
     );
 }
 
-// Simple data generators from stats for charts
-function generateMonthlySeries(stats) {
-    const base = (stats?.totalBookings || 20);
-    return Array.from({ length: 12 }).map((_, i) => ({ label: i, value: Math.max(5, Math.round(base * (0.6 + ((i % 5) * 0.1)))) }));
-}
-
 function generateWeeklySeries(stats) {
     const base = (stats?.totalUsers || 50);
     return Array.from({ length: 8 }).map((_, i) => ({ label: i, value: Math.max(5, Math.round(base * (0.4 + ((Math.sin(i) + 1) / 3)))) }));
-}
+}

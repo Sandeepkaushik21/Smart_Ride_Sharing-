@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Ride Sharing — Booking, Payment & Email Flow Diagram</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f0f1a;
+            --bg-secondary: #1a1a2e;
+            --bg-card: #16213e;
+            --accent-blue: #4fc3f7;
+            --accent-purple: #b388ff;
+            --accent-green: #69f0ae;
+            --accent-orange: #ffab40;
+            --accent-red: #ff5252;
+            --accent-yellow: #ffd740;
+            --accent-cyan: #84ffff;
+            --accent-pink: #ff80ab;
+            --text-primary: #e8eaf6;
+            --text-secondary: #9fa8da;
+            --border-glow: rgba(79, 195, 247, 0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ─── Animated background ─── */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(circle at 20% 50%, rgba(79,195,247,.06) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(179,136,255,.06) 0%, transparent 50%),
+                        radial-gradient(circle at 50% 80%, rgba(105,240,174,.04) 0%, transparent 50%);
+            animation: bgDrift 20s ease-in-out infinite alternate;
+            z-index: 0;
+        }
+        @keyframes bgDrift {
+            0%   { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(-30px, -20px) rotate(3deg); }
+        }
+
+        /* ─── Header ─── */
+        .header {
+            position: relative; z-index: 1;
+            text-align: center;
+            padding: 48px 24px 24px;
+        }
+        .header h1 {
+            font-size: 2.4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+        .header p {
+            color: var(--text-secondary);
+            margin-top: 8px;
+            font-size: .95rem;
+        }
+        .legend-bar {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: .8rem;
+            color: var(--text-secondary);
+        }
+        .legend-dot {
+            width: 12px; height: 12px;
+            border-radius: 3px;
+        }
+
+        /* ─── Main canvas ─── */
+        .canvas {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* ─── Section titles ─── */
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin: 40px 0 20px;
+            padding-left: 16px;
+            border-left: 4px solid var(--accent-blue);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-title .icon { font-size: 1.4rem; }
+
+        /* ─── Flow container ─── */
+        .flow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+
+        /* ─── Node ─── */
+        .node {
+            position: relative;
+            min-width: 200px;
+            padding: 16px 28px;
+            border-radius: 14px;
+            text-align: center;
+            font-weight: 600;
+            font-size: .95rem;
+            cursor: default;
+            transition: transform .25s, box-shadow .25s;
+            animation: fadeSlideIn .6s ease-out both;
+        }
+        .node:hover {
+            transform: translateY(-4px) scale(1.03);
+        }
+        .node .sub {
+            display: block;
+            font-size: .72rem;
+            font-weight: 400;
+            margin-top: 4px;
+            opacity: .8;
+        }
+        .node .badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            font-size: .6rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 20px;
+            letter-spacing: .5px;
+            text-transform: uppercase;
+        }
+
+        /* Node colour variants */
+        .node--pending {
+            background: linear-gradient(135deg, #1a237e, #283593);
+            border: 1.5px solid rgba(79,195,247,.4);
+            box-shadow: 0 0 24px rgba(79,195,247,.15);
+            color: var(--accent-cyan);
+        }
+        .node--accepted {
+            background: linear-gradient(135deg, #1b5e20, #2e7d32);
+            border: 1.5px solid rgba(105,240,174,.4);
+            box-shadow: 0 0 24px rgba(105,240,174,.15);
+            color: var(--accent-green);
+        }
+        .node--confirmed {
+            background: linear-gradient(135deg, #4a148c, #6a1b9a);
+            border: 1.5px solid rgba(179,136,255,.5);
+            box-shadow: 0 0 24px rgba(179,136,255,.15);
+            color: var(--accent-purple);
+        }
+        .node--completed {
+            background: linear-gradient(135deg, #004d40, #00695c);
+            border: 1.5px solid rgba(105,240,174,.5);
+            box-shadow: 0 0 24px rgba(105,240,174,.15);
+            color: var(--accent-green);
+        }
+        .node--cancelled {
+            background: linear-gradient(135deg, #b71c1c, #c62828);
+            border: 1.5px solid rgba(255,82,82,.5);
+            box-shadow: 0 0 24px rgba(255,82,82,.15);
+            color: #ffcdd2;
+        }
+        .node--rescheduled {
+            background: linear-gradient(135deg, #e65100, #ef6c00);
+            border: 1.5px solid rgba(255,171,64,.5);
+            box-shadow: 0 0 24px rgba(255,171,64,.15);
+            color: #fff3e0;
+        }
+        .node--payment {
+            background: linear-gradient(135deg, #311b92, #4527a0);
+            border: 1.5px solid rgba(179,136,255,.5);
+            box-shadow: 0 0 24px rgba(179,136,255,.12);
+            color: #ede7f6;
+        }
+        .node--email {
+            background: linear-gradient(135deg, #006064, #00838f);
+            border: 1.5px solid rgba(132,255,255,.4);
+            box-shadow: 0 0 24px rgba(132,255,255,.12);
+            color: var(--accent-cyan);
+        }
+        .node--driver-pay {
+            background: linear-gradient(135deg, #33691e, #558b2f);
+            border: 1.5px solid rgba(255,215,64,.4);
+            box-shadow: 0 0 24px rgba(255,215,64,.12);
+            color: var(--accent-yellow);
+        }
+        .node--trigger {
+            background: rgba(255,255,255,.05);
+            border: 1.5px dashed rgba(255,255,255,.2);
+            color: var(--text-secondary);
+            font-weight: 400;
+            font-size: .82rem;
+            min-width: 160px;
+            padding: 10px 20px;
+        }
+
+        .badge--email {
+            background: linear-gradient(135deg, #00bcd4, #0097a7);
+            color: #fff;
+        }
+        .badge--payment {
+            background: linear-gradient(135deg, #7c4dff, #651fff);
+            color: #fff;
+        }
+        .badge--refund {
+            background: linear-gradient(135deg, #ff6e40, #ff3d00);
+            color: #fff;
+        }
+
+        /* ─── Arrow / connector ─── */
+        .arrow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            animation: fadeSlideIn .5s ease-out both;
+        }
+        .arrow .line {
+            width: 2px;
+            height: 32px;
+            background: linear-gradient(to bottom, rgba(79,195,247,.5), rgba(179,136,255,.5));
+        }
+        .arrow .label {
+            font-size: .72rem;
+            color: var(--text-secondary);
+            background: var(--bg-primary);
+            padding: 2px 10px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,.08);
+            white-space: nowrap;
+        }
+        .arrow .chevron {
+            width: 0; height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid var(--accent-purple);
+        }
+
+        /* ─── Branch (horizontal split) ─── */
+        .branch {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            flex-wrap: wrap;
+            position: relative;
+        }
+        .branch::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 15%;
+            right: 15%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(179,136,255,.4), transparent);
+        }
+        .branch-arm {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+
+        /* ─── Side-by-side layout ─── */
+        .dual-flow {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 48px;
+            margin-top: 20px;
+        }
+        .dual-flow .flow-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            background: rgba(255,255,255,.02);
+            border: 1px solid rgba(255,255,255,.06);
+            border-radius: 20px;
+            padding: 28px 20px;
+        }
+        .flow-col-title {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ─── Email table ─── */
+        .email-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 6px;
+            margin-top: 12px;
+        }
+        .email-table th {
+            font-size: .75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            padding: 10px 14px;
+            text-align: left;
+        }
+        .email-table td {
+            background: rgba(255,255,255,.04);
+            padding: 12px 14px;
+            font-size: .85rem;
+        }
+        .email-table tr td:first-child { border-radius: 10px 0 0 10px; }
+        .email-table tr td:last-child  { border-radius: 0 10px 10px 0; }
+        .email-table .trigger-cell {
+            font-weight: 600;
+        }
+        .email-table .recipient-cell {
+            color: var(--accent-cyan);
+        }
+        .pill {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: .72rem;
+            font-weight: 600;
+        }
+        .pill--passenger { background: rgba(79,195,247,.15); color: var(--accent-blue); }
+        .pill--driver    { background: rgba(105,240,174,.15); color: var(--accent-green); }
+        .pill--both      { background: rgba(179,136,255,.15); color: var(--accent-purple); }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 800px) {
+            .dual-flow { grid-template-columns: 1fr; }
+            .branch { gap: 16px; }
+            .header h1 { font-size: 1.6rem; }
+        }
+
+        /* ─── Animations ─── */
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .flow > *:nth-child(1)  { animation-delay: .05s; }
+        .flow > *:nth-child(2)  { animation-delay: .10s; }
+        .flow > *:nth-child(3)  { animation-delay: .15s; }
+        .flow > *:nth-child(4)  { animation-delay: .20s; }
+        .flow > *:nth-child(5)  { animation-delay: .25s; }
+        .flow > *:nth-child(6)  { animation-delay: .30s; }
+        .flow > *:nth-child(7)  { animation-delay: .35s; }
+        .flow > *:nth-child(8)  { animation-delay: .40s; }
+        .flow > *:nth-child(9)  { animation-delay: .45s; }
+        .flow > *:nth-child(10) { animation-delay: .50s; }
+        .flow > *:nth-child(11) { animation-delay: .55s; }
+        .flow > *:nth-child(12) { animation-delay: .60s; }
+        .flow > *:nth-child(13) { animation-delay: .65s; }
+
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+        }
+        .tooltip .tip-text {
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            bottom: calc(100% + 10px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-card);
+            border: 1px solid rgba(255,255,255,.12);
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: .78rem;
+            font-weight: 400;
+            color: var(--text-secondary);
+            width: 240px;
+            text-align: left;
+            box-shadow: 0 8px 32px rgba(0,0,0,.5);
+            transition: opacity .2s, visibility .2s;
+            z-index: 100;
+            line-height: 1.5;
+        }
+        .tooltip:hover .tip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+            font-size: .75rem;
+            position: relative;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+<div class="header">
+    <h1>🚗 Smart Ride Sharing — Complete Flow Diagram</h1>
+    <p>Booking Status · Razorpay Payment Status · Driver Payout Status · Email Notifications</p>
+    <div class="legend-bar">
+        <div class="legend-item"><div class="legend-dot" style="background: linear-gradient(135deg,#1a237e,#283593);"></div> Pending</div>
+        <div class="legend-item"><div class="legend-dot" style="background: linear-gradient(135deg,#1b5e20,#2e7d32);"></div> Accepted</div>
+        <div class="legend-item"><div class="legend-dot" style="background: linear-gradient(135deg,#4a148c,#6a1b9a);"></div> Confirmed</div>
+        <div class="legend-item"><div class="legend-dot" style="background: linear-gradient(135deg,#004d40,#00695c);"></div> Completed</div>
+        <div class="legend-item"><div class="legend-dot" style="background: linear-gradient(135deg,#b71c1c,#c62828);"></div> Cancelled</div>
+        <div class="legend-item"><div class="legend-dot" style="background: linear-gradient(135deg,#e65100,#ef6c00);"></div> Rescheduled</div>
+        <div class="legend-item"><div class="legend-dot" style="background: linear-gradient(135deg,#006064,#00838f);"></div> Email Sent</div>
+        <div class="legend-item"><div class="legend-dot" style="background: linear-gradient(135deg,#311b92,#4527a0);"></div> Payment</div>
+    </div>
+</div>
+
+<div class="canvas">
+
+    <!-- ════════════════════ §1  BOOKING STATUS FLOW ════════════════════ -->
+    <div class="section-title"><span class="icon">📋</span> 1. Booking Status Flow</div>
+
+    <div class="flow">
+
+        <!-- PENDING -->
+        <div class="node node--pending tooltip">
+            🕐 PENDING
+            <span class="sub">Passenger books a ride</span>
+            <span class="badge badge--email">📧 ×2</span>
+            <span class="tip-text">
+                <strong>BookingService.createBooking()</strong><br>
+                Booking created with status <code>PENDING</code>.<br>
+                Two emails sent: booking confirmation to passenger &amp; ride-booking notification to driver.
+            </span>
+        </div>
+
+        <!-- Arrow down → decision -->
+        <div class="arrow">
+            <div class="line"></div>
+            <div class="label">Driver reviews request</div>
+            <div class="line" style="height:16px;"></div>
+            <div class="chevron"></div>
+        </div>
+
+        <!-- Branch: Accept / Decline -->
+        <div class="branch">
+            <!-- LEFT — ACCEPTED -->
+            <div class="branch-arm">
+                <div class="arrow">
+                    <div class="line" style="height:20px;"></div>
+                    <div class="label">✅ Driver accepts</div>
+                    <div class="line" style="height:12px;"></div>
+                    <div class="chevron"></div>
+                </div>
+                <div class="node node--accepted tooltip">
+                    ✅ ACCEPTED
+                    <span class="sub">Awaiting passenger payment</span>
+                    <span class="badge badge--email">📧</span>
+                    <span class="tip-text">
+                        <strong>BookingService.acceptBooking()</strong><br>
+                        Status → <code>ACCEPTED</code>. Available seats decremented.<br>
+                        Email: Driver acceptance notification sent to <strong>passenger</strong>.
+                    </span>
+                </div>
+
+                <!-- Arrow to Razorpay -->
+                <div class="arrow">
+                    <div class="line"></div>
+                    <div class="label">💳 Razorpay payment initiated</div>
+                    <div class="line" style="height:12px;"></div>
+                    <div class="chevron"></div>
+                </div>
+
+                <!-- PAYMENT GATEWAY -->
+                <div class="node node--payment tooltip">
+                    💳 RAZORPAY PAYMENT
+                    <span class="sub">createOrder() → verifyPayment()</span>
+                    <span class="badge badge--payment">PAY</span>
+                    <span class="tip-text">
+                        <strong>RazorpayPaymentService.createOrder()</strong><br>
+                        Creates Razorpay order. Payment record saved with status <code>PENDING</code>.<br>
+                        On success: <code>verifyPayment()</code> sets payment to <code>SUCCESS</code>, booking to <code>CONFIRMED</code>.
+                    </span>
+                </div>
+
+                <!-- Branch: Success / Fail -->
+                <div class="arrow">
+                    <div class="line"></div>
+                    <div class="chevron"></div>
+                </div>
+
+                <div class="branch" style="gap:48px;">
+                    <!-- Payment SUCCESS -->
+                    <div class="branch-arm">
+                        <div class="arrow">
+                            <div class="line" style="height:16px;"></div>
+                            <div class="label" style="background:rgba(105,240,174,.1); color:var(--accent-green);">✓ Signature verified</div>
+                            <div class="line" style="height:12px;"></div>
+                            <div class="chevron" style="border-top-color: var(--accent-green);"></div>
+                        </div>
+                        <div class="node node--confirmed tooltip">
+                            🔒 CONFIRMED
+                            <span class="sub">Payment successful</span>
+                            <span class="tip-text">
+                                <strong>verifyPayment()</strong><br>
+                                Payment status → <code>SUCCESS</code><br>
+                                Booking status → <code>CONFIRMED</code><br>
+                                Ride is locked in. Awaiting completion or reschedule.
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Payment FAIL -->
+                    <div class="branch-arm">
+                        <div class="arrow">
+                            <div class="line" style="height:16px;"></div>
+                            <div class="label" style="background:rgba(255,82,82,.1); color:var(--accent-red);">✗ Verification failed</div>
+                            <div class="line" style="height:12px;"></div>
+                            <div class="chevron" style="border-top-color: var(--accent-red);"></div>
+                        </div>
+                        <div class="node node--cancelled tooltip">
+                            ❌ PAYMENT FAILED
+                            <span class="sub">Payment status: FAILED</span>
+                            <span class="tip-text">
+                                Signature mismatch or Razorpay error.<br>
+                                Payment status → <code>FAILED</code>.<br>
+                                Booking remains <code>ACCEPTED</code> — passenger can retry payment.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT — DECLINED / CANCELLED -->
+            <div class="branch-arm">
+                <div class="arrow">
+                    <div class="line" style="height:20px;"></div>
+                    <div class="label" style="background:rgba(255,82,82,.08); color:#ff8a80;">✗ Driver declines</div>
+                    <div class="line" style="height:12px;"></div>
+                    <div class="chevron" style="border-top-color: var(--accent-red);"></div>
+                </div>
+                <div class="node node--cancelled tooltip">
+                    ❌ CANCELLED
+                    <span class="sub">Driver declined the booking</span>
+                    <span class="tip-text">
+                        <strong>BookingService.declineBooking()</strong><br>
+                        Status → <code>CANCELLED</code>.<br>
+                        No payment was ever initiated.
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Post-CONFIRMED branches ── -->
+        <div class="arrow" style="margin-top: 24px;">
+            <div class="line" style="background: linear-gradient(to bottom, rgba(179,136,255,.5), rgba(105,240,174,.5));"></div>
+            <div class="label">After CONFIRMED</div>
+            <div class="line" style="height:12px; background: linear-gradient(to bottom, rgba(105,240,174,.5), rgba(179,136,255,.3));"></div>
+            <div class="chevron" style="border-top-color: var(--accent-green);"></div>
+        </div>
+
+        <div class="branch" style="gap: 36px;">
+            <!-- COMPLETED -->
+            <div class="branch-arm">
+                <div class="arrow">
+                    <div class="line" style="height:16px;"></div>
+                    <div class="label" style="background:rgba(105,240,174,.1); color:var(--accent-green);">🏁 Driver marks complete</div>
+                    <div class="line" style="height:12px;"></div>
+                    <div class="chevron" style="border-top-color: var(--accent-green);"></div>
+                </div>
+                <div class="node node--completed tooltip">
+                    🏁 COMPLETED
+                    <span class="sub">Ride finished successfully</span>
+                    <span class="badge badge--payment">💰</span>
+                    <span class="tip-text">
+                        <strong>BookingService.completeBooking()</strong><br>
+                        Status → <code>COMPLETED</code>.<br>
+                        Triggers <code>transferToDriver()</code> — driver payout initiated.
+                    </span>
+                </div>
+            </div>
+
+            <!-- CANCELLED (post-confirmed) -->
+            <div class="branch-arm">
+                <div class="arrow">
+                    <div class="line" style="height:16px;"></div>
+                    <div class="label" style="background:rgba(255,82,82,.08); color:#ff8a80;">Passenger cancels</div>
+                    <div class="line" style="height:12px;"></div>
+                    <div class="chevron" style="border-top-color: var(--accent-red);"></div>
+                </div>
+                <div class="node node--cancelled tooltip">
+                    ❌ CANCELLED
+                    <span class="sub">After payment — refund triggered</span>
+                    <span class="badge badge--refund">REFUND</span>
+                    <span class="tip-text">
+                        <strong>BookingService.cancelBooking()</strong><br>
+                        Status → <code>CANCELLED</code>.<br>
+                        Payment status → <code>REFUNDED</code>. Seats restored.<br>
+                        Email: Booking cancellation notification sent to <strong>driver</strong>.
+                    </span>
+                </div>
+            </div>
+
+            <!-- RESCHEDULED -->
+            <div class="branch-arm">
+                <div class="arrow">
+                    <div class="line" style="height:16px;"></div>
+                    <div class="label" style="background:rgba(255,171,64,.1); color:var(--accent-orange);">🔄 Driver reschedules ride</div>
+                    <div class="line" style="height:12px;"></div>
+                    <div class="chevron" style="border-top-color: var(--accent-orange);"></div>
+                </div>
+                <div class="node node--rescheduled tooltip">
+                    🔄 RESCHEDULED
+                    <span class="sub">Passenger must accept or cancel</span>
+                    <span class="badge badge--email">📧</span>
+                    <span class="tip-text">
+                        <strong>BookingService (via RideService)</strong><br>
+                        All confirmed bookings → <code>RESCHEDULED</code>.<br>
+                        Payments → <code>REFUNDED</code>.<br>
+                        Email: Reschedule notification + refund notification sent to <strong>passenger</strong>.
+                    </span>
+                </div>
+
+                <!-- Sub-branch from RESCHEDULED -->
+                <div class="arrow">
+                    <div class="line"></div>
+                    <div class="label">Passenger decides</div>
+                    <div class="line" style="height:12px;"></div>
+                    <div class="chevron"></div>
+                </div>
+
+                <div class="branch" style="gap:24px;">
+                    <div class="branch-arm">
+                        <div class="arrow">
+                            <div class="line" style="height:12px;"></div>
+                            <div class="label" style="font-size:.68rem;">✅ Accept</div>
+                            <div class="line" style="height:8px;"></div>
+                            <div class="chevron" style="border-top-color: var(--accent-green);"></div>
+                        </div>
+                        <div class="node node--confirmed tooltip" style="min-width:150px; padding:12px 20px; font-size:.85rem;">
+                            🔒 CONFIRMED
+                            <span class="sub">Re-payment required</span>
+                            <span class="tip-text">
+                                <strong>acceptRescheduledRide()</strong><br>
+                                Status → <code>CONFIRMED</code>.<br>
+                                Passenger must pay again for the new schedule.
+                            </span>
+                        </div>
+                    </div>
+                    <div class="branch-arm">
+                        <div class="arrow">
+                            <div class="line" style="height:12px;"></div>
+                            <div class="label" style="font-size:.68rem;">❌ Cancel</div>
+                            <div class="line" style="height:8px;"></div>
+                            <div class="chevron" style="border-top-color: var(--accent-red);"></div>
+                        </div>
+                        <div class="node node--cancelled tooltip" style="min-width:150px; padding:12px 20px; font-size:.85rem;">
+                            ❌ CANCELLED
+                            <span class="sub">Refund already issued</span>
+                            <span class="tip-text">
+                                <strong>cancelRescheduledRide()</strong><br>
+                                Status → <code>CANCELLED</code>.<br>
+                                Seats restored. Refund was already processed during reschedule.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════════ §2  PAYMENT STATUS + DRIVER PAYOUT ════════════════════ -->
+    <div class="section-title" style="border-left-color: var(--accent-purple);"><span class="icon">💳</span> 2. Payment Status &amp; Driver Payout Flow</div>
+
+    <div class="dual-flow">
+        <!-- LEFT: Razorpay Payment Status -->
+        <div class="flow-col">
+            <div class="flow-col-title" style="color: var(--accent-purple);">💳 Razorpay Payment Status</div>
+            <div class="flow">
+                <div class="node node--pending" style="min-width:180px;">
+                    🕐 PENDING
+                    <span class="sub">Order created, awaiting payment</span>
+                </div>
+                <div class="arrow">
+                    <div class="line"></div>
+                    <div class="chevron"></div>
+                </div>
+                <div class="branch" style="gap:24px;">
+                    <div class="branch-arm">
+                        <div class="arrow">
+                            <div class="line" style="height:12px;"></div>
+                            <div class="label" style="font-size:.7rem;">✓ Verified</div>
+                            <div class="line" style="height:8px;"></div>
+                            <div class="chevron" style="border-top-color:var(--accent-green);"></div>
+                        </div>
+                        <div class="node node--completed" style="min-width:140px; font-size:.85rem;">
+                            ✅ SUCCESS
+                        </div>
+                        <div class="arrow">
+                            <div class="line" style="height:16px;"></div>
+                            <div class="label" style="font-size:.68rem;">Cancel / Reschedule</div>
+                            <div class="line" style="height:8px;"></div>
+                            <div class="chevron" style="border-top-color:var(--accent-orange);"></div>
+                        </div>
+                        <div class="node node--rescheduled" style="min-width:140px; font-size:.85rem;">
+                            💸 REFUNDED
+                        </div>
+                    </div>
+                    <div class="branch-arm">
+                        <div class="arrow">
+                            <div class="line" style="height:12px;"></div>
+                            <div class="label" style="font-size:.7rem;">✗ Failed</div>
+                            <div class="line" style="height:8px;"></div>
+                            <div class="chevron" style="border-top-color:var(--accent-red);"></div>
+                        </div>
+                        <div class="node node--cancelled" style="min-width:140px; font-size:.85rem;">
+                            ❌ FAILED
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: Driver Payout Status -->
+        <div class="flow-col">
+            <div class="flow-col-title" style="color: var(--accent-yellow);">💰 Driver Payout Status</div>
+            <div class="flow">
+                <div class="node node--pending" style="min-width:180px;">
+                    🕐 PENDING
+                    <span class="sub">Awaiting ride completion</span>
+                </div>
+                <div class="arrow">
+                    <div class="line"></div>
+                    <div class="label" style="font-size:.7rem;">Ride completed</div>
+                    <div class="line" style="height:8px;"></div>
+                    <div class="chevron"></div>
+                </div>
+                <div class="node node--payment" style="min-width:180px;">
+                    ⏳ PROCESSING
+                    <span class="sub">Transfer initiated</span>
+                </div>
+                <div class="arrow">
+                    <div class="line"></div>
+                    <div class="chevron"></div>
+                </div>
+                <div class="branch" style="gap:24px;">
+                    <div class="branch-arm">
+                        <div class="arrow">
+                            <div class="line" style="height:12px;"></div>
+                            <div class="label" style="font-size:.7rem;">✓ Done</div>
+                            <div class="line" style="height:8px;"></div>
+                            <div class="chevron" style="border-top-color:var(--accent-green);"></div>
+                        </div>
+                        <div class="node node--completed" style="min-width:140px; font-size:.85rem;">
+                            ✅ COMPLETED
+                            <span class="sub">Driver wallet credited</span>
+                        </div>
+                    </div>
+                    <div class="branch-arm">
+                        <div class="arrow">
+                            <div class="line" style="height:12px;"></div>
+                            <div class="label" style="font-size:.7rem;">✗ Error</div>
+                            <div class="line" style="height:8px;"></div>
+                            <div class="chevron" style="border-top-color:var(--accent-red);"></div>
+                        </div>
+                        <div class="node node--cancelled" style="min-width:140px; font-size:.85rem;">
+                            ❌ FAILED
+                            <span class="sub">Retry needed</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════════ §3  EMAIL NOTIFICATIONS ════════════════════ -->
+    <div class="section-title" style="border-left-color: var(--accent-cyan);"><span class="icon">📧</span> 3. Email Notifications Triggered</div>
+
+    <div style="background: rgba(255,255,255,.02); border: 1px solid rgba(255,255,255,.06); border-radius: 20px; padding: 24px; overflow-x: auto;">
+        <table class="email-table">
+            <thead>
+                <tr>
+                    <th>Trigger Event</th>
+                    <th>Email Method</th>
+                    <th>Recipient</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="trigger-cell">📋 Booking Created</td>
+                    <td><code>sendBookingConfirmation()</code></td>
+                    <td><span class="pill pill--passenger">🧑 Passenger</span></td>
+                    <td>Confirmation with ride details — source, destination, date &amp; time</td>
+                </tr>
+                <tr>
+                    <td class="trigger-cell">📋 Booking Created</td>
+                    <td><code>sendRideBookingNotification()</code></td>
+                    <td><span class="pill pill--driver">🚗 Driver</span></td>
+                    <td>Notifies driver a new passenger has booked their ride</td>
+                </tr>
+                <tr>
+                    <td class="trigger-cell">✅ Driver Accepts</td>
+                    <td><code>sendDriverAcceptanceNotification()</code></td>
+                    <td><span class="pill pill--passenger">🧑 Passenger</span></td>
+                    <td>Acceptance notice with fare amount — prompts payment</td>
+                </tr>
+                <tr>
+                    <td class="trigger-cell">❌ Passenger Cancels</td>
+                    <td><code>sendBookingCancellationNotification()</code></td>
+                    <td><span class="pill pill--driver">🚗 Driver</span></td>
+                    <td>Informs driver the booking was cancelled</td>
+                </tr>
+                <tr>
+                    <td class="trigger-cell">❌ Driver Cancels Ride</td>
+                    <td><code>sendRideCancellationNotification()</code></td>
+                    <td><span class="pill pill--passenger">🧑 Passenger</span></td>
+                    <td>Cancellation + reason. Refund processed if payment was made</td>
+                </tr>
+                <tr>
+                    <td class="trigger-cell">🔄 Ride Rescheduled</td>
+                    <td><code>sendRideRescheduleNotification()</code></td>
+                    <td><span class="pill pill--passenger">🧑 Passenger</span></td>
+                    <td>New date/time, reason, and request to accept or cancel</td>
+                </tr>
+                <tr>
+                    <td class="trigger-cell">🔄 Reschedule Refund</td>
+                    <td><code>sendRescheduleRefundNotification()</code></td>
+                    <td><span class="pill pill--driver">🚗 Driver</span></td>
+                    <td>Notifies driver that refunds were issued to passengers</td>
+                </tr>
+                <tr>
+                    <td class="trigger-cell">⏰ Ride Reminder</td>
+                    <td><code>sendRideReminderNotification()</code></td>
+                    <td><span class="pill pill--passenger">🧑 Passenger</span></td>
+                    <td>Automated reminder X hours before departure</td>
+                </tr>
+                <tr>
+                    <td class="trigger-cell">🚗 Ride Posted</td>
+                    <td><code>sendRidePostedNotification()</code></td>
+                    <td><span class="pill pill--driver">🚗 Driver</span></td>
+                    <td>Confirmation that the ride has been published successfully</td>
+                </tr>
+                <tr>
+                    <td class="trigger-cell">🛡️ Driver Approval</td>
+                    <td><code>sendDriverApprovalNotification()</code></td>
+                    <td><span class="pill pill--driver">🚗 Driver</span></td>
+                    <td>Admin approves or rejects driver registration</td>
+                </tr>
+                <tr>
+                    <td class="trigger-cell">🔑 Temp Credentials</td>
+                    <td><code>sendTempCredentials()</code></td>
+                    <td><span class="pill pill--both">👥 User</span></td>
+                    <td>Temporary password sent on registration</td>
+                </tr>
+                <tr>
+                    <td class="trigger-cell">🔑 Forgot Password</td>
+                    <td><code>sendForgotPasswordEmail()</code></td>
+                    <td><span class="pill pill--both">👥 User</span></td>
+                    <td>Temporary password reset email</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ════════════════════ §4  ENUM REFERENCE ════════════════════ -->
+    <div class="section-title" style="border-left-color: var(--accent-yellow);"><span class="icon">📦</span> 4. Enum Reference (from Codebase)</div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 8px;">
+        <!-- BookingStatus -->
+        <div style="background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 20px;">
+            <div style="font-weight: 700; margin-bottom: 12px; color: var(--accent-blue); font-size: .9rem;">Booking.BookingStatus</div>
+            <div style="display: flex; flex-direction: column; gap: 6px; font-size: .82rem;">
+                <div>🕐 <code>PENDING</code> — Waiting for driver</div>
+                <div>✅ <code>ACCEPTED</code> — Driver accepted</div>
+                <div>🔒 <code>CONFIRMED</code> — Payment done</div>
+                <div>🔄 <code>RESCHEDULED</code> — Driver rescheduled</div>
+                <div>❌ <code>CANCELLED</code> — Cancelled</div>
+                <div>🏁 <code>COMPLETED</code> — Ride finished</div>
+            </div>
+        </div>
+        <!-- PaymentStatus -->
+        <div style="background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 20px;">
+            <div style="font-weight: 700; margin-bottom: 12px; color: var(--accent-purple); font-size: .9rem;">Payment.PaymentStatus</div>
+            <div style="display: flex; flex-direction: column; gap: 6px; font-size: .82rem;">
+                <div>🕐 <code>PENDING</code> — Awaiting payment</div>
+                <div>✅ <code>SUCCESS</code> — Payment verified</div>
+                <div>❌ <code>FAILED</code> — Verification failed</div>
+                <div>💸 <code>REFUNDED</code> — Money returned</div>
+            </div>
+        </div>
+        <!-- PaymentType -->
+        <div style="background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 20px;">
+            <div style="font-weight: 700; margin-bottom: 12px; color: var(--accent-orange); font-size: .9rem;">Payment.PaymentType</div>
+            <div style="display: flex; flex-direction: column; gap: 6px; font-size: .82rem;">
+                <div>💳 <code>BOOKING</code> — Passenger payment</div>
+                <div>💰 <code>DRIVER_PAYOUT</code> — To driver</div>
+            </div>
+        </div>
+        <!-- DriverPaymentStatus -->
+        <div style="background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 20px;">
+            <div style="font-weight: 700; margin-bottom: 12px; color: var(--accent-yellow); font-size: .9rem;">Payment.DriverPaymentStatus</div>
+            <div style="display: flex; flex-direction: column; gap: 6px; font-size: .82rem;">
+                <div>🕐 <code>PENDING</code> — Not transferred</div>
+                <div>⏳ <code>PROCESSING</code> — In progress</div>
+                <div>✅ <code>COMPLETED</code> — Wallet credited</div>
+                <div>❌ <code>FAILED</code> — Transfer failed</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="footer">
+    Smart Ride Sharing Application — Infosys Springboard · Flow Diagram generated from codebase models &amp; services
+</div>
+
+</body>
+</html>

@@ -40,7 +40,8 @@ public class BookingService {
     // ---------------- CREATE BOOKING ----------------
     @Transactional
     public Booking createBooking(Long passengerId, BookingRequest request) {
-        logger.info("Attempting to create booking for passenger ID: {} and ride ID: {}", passengerId, request.getRideId());
+        logger.info("Attempting to create booking for passenger ID: {} and ride ID: {}", passengerId,
+                request.getRideId());
 
         // Ride validation
         Ride ride = rideRepository.findById(request.getRideId())
@@ -53,8 +54,10 @@ public class BookingService {
         logger.debug("Requested number of seats: {}, available seats: {}", numberOfSeats, ride.getAvailableSeats());
 
         if (ride.getAvailableSeats() < numberOfSeats) {
-            logger.error("Not enough seats for booking. Requested: {}, Available: {}", numberOfSeats, ride.getAvailableSeats());
-            throw new InsufficientSeatsException("Not enough seats available. Only " + ride.getAvailableSeats() + " seat(s) remaining.");
+            logger.error("Not enough seats for booking. Requested: {}, Available: {}", numberOfSeats,
+                    ride.getAvailableSeats());
+            throw new InsufficientSeatsException(
+                    "Not enough seats available. Only " + ride.getAvailableSeats() + " seat(s) remaining.");
         }
 
         // Passenger validation
@@ -80,15 +83,17 @@ public class BookingService {
         // Prevent duplicate bookings for same ride
         boolean alreadyBooked = bookingRepository.existsByRideIdAndPassengerId(request.getRideId(), passengerId);
         if (alreadyBooked) {
-            logger.warn("Duplicate booking attempt detected for passenger ID: {} and ride ID: {}", passengerId, request.getRideId());
+            logger.warn("Duplicate booking attempt detected for passenger ID: {} and ride ID: {}", passengerId,
+                    request.getRideId());
             throw new DuplicateBookingException("You have already booked this ride.");
         }
 
         // Fare calculation
         double passengerDistance = fareCalculationService.calculateDistance(pickupLocation, dropoffLocation);
-        double farePerSeat = fareCalculationService.calculateFare(passengerDistance);
+        double farePerSeat = ride.getEstimatedFare() != null ? ride.getEstimatedFare() : 50.0;
         double totalFareAmount = farePerSeat * numberOfSeats;
-        logger.debug("Fare calculated: Distance = {}, Fare per seat = {}, Total = {}", passengerDistance, farePerSeat, totalFareAmount);
+        logger.debug("Fare calculated: Distance = {}, Fare per seat = {}, Total = {}", passengerDistance, farePerSeat,
+                totalFareAmount);
 
         // Booking creation
         Booking booking = new Booking();
@@ -190,7 +195,7 @@ public class BookingService {
             User passenger = booking.getPassenger();
             String dateStr = ride.getDate() != null ? ride.getDate().toString() : "N/A";
             String timeStr = ride.getTime() != null ? ride.getTime().toString() : "N/A";
-            
+
             emailService.sendBookingCancellationNotification(
                     driver.getEmail(),
                     driver.getName() != null ? driver.getName() : driver.getEmail(),
@@ -198,14 +203,14 @@ public class BookingService {
                     booking.getPickupLocation(),
                     booking.getDropoffLocation(),
                     dateStr,
-                    timeStr
-            );
+                    timeStr);
         } catch (Exception e) {
             logger.error("Failed to send booking cancellation email notification: {}", e.getMessage());
             // Don't fail the transaction if email fails
         }
 
-        logger.info("Booking ID: {} cancelled successfully. Restored {} seat(s) to ride ID: {}", bookingId, seatsToRestore, ride.getId());
+        logger.info("Booking ID: {} cancelled successfully. Restored {} seat(s) to ride ID: {}", bookingId,
+                seatsToRestore, ride.getId());
         return updatedBooking;
     }
 
@@ -241,7 +246,8 @@ public class BookingService {
         // Send cancellation notifications to all passengers
         String dateStr = ride.getDate() != null ? ride.getDate().toString() : "N/A";
         String timeStr = ride.getTime() != null ? ride.getTime().toString() : "N/A";
-        String driverName = ride.getDriver().getName() != null ? ride.getDriver().getName() : ride.getDriver().getEmail();
+        String driverName = ride.getDriver().getName() != null ? ride.getDriver().getName()
+                : ride.getDriver().getEmail();
 
         for (Booking booking : bookings) {
             if (booking.getStatus() != Booking.BookingStatus.CANCELLED
@@ -254,7 +260,7 @@ public class BookingService {
                 try {
                     User passenger = booking.getPassenger();
                     String passengerName = passenger.getName() != null ? passenger.getName() : passenger.getEmail();
-                    
+
                     emailService.sendRideCancellationNotification(
                             passenger.getEmail(),
                             passengerName,
@@ -266,7 +272,7 @@ public class BookingService {
                             null // No specific reason provided
                     );
                 } catch (Exception e) {
-                    logger.error("Failed to send ride cancellation email notification to passenger {}: {}", 
+                    logger.error("Failed to send ride cancellation email notification to passenger {}: {}",
                             booking.getPassenger().getEmail(), e.getMessage());
                     // Don't fail the transaction if email fails
                 }
@@ -280,7 +286,7 @@ public class BookingService {
         return updatedRide;
     }
 
-    // ---------------- ACCEPT BOOKING ---------------- 
+    // ---------------- ACCEPT BOOKING ----------------
     @Transactional
     public Booking acceptBooking(Long driverId, Long bookingId) {
         logger.info("Driver ID: {} attempting to accept booking ID: {}", driverId, bookingId);
@@ -306,13 +312,14 @@ public class BookingService {
         Ride ride = booking.getRide();
         if (ride.getAvailableSeats() < booking.getNumberOfSeats()) {
             logger.error("Not enough seats available for booking ID: {}", bookingId);
-            throw new InsufficientSeatsException("Not enough seats available. Only " + ride.getAvailableSeats() + " seat(s) remaining.");
+            throw new InsufficientSeatsException(
+                    "Not enough seats available. Only " + ride.getAvailableSeats() + " seat(s) remaining.");
         }
 
         // Decrement available seats when booking is accepted
         ride.setAvailableSeats(ride.getAvailableSeats() - booking.getNumberOfSeats());
         rideRepository.save(ride);
-        logger.debug("Decremented {} seat(s) from ride ID: {}. Remaining seats: {}", 
+        logger.debug("Decremented {} seat(s) from ride ID: {}. Remaining seats: {}",
                 booking.getNumberOfSeats(), ride.getId(), ride.getAvailableSeats());
 
         booking.setStatus(Booking.BookingStatus.ACCEPTED);
@@ -324,7 +331,7 @@ public class BookingService {
             User driver = ride.getDriver();
             String dateStr = ride.getDate() != null ? ride.getDate().toString() : "N/A";
             String timeStr = ride.getTime() != null ? ride.getTime().toString() : "N/A";
-            
+
             emailService.sendDriverAcceptanceNotification(
                     passenger.getEmail(),
                     passenger.getName() != null ? passenger.getName() : passenger.getEmail(),
@@ -333,8 +340,7 @@ public class BookingService {
                     booking.getDropoffLocation(),
                     dateStr,
                     timeStr,
-                    booking.getFareAmount()
-            );
+                    booking.getFareAmount());
         } catch (Exception e) {
             logger.error("Failed to send acceptance email notification: {}", e.getMessage());
             // Don't fail the transaction if email fails
@@ -344,7 +350,7 @@ public class BookingService {
         return updatedBooking;
     }
 
-    // ---------------- DECLINE BOOKING ---------------- 
+    // ---------------- DECLINE BOOKING ----------------
     @Transactional
     public Booking declineBooking(Long driverId, Long bookingId) {
         logger.info("Driver ID: {} attempting to decline booking ID: {}", driverId, bookingId);
@@ -373,14 +379,14 @@ public class BookingService {
         return updatedBooking;
     }
 
-    // ---------------- RIDE HISTORY ---------------- 
+    // ---------------- RIDE HISTORY ----------------
     public List<Booking> getRideHistoryByPassenger(Long passengerId) {
         logger.info("Fetching ride history for passenger ID: {}", passengerId);
         List<Booking> allBookings = bookingRepository.findAllByPassengerId(passengerId);
         List<Booking> history = allBookings.stream()
-                .filter(b -> b.getStatus() == Booking.BookingStatus.COMPLETED || 
-                            b.getStatus() == Booking.BookingStatus.CANCELLED ||
-                            b.getStatus() == Booking.BookingStatus.CONFIRMED)
+                .filter(b -> b.getStatus() == Booking.BookingStatus.COMPLETED ||
+                        b.getStatus() == Booking.BookingStatus.CANCELLED ||
+                        b.getStatus() == Booking.BookingStatus.CONFIRMED)
                 .toList();
         logger.debug("Found {} historical bookings for passenger ID: {}", history.size(), passengerId);
         return history;
@@ -390,15 +396,16 @@ public class BookingService {
         logger.info("Fetching ride history for driver ID: {}", driverId);
         List<Booking> allBookings = bookingRepository.findAllByRideDriverId(driverId);
         List<Booking> history = allBookings.stream()
-                .filter(b -> b.getStatus() == Booking.BookingStatus.COMPLETED || 
-                            b.getStatus() == Booking.BookingStatus.CANCELLED ||
-                            b.getStatus() == Booking.BookingStatus.CONFIRMED)
+                .filter(b -> b.getStatus() == Booking.BookingStatus.COMPLETED ||
+                        b.getStatus() == Booking.BookingStatus.CANCELLED ||
+                        b.getStatus() == Booking.BookingStatus.CONFIRMED)
                 .toList();
         logger.debug("Found {} historical bookings for driver ID: {}", history.size(), driverId);
         return history;
     }
 
-    // ---------------- UPDATE BOOKING LOCATIONS (FOR TRAVELING PASSENGERS) ---------------- 
+    // ---------------- UPDATE BOOKING LOCATIONS (FOR TRAVELING PASSENGERS)
+    // ----------------
     @Transactional
     public Booking updateBookingLocations(Long passengerId, Long bookingId, UpdateBookingLocationsRequest request) {
         logger.info("Attempting to update locations for booking ID: {} by passenger ID: {}", bookingId, passengerId);
@@ -417,7 +424,8 @@ public class BookingService {
 
         // Only allow updates for CONFIRMED bookings (traveling passengers)
         if (booking.getStatus() != Booking.BookingStatus.CONFIRMED) {
-            logger.error("Booking ID: {} is not in CONFIRMED status. Current status: {}", bookingId, booking.getStatus());
+            logger.error("Booking ID: {} is not in CONFIRMED status. Current status: {}", bookingId,
+                    booking.getStatus());
             throw new InvalidLocationException("You can only update locations for confirmed bookings while traveling.");
         }
 
@@ -428,13 +436,16 @@ public class BookingService {
         // Validate that selected locations are from driver's choices
         if (!driverPickupLocations.contains(request.getPickupLocation1())) {
             logger.error("Pickup location 1 '{}' is not in driver's pickup locations", request.getPickupLocation1());
-            throw new InvalidLocationException("Pickup location 1 must be selected from the driver's available pickup locations.");
+            throw new InvalidLocationException(
+                    "Pickup location 1 must be selected from the driver's available pickup locations.");
         }
 
         if (request.getPickupLocation2() != null && !request.getPickupLocation2().trim().isEmpty()) {
             if (!driverPickupLocations.contains(request.getPickupLocation2())) {
-                logger.error("Pickup location 2 '{}' is not in driver's pickup locations", request.getPickupLocation2());
-                throw new InvalidLocationException("Pickup location 2 must be selected from the driver's available pickup locations.");
+                logger.error("Pickup location 2 '{}' is not in driver's pickup locations",
+                        request.getPickupLocation2());
+                throw new InvalidLocationException(
+                        "Pickup location 2 must be selected from the driver's available pickup locations.");
             }
             // Ensure pickup locations are different
             if (request.getPickupLocation1().equals(request.getPickupLocation2())) {
@@ -445,18 +456,23 @@ public class BookingService {
 
         if (!driverDropLocations.contains(request.getDropLocation())) {
             logger.error("Drop location '{}' is not in driver's drop locations", request.getDropLocation());
-            throw new InvalidLocationException("Drop location must be selected from the driver's available drop locations.");
+            throw new InvalidLocationException(
+                    "Drop location must be selected from the driver's available drop locations.");
         }
 
         // Update booking locations
         booking.setPickupLocation(request.getPickupLocation1());
-        booking.setPickupLocation2(request.getPickupLocation2() != null && !request.getPickupLocation2().trim().isEmpty() 
-                ? request.getPickupLocation2() : null);
+        booking.setPickupLocation2(
+                request.getPickupLocation2() != null && !request.getPickupLocation2().trim().isEmpty()
+                        ? request.getPickupLocation2()
+                        : null);
         booking.setDropoffLocation(request.getDropLocation());
 
-        // Recalculate fare based on new locations (use first pickup and drop for distance calculation)
-        double passengerDistance = fareCalculationService.calculateDistance(request.getPickupLocation1(), request.getDropLocation());
-        double farePerSeat = fareCalculationService.calculateFare(passengerDistance);
+        // Recalculate fare based on new locations (use first pickup and drop for
+        // distance calculation)
+        double passengerDistance = fareCalculationService.calculateDistance(request.getPickupLocation1(),
+                request.getDropLocation());
+        double farePerSeat = booking.getRide().getEstimatedFare() != null ? booking.getRide().getEstimatedFare() : 50.0;
         double totalFareAmount = farePerSeat * booking.getNumberOfSeats();
         booking.setDistanceCovered(passengerDistance);
         booking.setFareAmount(totalFareAmount);
@@ -466,10 +482,11 @@ public class BookingService {
         return updatedBooking;
     }
 
-    // ---------------- ACCEPT RESCHEDULED RIDE ---------------- 
+    // ---------------- ACCEPT RESCHEDULED RIDE ----------------
     @Transactional
     public Booking acceptRescheduledRide(Long passengerId, Long bookingId) {
-        logger.info("Passenger ID: {} attempting to accept rescheduled ride for booking ID: {}", passengerId, bookingId);
+        logger.info("Passenger ID: {} attempting to accept rescheduled ride for booking ID: {}", passengerId,
+                bookingId);
 
         Booking booking = bookingRepository.findByIdWithRide(bookingId)
                 .orElseThrow(() -> {
@@ -483,12 +500,16 @@ public class BookingService {
         }
 
         if (booking.getStatus() != Booking.BookingStatus.RESCHEDULED) {
-            logger.error("Booking ID: {} is not in RESCHEDULED status. Current status: {}", bookingId, booking.getStatus());
-            throw new InvalidLocationException("This booking is not rescheduled. Current status: " + booking.getStatus());
+            logger.error("Booking ID: {} is not in RESCHEDULED status. Current status: {}", bookingId,
+                    booking.getStatus());
+            throw new InvalidLocationException(
+                    "This booking is not rescheduled. Current status: " + booking.getStatus());
         }
 
-        // Change status back to CONFIRMED (if payment was made) or ACCEPTED (if payment wasn't made yet)
-        // Since rescheduled bookings were previously CONFIRMED or ACCEPTED, we restore to CONFIRMED
+        // Change status back to CONFIRMED (if payment was made) or ACCEPTED (if payment
+        // wasn't made yet)
+        // Since rescheduled bookings were previously CONFIRMED or ACCEPTED, we restore
+        // to CONFIRMED
         // The passenger will need to make payment again if needed
         booking.setStatus(Booking.BookingStatus.CONFIRMED);
         Booking updatedBooking = bookingRepository.save(booking);
@@ -504,10 +525,10 @@ public class BookingService {
                     passenger.getEmail(),
                     passengerName,
                     booking.getPickupLocation() != null ? booking.getPickupLocation() : booking.getRide().getSource(),
-                    booking.getDropoffLocation() != null ? booking.getDropoffLocation() : booking.getRide().getDestination(),
+                    booking.getDropoffLocation() != null ? booking.getDropoffLocation()
+                            : booking.getRide().getDestination(),
                     dateStr,
-                    timeStr
-            );
+                    timeStr);
         } catch (Exception e) {
             logger.error("Failed to send acceptance confirmation email: {}", e.getMessage());
         }
@@ -516,10 +537,11 @@ public class BookingService {
         return updatedBooking;
     }
 
-    // ---------------- CANCEL RESCHEDULED RIDE ---------------- 
+    // ---------------- CANCEL RESCHEDULED RIDE ----------------
     @Transactional
     public Booking cancelRescheduledRide(Long passengerId, Long bookingId) {
-        logger.info("Passenger ID: {} attempting to cancel rescheduled ride for booking ID: {}", passengerId, bookingId);
+        logger.info("Passenger ID: {} attempting to cancel rescheduled ride for booking ID: {}", passengerId,
+                bookingId);
 
         Booking booking = bookingRepository.findByIdWithRide(bookingId)
                 .orElseThrow(() -> {
@@ -533,8 +555,10 @@ public class BookingService {
         }
 
         if (booking.getStatus() != Booking.BookingStatus.RESCHEDULED) {
-            logger.error("Booking ID: {} is not in RESCHEDULED status. Current status: {}", bookingId, booking.getStatus());
-            throw new InvalidLocationException("This booking is not rescheduled. Current status: " + booking.getStatus());
+            logger.error("Booking ID: {} is not in RESCHEDULED status. Current status: {}", bookingId,
+                    booking.getStatus());
+            throw new InvalidLocationException(
+                    "This booking is not rescheduled. Current status: " + booking.getStatus());
         }
 
         Ride ride = booking.getRide();
@@ -561,18 +585,17 @@ public class BookingService {
                     booking.getPickupLocation() != null ? booking.getPickupLocation() : ride.getSource(),
                     booking.getDropoffLocation() != null ? booking.getDropoffLocation() : ride.getDestination(),
                     dateStr,
-                    timeStr
-            );
+                    timeStr);
         } catch (Exception e) {
             logger.error("Failed to send cancellation notification email: {}", e.getMessage());
         }
 
-        logger.info("Rescheduled ride cancelled successfully for booking ID: {}. Restored {} seat(s) to ride ID: {}", 
+        logger.info("Rescheduled ride cancelled successfully for booking ID: {}. Restored {} seat(s) to ride ID: {}",
                 bookingId, seatsToRestore, ride.getId());
         return updatedBooking;
     }
 
-    // ---------------- COMPLETE BOOKING ---------------- 
+    // ---------------- COMPLETE BOOKING ----------------
     @Transactional
     public Booking completeBooking(Long driverId, Long bookingId) {
         logger.info("Driver ID: {} attempting to complete booking ID: {}", driverId, bookingId);
@@ -590,8 +613,10 @@ public class BookingService {
         }
 
         if (booking.getStatus() != Booking.BookingStatus.CONFIRMED) {
-            logger.error("Booking ID: {} is not in CONFIRMED status. Current status: {}", bookingId, booking.getStatus());
-            throw new InvalidLocationException("Only confirmed bookings can be marked as completed. Current status: " + booking.getStatus());
+            logger.error("Booking ID: {} is not in CONFIRMED status. Current status: {}", bookingId,
+                    booking.getStatus());
+            throw new InvalidLocationException(
+                    "Only confirmed bookings can be marked as completed. Current status: " + booking.getStatus());
         }
 
         booking.setStatus(Booking.BookingStatus.COMPLETED);
@@ -601,8 +626,8 @@ public class BookingService {
         Ride ride = booking.getRide();
         List<Booking> allBookings = bookingRepository.findByRideId(ride.getId());
         boolean allCompleted = allBookings.stream()
-                .allMatch(b -> b.getStatus() == Booking.BookingStatus.COMPLETED || 
-                              b.getStatus() == Booking.BookingStatus.CANCELLED);
+                .allMatch(b -> b.getStatus() == Booking.BookingStatus.COMPLETED ||
+                        b.getStatus() == Booking.BookingStatus.CANCELLED);
         if (allCompleted) {
             ride.setStatus(Ride.RideStatus.COMPLETED);
             rideRepository.save(ride);

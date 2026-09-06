@@ -70,8 +70,7 @@ public class RideService {
         try {
             distance = fareCalculationService.calculateDistance(
                     request.getSource(),
-                    request.getDestination()
-            );
+                    request.getDestination());
             estimatedFare = fareCalculationService.calculateFare(distance);
         } catch (Exception e) {
             throw new RuntimeException("Failed to calculate route distance", e);
@@ -104,6 +103,34 @@ public class RideService {
 
         // -------- VEHICLE SNAPSHOT --------
         ride.setVehicleModel(driver.getVehicleModel());
+        try {
+            if (driver.getMasterVehicleDetailsJson() != null && !driver.getMasterVehicleDetailsJson().isEmpty()) {
+                com.fasterxml.jackson.databind.JsonNode details = objectMapper
+                        .readTree(driver.getMasterVehicleDetailsJson());
+
+                if (details.has("vehiclePhotos")) {
+                    ride.setVehiclePhotosJson(objectMapper.writeValueAsString(details.get("vehiclePhotos")));
+                }
+
+                if (details.has("hasAC") && !details.get("hasAC").isNull()) {
+                    ride.setHasAC(details.get("hasAC").asBoolean());
+                }
+                if (details.has("vehicleType") && !details.get("vehicleType").isNull()) {
+                    ride.setVehicleType(details.get("vehicleType").asText());
+                }
+                if (details.has("vehicleModel") && !details.get("vehicleModel").isNull()) {
+                    ride.setVehicleModel(details.get("vehicleModel").asText());
+                }
+                if (details.has("vehicleColor") && !details.get("vehicleColor").isNull()) {
+                    ride.setVehicleColor(details.get("vehicleColor").asText());
+                }
+                if (details.has("otherFeatures") && !details.get("otherFeatures").isNull()) {
+                    ride.setOtherFeatures(details.get("otherFeatures").asText());
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Failed to parse master vehicle details for driver {}", driverId, e);
+        }
 
         // -------- PICKUP LOCATIONS --------
         if (request.getPickupLocations() == null || request.getPickupLocations().size() != 4) {
@@ -111,8 +138,7 @@ public class RideService {
         }
         try {
             ride.setPickupLocationsJson(
-                    objectMapper.writeValueAsString(request.getPickupLocations())
-            );
+                    objectMapper.writeValueAsString(request.getPickupLocations()));
         } catch (Exception e) {
             throw new RuntimeException("Invalid pickup locations", e);
         }
@@ -123,8 +149,7 @@ public class RideService {
         }
         try {
             ride.setDropLocationsJson(
-                    objectMapper.writeValueAsString(request.getDropLocations())
-            );
+                    objectMapper.writeValueAsString(request.getDropLocations()));
         } catch (Exception e) {
             throw new RuntimeException("Invalid drop locations", e);
         }
@@ -219,8 +244,7 @@ public class RideService {
                         oldTime.toString(),
                         request.getNewDate().toString(),
                         request.getNewTime().toString(),
-                        request.getReason()
-                );
+                        request.getReason());
             } catch (Exception e) {
                 logger.error("Email failed: {}", e.getMessage());
             }
