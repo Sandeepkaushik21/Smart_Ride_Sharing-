@@ -69,11 +69,11 @@ frontend/
 
 ## 🌐 API Configuration
 
-The frontend connects to the backend at `http://localhost:8080/api`
+The frontend connects to the backend at `http://localhost:8081/api`
 
 To change the API URL, edit `src/services/api.js`:
 ```javascript
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'http://localhost:8081/api';
 ```
 
 ## 📦 Dependencies
@@ -97,5 +97,6 @@ The application uses Tailwind CSS for styling. All components are styled with Ta
 
 ## 📝 Notes
 
-- Make sure the backend is running on port 8080 before using the frontend
+- Make sure the backend is running on port 8081 before using the frontend
 - Default admin credentials: `admin@rideshare.com` / `adminpass`
+- Branch: `backup` (Stable snapshot of Smart Ride Sharing Application)
