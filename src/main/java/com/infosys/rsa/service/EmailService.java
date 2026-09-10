@@ -51,27 +51,36 @@ public class EmailService {
     }
 
     public void sendBookingConfirmation(String toEmail, String passengerName, String source, String destination, String date, String time) {
-        logger.info("Sending booking confirmation email to passenger: {} ({})", passengerName, toEmail);
+        sendBookingConfirmation(toEmail, passengerName, source, destination, date, time, null);
+    }
+
+    public void sendBookingConfirmation(String toEmail, String passengerName, String source, String destination, String date, String time, String startOtp) {
+        logger.info("Sending booking confirmation email to passenger: {} ({}) with OTP: {}", passengerName, toEmail, startOtp);
 
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(fromEmail);
             message.setTo(toEmail);
-            message.setSubject("Ride Booking Accepted - Confirmation");
+            message.setSubject("Ride Booking Confirmed - Smart Ride Sharing");
+
+            String otpSection = (startOtp != null && !startOtp.trim().isEmpty())
+                    ? String.format("\n🔐 RIDE START OTP: %s\n(Please share this 4-digit OTP with your driver upon boarding to start your ride)\n", startOtp)
+                    : "";
 
             String body = String.format(
                     "Dear %s,\n\n" +
-                            "Great news! Your ride booking has been accepted!\n\n" +
+                            "Great news! Your ride booking has been confirmed!\n\n" +
                             "Booking Details:\n" +
                             "From: %s\n" +
                             "To: %s\n" +
                             "Date: %s\n" +
-                            "Time: %s\n\n" +
-                            "Your booking is confirmed. Enjoy your ride!\n\n" +
+                            "Time: %s\n" +
+                            "%s\n" +
+                            "Enjoy your journey!\n\n" +
                             "Thank you for using Smart Ride Sharing!\n\n" +
                             "Best Regards,\n" +
                             "Smart Ride Sharing Team",
-                    passengerName, source, destination, date, time
+                    passengerName, source, destination, date, time, otpSection
             );
 
             message.setText(body);

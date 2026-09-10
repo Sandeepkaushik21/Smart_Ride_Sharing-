@@ -211,8 +211,11 @@ public class RazorpayPaymentService {
         payment.setRazorpaySignature(signature);
         payment.setStatus(Payment.PaymentStatus.SUCCESS);
 
-        // Update booking status to CONFIRMED
+        // Update booking status to CONFIRMED and generate 4-digit Ride Start OTP
         // Note: Seats are already decremented when driver accepts the booking, so no need to decrement again here
+        String startOtp = String.format("%04d", new java.util.Random().nextInt(10000));
+        booking.setStartOtp(startOtp);
+        booking.setIsOtpVerified(false);
         booking.setStatus(Booking.BookingStatus.CONFIRMED);
         bookingRepository.save(booking);
         
@@ -226,7 +229,8 @@ public class RazorpayPaymentService {
                 ride.getSource(), 
                 ride.getDestination(), 
                 ride.getDate().toString(), 
-                ride.getTime().toString()
+                ride.getTime().toString(),
+                startOtp
             );
             
             emailService.sendRideBookingNotification(

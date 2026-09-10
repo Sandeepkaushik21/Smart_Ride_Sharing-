@@ -595,6 +595,67 @@ public class BookingService {
         return updatedBooking;
     }
 
+    public String generateOtp() {
+        return String.format("%04d", new java.util.Random().nextInt(10000));
+    }
+
+    // ---------------- VERIFY BOOKING OTP (START RIDE / BOARDING) ----------------
+    @Transactional
+    public Booking verifyBookingOtp(Long driverId, Long bookingId, String otp) {
+        logger.info("Driver ID: {} attempting to verify OTP for booking ID: {}", driverId, bookingId);
+
+        Booking booking = bookingRepository.findByIdWithRide(bookingId)
+                .orElseThrow(() -> {
+                    logger.error("Booking not found with ID: {}", bookingId);
+                    return new RideNotFoundException("Booking not found with ID: " + bookingId);
+                });
+
+        // Verify driver owns the ride
+        if (!booking.getRide().getDriver().getId().equals(driverId)) {
+            logger.error("Unauthorized OTP verification attempt by driver ID: {}", driverId);
+            throw new PassengerNotFoundException("You can only verify OTP for your own rides.");
+        }
+
+        if (booking.getStatus() == Booking.BookingStatus.CANCELLED) {
+            throw new InvalidLocationException("Cannot verify OTP for a cancelled booking.");
+        }
+
+        if (booking.getStatus() == Booking.BookingStatus.COMPLETED) {
+            throw new InvalidLocationException("This booking is already completed.");
+        }
+
+        if (Boolean.TRUE.equals(booking.getIsOtpVerified()) && booking.getStatus() == Booking.BookingStatus.IN_PROGRESS) {
+            logger.info("Booking ID: {} is already OTP verified and in progress", bookingId);
+            return booking;
+        }
+
+        if (booking.getStartOtp() == null || booking.getStartOtp().trim().isEmpty()) {
+            booking.setStartOtp(generateOtp());
+            bookingRepository.save(booking);
+        }
+
+        if (otp == null || !booking.getStartOtp().trim().equals(otp.trim())) {
+            logger.warn("Invalid OTP provided for booking ID: {}. Expected: {}, Provided: {}",
+                    bookingId, booking.getStartOtp(), otp);
+            throw new InvalidLocationException("Invalid Ride Start OTP. Please ask the passenger for their 4-digit code.");
+        }
+
+        booking.setIsOtpVerified(true);
+        booking.setStatus(Booking.BookingStatus.IN_PROGRESS);
+        Booking updatedBooking = bookingRepository.save(booking);
+
+        // Update ride status to ONGOING if it is SCHEDULED
+        Ride ride = booking.getRide();
+        if (ride.getStatus() == Ride.RideStatus.SCHEDULED) {
+            ride.setStatus(Ride.RideStatus.ONGOING);
+            rideRepository.save(ride);
+            logger.info("Ride ID: {} marked as ONGOING", ride.getId());
+        }
+
+        logger.info("Booking ID: {} OTP verified successfully and marked IN_PROGRESS", bookingId);
+        return updatedBooking;
+    }
+
     // ---------------- COMPLETE BOOKING ----------------
     @Transactional
     public Booking completeBooking(Long driverId, Long bookingId) {
@@ -612,11 +673,11 @@ public class BookingService {
             throw new PassengerNotFoundException("You can only complete bookings for your own rides.");
         }
 
-        if (booking.getStatus() != Booking.BookingStatus.CONFIRMED) {
-            logger.error("Booking ID: {} is not in CONFIRMED status. Current status: {}", bookingId,
+        if (booking.getStatus() != Booking.BookingStatus.CONFIRMED && booking.getStatus() != Booking.BookingStatus.IN_PROGRESS) {
+            logger.error("Booking ID: {} is not in CONFIRMED or IN_PROGRESS status. Current status: {}", bookingId,
                     booking.getStatus());
             throw new InvalidLocationException(
-                    "Only confirmed bookings can be marked as completed. Current status: " + booking.getStatus());
+                    "Only confirmed or in-progress bookings can be marked as completed. Current status: " + booking.getStatus());
         }
 
         booking.setStatus(Booking.BookingStatus.COMPLETED);

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Search, MapPin, Calendar, Clock, User, CheckCircle, Car, Navigation, Star, Ticket, Snowflake, ChevronLeft, ChevronRight, X, ZoomIn, History, Users, Loader, Printer, Phone, DollarSign, TrendingUp } from 'lucide-react';
+import { Search, MapPin, Calendar, Clock, User, CheckCircle, Car, Navigation, Star, Ticket, Snowflake, ChevronLeft, ChevronRight, X, ZoomIn, History, Users, Loader, Printer, Phone, DollarSign, TrendingUp, ShieldCheck, Key, Copy } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import BackButton from '../components/BackButton';
@@ -16,6 +16,14 @@ const PassengerDashboard = () => {
 
     const [showCarDetails, setShowCarDetails] = useState(false);
     const [selectedCar, setSelectedCar] = useState(null);
+    const [copiedOtpId, setCopiedOtpId] = useState(null);
+
+    const handleCopyOtp = (bookingId, otp) => {
+        if (!otp) return;
+        navigator.clipboard.writeText(otp);
+        setCopiedOtpId(bookingId);
+        setTimeout(() => setCopiedOtpId(null), 2000);
+    };
 
 
 
@@ -1631,12 +1639,13 @@ const PassengerDashboard = () => {
                                                                 </div>
                                                             </div>
                                                             <span className={`px-4 py-2 rounded-xl text-sm font-bold shadow-md ${(booking.status === 'COMPLETED' || (booking.status === 'CONFIRMED' && booking.ride?.date && isDatePassed(booking.ride.date))) ? 'bg-gradient-to-r from-purple-400 to-indigo-500 text-white' :
+                                                                booking.status === 'IN_PROGRESS' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white animate-pulse' :
                                                                 booking.status === 'CONFIRMED' ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white' :
                                                                     booking.status === 'ACCEPTED' ? 'bg-gradient-to-r from-blue-400 to-cyan-500 text-white' :
                                                                         booking.status === 'PENDING' ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white' :
                                                                             'bg-gradient-to-r from-red-400 to-pink-500 text-white'
                                                                 }`}>
-                                                                {(booking.status === 'CONFIRMED' && booking.ride?.date && isDatePassed(booking.ride.date)) ? 'COMPLETED' : booking.status}
+                                                                {booking.status === 'IN_PROGRESS' ? 'IN TRANSIT' : (booking.status === 'CONFIRMED' && booking.ride?.date && isDatePassed(booking.ride.date)) ? 'COMPLETED' : booking.status}
                                                             </span>
                                                         </div>
                                                         {/* Other booking details... */}
@@ -1693,11 +1702,53 @@ const PassengerDashboard = () => {
                                                             </div>
                                                         )}
                                                         {booking.status === 'CONFIRMED' && booking.ride?.date && !isDatePassed(booking.ride.date) && (
-                                                            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                                                                <p className="text-sm text-green-800 mb-2"><strong>Booking Confirmed!</strong></p>
+                                                            <div className="mt-4 p-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-green-50 border-2 border-emerald-200 rounded-xl shadow-sm">
+                                                                <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                                                                    <p className="text-sm text-emerald-900 font-bold flex items-center gap-1.5">
+                                                                        <CheckCircle className="h-4 w-4 text-emerald-600" />
+                                                                        Booking Confirmed!
+                                                                    </p>
+                                                                    {booking.startOtp && (
+                                                                        <div className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-emerald-300 shadow-sm">
+                                                                            <div className="flex items-center space-x-1.5 text-emerald-800">
+                                                                                <Key className="h-4 w-4 text-emerald-600" />
+                                                                                <span className="text-xs font-bold uppercase tracking-wider">Ride Start OTP:</span>
+                                                                            </div>
+                                                                            <span className="font-mono text-xl font-extrabold tracking-widest text-emerald-700 bg-emerald-100/80 px-2.5 py-0.5 rounded-lg border border-emerald-300">
+                                                                                {booking.startOtp}
+                                                                            </span>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleCopyOtp(booking.id, booking.startOtp)}
+                                                                                className="p-1 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded transition-colors"
+                                                                                title="Copy OTP"
+                                                                            >
+                                                                                {copiedOtpId === booking.id ? <CheckCircle className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <p className="text-xs text-emerald-700 mb-3 flex items-center gap-1">
+                                                                    <ShieldCheck className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                                                                    <span>Share this 4-digit OTP with your driver upon boarding to officially start your trip.</span>
+                                                                </p>
                                                                 <div className="flex space-x-2">
-                                                                    <button onClick={() => handlePrintReceipt(booking)} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold flex items-center space-x-1"><Printer className="h-4 w-4" /><span>Print Receipt</span></button>
-                                                                    <button onClick={() => handleCancelBooking(booking.id)} className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-semibold">Cancel Booking</button>
+                                                                    <button onClick={() => handlePrintReceipt(booking)} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-semibold flex items-center space-x-1"><Printer className="h-4 w-4" /><span>Print Receipt</span></button>
+                                                                    <button onClick={() => handleCancelBooking(booking.id)} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-semibold">Cancel Booking</button>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                        {booking.status === 'IN_PROGRESS' && (
+                                                            <div className="mt-4 p-4 bg-gradient-to-r from-cyan-50 via-blue-50 to-indigo-50 border-2 border-cyan-300 rounded-xl shadow-sm">
+                                                                <div className="flex items-center space-x-2 mb-2">
+                                                                    <div className="w-2.5 h-2.5 bg-cyan-500 rounded-full animate-ping"></div>
+                                                                    <p className="text-sm font-bold text-cyan-900">Ride In Progress / Passenger Boarded</p>
+                                                                </div>
+                                                                <p className="text-xs text-cyan-700 mb-3">
+                                                                    Your OTP was verified. You are on your way to your destination!
+                                                                </p>
+                                                                <div className="flex space-x-2">
+                                                                    <button onClick={() => handlePrintReceipt(booking)} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-semibold flex items-center space-x-1"><Printer className="h-4 w-4" /><span>Print Receipt</span></button>
                                                                 </div>
                                                             </div>
                                                         )}

@@ -75,6 +75,11 @@ export const bookingService = {
     return response.data;
   },
 
+  verifyOtp: async (bookingId, otp) => {
+    const response = await api.patch(`/bookings/${bookingId}/verify-otp`, { otp });
+    return response.data;
+  },
+
   completeBooking: async (bookingId) => {
     const response = await api.patch(`/bookings/${bookingId}/complete`);
     return response.data;

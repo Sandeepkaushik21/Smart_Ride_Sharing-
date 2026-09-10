@@ -49,6 +49,12 @@ public class Booking {
     @Column(name = "booking_status")
     private BookingStatus status = BookingStatus.PENDING;
 
+    @Column(name = "start_otp", length = 10)
+    private String startOtp;
+
+    @Column(name = "is_otp_verified")
+    private Boolean isOtpVerified = false;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -59,6 +65,7 @@ public class Booking {
         PENDING,        // Waiting for driver approval
         ACCEPTED,       // Driver accepted, waiting for payment
         CONFIRMED,      // Payment completed
+        IN_PROGRESS,    // OTP verified, ride in progress / passenger boarded
         RESCHEDULED,    // Ride rescheduled by driver, waiting for passenger to accept/cancel
         CANCELLED,
         COMPLETED

@@ -1,6 +1,7 @@
 package com.infosys.rsa.controller;
 
 import com.infosys.rsa.dto.BookingRequest;
+import com.infosys.rsa.dto.OtpVerificationRequest;
 import com.infosys.rsa.dto.UpdateBookingLocationsRequest;
 import com.infosys.rsa.model.Booking;
 import com.infosys.rsa.model.Ride;
@@ -200,6 +201,21 @@ public class BookingController {
         Booking cancelledBooking = bookingService.cancelRescheduledRide(userPrincipal.getId(), id);
         logger.info("Rescheduled ride cancelled successfully for booking ID: {}", id);
         return ResponseEntity.ok(cancelledBooking);
+    }
+
+    // ---------------- VERIFY RIDE START OTP ---------------- 
+    @PatchMapping("/{id}/verify-otp")
+    @PreAuthorize("hasRole('DRIVER')")
+    public ResponseEntity<?> verifyOtp(@PathVariable Long id, 
+                                       @Valid @RequestBody OtpVerificationRequest request,
+                                       Authentication authentication) {
+        logger.info("Entering verifyOtp() for bookingId: {}", id);
+        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+        logger.debug("Driver ID: {} attempting to verify OTP for booking", userPrincipal.getId());
+
+        Booking verifiedBooking = bookingService.verifyBookingOtp(userPrincipal.getId(), id, request.getOtp());
+        logger.info("Booking with ID: {} OTP verified successfully and marked IN_PROGRESS", id);
+        return ResponseEntity.ok(verifiedBooking);
     }
 
     // ---------------- COMPLETE BOOKING ---------------- 

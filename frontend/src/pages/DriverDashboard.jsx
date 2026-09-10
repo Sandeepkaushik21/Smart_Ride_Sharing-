@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, MapPin, Calendar, Clock, Users, Car, Navigation, CheckCircle, X, Upload, Snowflake, Ticket, CheckCircle2, XCircle, History, Edit, Phone, Star, DollarSign, TrendingUp, Bell } from 'lucide-react';
+import { Plus, MapPin, Calendar, Clock, Users, Car, Navigation, CheckCircle, X, Upload, Snowflake, Ticket, CheckCircle2, XCircle, History, Edit, Phone, Star, DollarSign, TrendingUp, Bell, Key } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import BackButton from '../components/BackButton';
@@ -7,7 +7,7 @@ import CityAutocomplete from '../components/CityAutocomplete';
 import { rideService } from '../services/rideService';
 import { bookingService } from '../services/bookingService';
 import { userService } from '../services/userService';
-import { showConfirm, showSuccess, showError } from '../utils/swal';
+import { showConfirm, showSuccess, showError, showOtpPrompt } from '../utils/swal';
 import { authService } from '../services/authService';
 
 const DriverDashboard = () => {
@@ -459,6 +459,30 @@ const DriverDashboard = () => {
             await fetchPendingPage(pendingPage, pendingSize);
         } catch (error) {
             await showError(error.message || 'Error declining booking');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVerifyOtp = async (bookingId) => {
+        const result = await showOtpPrompt(
+            'Verify Ride Start OTP',
+            'Ask the passenger for their 4-digit ride start OTP upon pickup.'
+        );
+
+        if (!result.isConfirmed || !result.value) return;
+
+        const otp = result.value.trim();
+        setLoading(true);
+        try {
+            await bookingService.verifyOtp(bookingId, otp);
+            await showSuccess('OTP verified successfully! Ride is now in progress.');
+            await fetchBookingsPage(bookingsPage, bookingsSize);
+            await fetchData();
+        } catch (error) {
+            console.error('Error verifying OTP:', error);
+            const msg = error.response?.data?.message || error.message || 'Invalid OTP. Please check with passenger.';
+            await showError(msg);
         } finally {
             setLoading(false);
         }
@@ -1540,39 +1564,63 @@ const DriverDashboard = () => {
                                                                         <div>
                                                                             <div className="flex items-center space-x-2">
                                                                                 <h3 className="text-base md:text-lg font-semibold text-gray-800">
-                                                                                    {(booking.ride.citySource || booking.ride.source)} <span className="text-gray-500">→</span> {(booking.ride.cityDestination || booking.ride.destination)}
+                                                                                    {(booking.ride?.citySource || booking.ride?.source)} <span className="text-gray-500">→</span> {(booking.ride?.cityDestination || booking.ride?.destination)}
                                                                                 </h3>
-                                                                                <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${booking.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                                                                                <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${
+                                                                                    booking.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                                                                                    booking.status === 'IN_PROGRESS' ? 'bg-purple-100 text-purple-800 animate-pulse' :
                                                                                     booking.status === 'CONFIRMED' ? 'bg-blue-100 text-blue-800' :
-                                                                                        booking.status === 'ACCEPTED' ? 'bg-yellow-100 text-yellow-800' :
-                                                                                            booking.status === 'PENDING' ? 'bg-orange-100 text-orange-800' :
-                                                                                                'bg-red-100 text-red-800'
-                                                                                    }`}>
-                                                                                    {booking.status}
+                                                                                    booking.status === 'ACCEPTED' ? 'bg-yellow-100 text-yellow-800' :
+                                                                                    booking.status === 'PENDING' ? 'bg-orange-100 text-orange-800' :
+                                                                                    'bg-red-100 text-red-800'
+                                                                                }`}>
+                                                                                    {booking.status === 'IN_PROGRESS' ? 'IN PROGRESS' : booking.status}
                                                                                 </span>
+                                                                            </div>
+                                                                            <div className="text-xs text-gray-600 mt-1 space-y-0.5">
+                                                                                <p><strong>Passenger:</strong> {booking.passenger?.name || booking.passenger?.email || 'Passenger'}</p>
+                                                                                {booking.pickupLocation && <p><strong>Route:</strong> {booking.pickupLocation} → {booking.dropoffLocation}</p>}
                                                                             </div>
                                                                             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                                                                                 <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
                                                                                     <Calendar className="h-3.5 w-3.5" />
-                                                                                    <span>{new Date(booking.ride.date).toLocaleDateString()}</span>
+                                                                                    <span>{booking.ride?.date ? new Date(booking.ride.date).toLocaleDateString() : 'N/A'}</span>
                                                                                 </span>
                                                                                 <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
                                                                                     <Clock className="h-3.5 w-3.5" />
-                                                                                    <span>{new Date(`1970-01-01T${booking.ride.time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                                                    <span>{booking.ride?.time ? new Date(`1970-01-01T${booking.ride.time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
                                                                                 </span>
                                                                                 <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-gray-100 text-gray-800">
                                                                                     <Users className="h-3.5 w-3.5" />
-                                                                                    <span>{booking.seats} seats</span>
+                                                                                    <span>{booking.seats || booking.numberOfSeats || 1} seats</span>
                                                                                 </span>
                                                                             </div>
                                                                         </div>
                                                                     </div>
-                                                                    {/* Right: fare */}
+                                                                    {/* Right: fare & action buttons */}
                                                                     <div className="text-right ml-4 flex flex-col items-end space-y-2">
                                                                         <div>
-                                                                            <div className="text-[11px] text-gray-500 leading-tight">Estimated Fare</div>
+                                                                            <div className="text-[11px] text-gray-500 leading-tight">Fare Amount</div>
                                                                             <div className="text-lg md:text-xl font-bold text-green-600">₹{(booking.totalPrice ?? booking.fareAmount ?? 0).toFixed(2)}</div>
                                                                         </div>
+                                                                        {booking.status === 'CONFIRMED' && (
+                                                                            <button
+                                                                                onClick={() => handleVerifyOtp(booking.id)}
+                                                                                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-sm font-semibold shadow-md transform hover:scale-105 transition-all flex items-center space-x-1.5"
+                                                                            >
+                                                                                <Key className="h-4 w-4" />
+                                                                                <span>Verify OTP & Start</span>
+                                                                            </button>
+                                                                        )}
+                                                                        {booking.status === 'IN_PROGRESS' && (
+                                                                            <button
+                                                                                onClick={() => handleCompleteBooking(booking.id)}
+                                                                                className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg text-sm font-semibold shadow-md transform hover:scale-105 transition-all flex items-center space-x-1.5"
+                                                                            >
+                                                                                <CheckCircle className="h-4 w-4" />
+                                                                                <span>Complete Ride</span>
+                                                                            </button>
+                                                                        )}
                                                                         {booking.status === 'COMPLETED' && (
                                                                             <span className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg text-sm font-semibold flex items-center space-x-2">
                                                                                 <CheckCircle className="h-4 w-4" />
