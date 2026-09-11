@@ -698,4 +698,84 @@ public class BookingService {
         logger.info("Booking ID: {} marked as COMPLETED successfully", bookingId);
         return updatedBooking;
     }
+
+    // ---------------- TRIGGER EMERGENCY SOS ALERT ----------------
+    @Transactional
+    public Booking triggerSosAlert(Long userId, Long bookingId, String note) {
+        logger.warn("User ID: {} triggering EMERGENCY SOS for booking ID: {}", userId, bookingId);
+
+        Booking booking = bookingRepository.findByIdWithRide(bookingId)
+                .orElseThrow(() -> {
+                    logger.error("Booking not found with ID: {}", bookingId);
+                    return new RideNotFoundException("Booking not found with ID: " + bookingId);
+                });
+
+        // Verify that the user is either the passenger or the driver of the ride
+        Long passengerId = booking.getPassenger().getId();
+        Long driverId = booking.getRide().getDriver().getId();
+
+        if (!userId.equals(passengerId) && !userId.equals(driverId)) {
+            logger.error("Unauthorized SOS attempt by user ID: {} for booking ID: {}", userId, bookingId);
+            throw new PassengerNotFoundException("You can only trigger SOS for your own bookings or rides.");
+        }
+
+        booking.setSosTriggered(true);
+        booking.setSosTriggeredAt(java.time.LocalDateTime.now());
+        Booking updatedBooking = bookingRepository.save(booking);
+
+        // Dispatch emergency notification emails
+        try {
+            User passenger = booking.getPassenger();
+            User driver = booking.getRide().getDriver();
+            Ride ride = booking.getRide();
+
+            String driverPhone = driver.getPhone() != null ? driver.getPhone() : "N/A";
+            String vehicleInfo = String.format("%s %s (%s)",
+                    ride.getVehicleType() != null ? ride.getVehicleType() : "Vehicle",
+                    ride.getVehicleModel() != null ? ride.getVehicleModel() : "",
+                    ride.getVehicleColor() != null ? ride.getVehicleColor() : "").trim();
+
+            String rideDate = ride.getDate() != null ? ride.getDate().toString() : "N/A";
+            String rideTime = ride.getTime() != null ? ride.getTime().toString() : "N/A";
+
+            // 1. Notify Passenger
+            if (passenger.getEmail() != null) {
+                emailService.sendEmergencySosAlertEmail(
+                        passenger.getEmail(),
+                        passenger.getName(),
+                        driver.getName(),
+                        driverPhone,
+                        vehicleInfo,
+                        booking.getPickupLocation(),
+                        booking.getDropoffLocation(),
+                        rideDate,
+                        rideTime,
+                        booking.getId(),
+                        note
+                );
+            }
+
+            // 2. Notify Driver
+            if (driver.getEmail() != null && !driver.getEmail().equalsIgnoreCase(passenger.getEmail())) {
+                emailService.sendEmergencySosAlertEmail(
+                        driver.getEmail(),
+                        passenger.getName(),
+                        driver.getName(),
+                        driverPhone,
+                        vehicleInfo,
+                        booking.getPickupLocation(),
+                        booking.getDropoffLocation(),
+                        rideDate,
+                        rideTime,
+                        booking.getId(),
+                        note
+                );
+            }
+        } catch (Exception e) {
+            logger.error("Error dispatching SOS alert emails: {}", e.getMessage());
+        }
+
+        logger.info("Emergency SOS alert logged and dispatched for booking ID: {}", bookingId);
+        return updatedBooking;
+    }
 }

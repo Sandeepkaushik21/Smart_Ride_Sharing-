@@ -86,6 +86,13 @@ public class User {
     @Column(name = "master_vehicle_details", columnDefinition = "LONGTEXT")
     private String masterVehicleDetailsJson; // JSON string containing: vehiclePhotos, hasAC, vehicleType, vehicleModel, vehicleColor, otherFeatures
 
+    // Emergency Contact details
+    @Column(name = "emergency_contact_name")
+    private String emergencyContactName;
+
+    @Column(name = "emergency_contact_phone")
+    private String emergencyContactPhone;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

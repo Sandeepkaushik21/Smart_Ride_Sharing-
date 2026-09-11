@@ -444,4 +444,50 @@ public class EmailService {
             logger.error("Failed to send forgot password email to {}: {}", toEmail, e.getMessage());
         }
     }
+
+    public void sendEmergencySosAlertEmail(String toEmail, String passengerName, String driverName, String driverPhone, String vehicleInfo, String pickup, String dropoff, String rideDate, String rideTime, Long bookingId, String note) {
+        logger.warn("URGENT: Sending Emergency SOS Alert Email to: {}", toEmail);
+
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(toEmail);
+            message.setSubject("🚨 URGENT EMERGENCY SOS ALERT - Smart Ride Sharing Trip #" + bookingId);
+
+            String body = String.format(
+                    "⚠️ URGENT EMERGENCY SAFETY ALERT ⚠️\n\n" +
+                            "An Emergency SOS Alert was triggered during a ride on Smart Ride Sharing.\n\n" +
+                            "TRIP SNAPSHOT DETAILS:\n" +
+                            "----------------------------------------\n" +
+                            "Booking Reference: #%d\n" +
+                            "Passenger: %s\n" +
+                            "Driver: %s (Contact: %s)\n" +
+                            "Vehicle: %s\n" +
+                            "Route: %s -> %s\n" +
+                            "Scheduled Date & Time: %s at %s\n" +
+                            "Alert Time: %s\n" +
+                            "Additional Note: %s\n" +
+                            "----------------------------------------\n\n" +
+                            "If you are unable to reach the passenger or driver, please contact local emergency authorities (National Emergency: 112, Women Safety: 1091) immediately.\n\n" +
+                            "Smart Ride Sharing Safety & Security Team",
+                    bookingId,
+                    passengerName != null ? passengerName : "Passenger",
+                    driverName != null ? driverName : "Driver",
+                    driverPhone != null ? driverPhone : "N/A",
+                    vehicleInfo != null ? vehicleInfo : "Standard Vehicle",
+                    pickup != null ? pickup : "N/A",
+                    dropoff != null ? dropoff : "N/A",
+                    rideDate != null ? rideDate : "N/A",
+                    rideTime != null ? rideTime : "N/A",
+                    java.time.LocalDateTime.now().toString(),
+                    (note != null && !note.trim().isEmpty()) ? note : "SOS Button Triggered by Passenger"
+            );
+
+            message.setText(body);
+            mailSender.send(message);
+            logger.info("Emergency SOS email successfully dispatched to {}", toEmail);
+        } catch (Exception e) {
+            logger.error("Failed to send emergency SOS email to {}: {}", toEmail, e.getMessage());
+        }
+    }
 }

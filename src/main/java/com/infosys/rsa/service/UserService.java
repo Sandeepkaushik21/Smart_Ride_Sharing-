@@ -68,6 +68,14 @@ public class UserService {
             logger.debug("Updating vehicle capacity for userId: {} to '{}'", userId, userDetails.getVehicleCapacity());
             user.setVehicleCapacity(userDetails.getVehicleCapacity());
         }
+        if (userDetails.getEmergencyContactName() != null) {
+            logger.debug("Updating emergency contact name for userId: {} to '{}'", userId, userDetails.getEmergencyContactName());
+            user.setEmergencyContactName(userDetails.getEmergencyContactName().trim());
+        }
+        if (userDetails.getEmergencyContactPhone() != null) {
+            logger.debug("Updating emergency contact phone for userId: {} to '{}'", userId, userDetails.getEmergencyContactPhone());
+            user.setEmergencyContactPhone(userDetails.getEmergencyContactPhone().trim());
+        }
 
         User updatedUser = userRepository.save(user);
         logger.info("Profile updated successfully for userId: {}", userId);

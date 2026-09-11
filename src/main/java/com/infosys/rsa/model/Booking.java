@@ -55,6 +55,12 @@ public class Booking {
     @Column(name = "is_otp_verified")
     private Boolean isOtpVerified = false;
 
+    @Column(name = "sos_triggered")
+    private Boolean sosTriggered = false;
+
+    @Column(name = "sos_triggered_at")
+    private LocalDateTime sosTriggeredAt;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

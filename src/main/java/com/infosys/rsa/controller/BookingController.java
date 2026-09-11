@@ -17,6 +17,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -229,6 +230,24 @@ public class BookingController {
         Booking completedBooking = bookingService.completeBooking(userPrincipal.getId(), id);
         logger.info("Booking with ID: {} completed successfully", id);
         return ResponseEntity.ok(completedBooking);
+    }
+
+    // ---------------- TRIGGER EMERGENCY SOS ALERT ---------------- 
+    @PostMapping("/{id}/sos-alert")
+    @PreAuthorize("hasAnyRole('PASSENGER', 'DRIVER')")
+    public ResponseEntity<?> triggerSosAlert(@PathVariable Long id,
+                                             @RequestBody(required = false) Map<String, String> request,
+                                             Authentication authentication) {
+        logger.warn("Entering triggerSosAlert() for bookingId: {}", id);
+        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+        String note = (request != null && request.containsKey("note")) ? request.get("note") : "Emergency SOS Triggered";
+
+        Booking updatedBooking = bookingService.triggerSosAlert(userPrincipal.getId(), id, note);
+        logger.warn("Emergency SOS triggered and recorded for booking ID: {}", id);
+        return ResponseEntity.ok(Map.of(
+                "message", "Emergency SOS Alert has been successfully triggered and dispatched.",
+                "booking", updatedBooking
+        ));
     }
 
     // ✅ Response wrapper for cancel API
