@@ -84,4 +84,9 @@ export const bookingService = {
     const response = await api.patch(`/bookings/${bookingId}/complete`);
     return response.data;
   },
+
+  triggerSosAlert: async (bookingId, note = 'Emergency SOS Alert Triggered') => {
+    const response = await api.post(`/bookings/${bookingId}/sos-alert`, { note });
+    return response.data;
+  },
 };

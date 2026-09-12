@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Search, MapPin, Calendar, Clock, User, CheckCircle, Car, Navigation, Star, Ticket, Snowflake, ChevronLeft, ChevronRight, X, ZoomIn, History, Users, Loader, Printer, Phone, DollarSign, TrendingUp, ShieldCheck, Key, Copy } from 'lucide-react';
+import { Search, MapPin, Calendar, Clock, User, CheckCircle, Car, Navigation, Star, Ticket, Snowflake, ChevronLeft, ChevronRight, X, ZoomIn, History, Users, Loader, Printer, Phone, DollarSign, TrendingUp, ShieldCheck, Key, Copy, ShieldAlert, MessageSquare } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import BackButton from '../components/BackButton';
 import CityAutocomplete from '../components/CityAutocomplete';
 import RazorpayPaymentModal from '../components/RazorpayPaymentModal';
+import SafetySosModal from '../components/SafetySosModal';
 import { rideService } from '../services/rideService';
 import { bookingService } from '../services/bookingService';
+import { userService } from '../services/userService';
 import { paymentService } from '../services/paymentService';
 import { authService } from '../services/authService';
 import { reviewService } from '../services/reviewService';
@@ -25,7 +27,52 @@ const PassengerDashboard = () => {
         setTimeout(() => setCopiedOtpId(null), 2000);
     };
 
+    const [userProfile, setUserProfile] = useState(null);
+    const [safetyModalBooking, setSafetyModalBooking] = useState(null);
 
+    const loadUserProfile = async () => {
+        try {
+            const profile = await userService.getProfile();
+            setUserProfile(profile);
+        } catch (error) {
+            console.error('Error loading user profile in passenger dashboard:', error);
+        }
+    };
+
+    useEffect(() => {
+        loadUserProfile();
+    }, []);
+
+    const handleShareWhatsApp = (booking) => {
+        if (!booking) return;
+        const driverName = booking.ride?.driver?.name || booking.driver?.name || 'Driver';
+        const driverPhone = booking.ride?.driver?.phone || booking.driver?.phone || '';
+        const vehicleInfo = [
+            booking.ride?.vehicleType || '',
+            booking.ride?.vehicleModel || '',
+            booking.ride?.vehicleColor || ''
+        ].filter(Boolean).join(' ') || 'Standard Vehicle';
+        const licensePlate = booking.ride?.driver?.licensePlate || booking.ride?.licensePlate || '';
+        const pickup = booking.pickupLocation || booking.ride?.citySource || booking.ride?.source || 'Pickup Point';
+        const dropoff = booking.dropoffLocation || booking.ride?.cityDestination || booking.ride?.destination || 'Drop-off Point';
+        const rideDate = booking.ride?.date ? new Date(booking.ride.date).toLocaleDateString() : 'Today';
+        const rideTime = booking.ride?.time ? new Date(`1970-01-01T${booking.ride.time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Scheduled Time';
+
+        const text = encodeURIComponent(`🚗 *Smart Ride Sharing - Live Trip Details*
+━━━━━━━━━━━━━━━━━━━━
+👤 *Passenger:* ${userProfile?.name || 'Passenger'}
+🚘 *Driver:* ${driverName} ${driverPhone ? `(${driverPhone})` : ''}
+🚙 *Vehicle:* ${vehicleInfo} ${licensePlate ? `[${licensePlate}]` : ''}
+📍 *Pickup:* ${pickup}
+🎯 *Destination:* ${dropoff}
+📅 *Date & Time:* ${rideDate} at ${rideTime}
+🔖 *Booking Reference:* #${booking.id}
+🟢 *Status:* ${booking.status === 'IN_PROGRESS' ? 'IN PROGRESS (Passenger Boarded)' : 'CONFIRMED'}
+━━━━━━━━━━━━━━━━━━━━
+_Shared for safety & live tracking via Smart Ride Sharing._`);
+
+        window.open(`https://wa.me/?text=${text}`, '_blank', 'noopener,noreferrer');
+    };
 
     const [currentView, setCurrentView] = useState('main'); // 'main', 'search', 'bookings', 'history'
 
@@ -1732,9 +1779,23 @@ const PassengerDashboard = () => {
                                                                     <ShieldCheck className="h-4 w-4 text-emerald-600 flex-shrink-0" />
                                                                     <span>Share this 4-digit OTP with your driver upon boarding to officially start your trip.</span>
                                                                 </p>
-                                                                <div className="flex space-x-2">
-                                                                    <button onClick={() => handlePrintReceipt(booking)} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-semibold flex items-center space-x-1"><Printer className="h-4 w-4" /><span>Print Receipt</span></button>
-                                                                    <button onClick={() => handleCancelBooking(booking.id)} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-semibold">Cancel Booking</button>
+                                                                <div className="flex flex-wrap gap-2 mt-3">
+                                                                    <button
+                                                                        onClick={() => handleShareWhatsApp(booking)}
+                                                                        className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-sm transform hover:scale-105 transition-all"
+                                                                    >
+                                                                        <MessageSquare className="h-3.5 w-3.5" />
+                                                                        <span>Share on WhatsApp</span>
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => setSafetyModalBooking(booking)}
+                                                                        className="px-3.5 py-1.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-sm transform hover:scale-105 transition-all"
+                                                                    >
+                                                                        <ShieldAlert className="h-3.5 w-3.5" />
+                                                                        <span>🚨 Safety & SOS</span>
+                                                                    </button>
+                                                                    <button onClick={() => handlePrintReceipt(booking)} className="px-3.5 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-semibold flex items-center space-x-1"><Printer className="h-3.5 w-3.5" /><span>Print Receipt</span></button>
+                                                                    <button onClick={() => handleCancelBooking(booking.id)} className="px-3.5 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-semibold">Cancel Booking</button>
                                                                 </div>
                                                             </div>
                                                         )}
@@ -1747,8 +1808,22 @@ const PassengerDashboard = () => {
                                                                 <p className="text-xs text-cyan-700 mb-3">
                                                                     Your OTP was verified. You are on your way to your destination!
                                                                 </p>
-                                                                <div className="flex space-x-2">
-                                                                    <button onClick={() => handlePrintReceipt(booking)} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-semibold flex items-center space-x-1"><Printer className="h-4 w-4" /><span>Print Receipt</span></button>
+                                                                <div className="flex flex-wrap gap-2 mt-3">
+                                                                    <button
+                                                                        onClick={() => handleShareWhatsApp(booking)}
+                                                                        className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-sm transform hover:scale-105 transition-all"
+                                                                    >
+                                                                        <MessageSquare className="h-3.5 w-3.5" />
+                                                                        <span>Share on WhatsApp</span>
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => setSafetyModalBooking(booking)}
+                                                                        className="px-3.5 py-1.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-sm transform hover:scale-105 transition-all animate-pulse"
+                                                                    >
+                                                                        <ShieldAlert className="h-3.5 w-3.5" />
+                                                                        <span>🚨 Safety & SOS</span>
+                                                                    </button>
+                                                                    <button onClick={() => handlePrintReceipt(booking)} className="px-3.5 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-semibold flex items-center space-x-1"><Printer className="h-3.5 w-3.5" /><span>Print Receipt</span></button>
                                                                 </div>
                                                             </div>
                                                         )}
@@ -2133,6 +2208,17 @@ const PassengerDashboard = () => {
                 </div>
             )}
 
+
+            {/* Safety & SOS Modal */}
+            {safetyModalBooking && (
+                <SafetySosModal
+                    isOpen={!!safetyModalBooking}
+                    onClose={() => setSafetyModalBooking(null)}
+                    booking={safetyModalBooking}
+                    userProfile={userProfile}
+                    onProfileUpdated={loadUserProfile}
+                />
+            )}
 
             {/* Global Loading Overlay */}
             {(loading || paymentProcessing || Object.values(bookingLoading).some(v => v)) && (

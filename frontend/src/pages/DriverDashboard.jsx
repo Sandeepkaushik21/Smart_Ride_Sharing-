@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, MapPin, Calendar, Clock, Users, Car, Navigation, CheckCircle, X, Upload, Snowflake, Ticket, CheckCircle2, XCircle, History, Edit, Phone, Star, DollarSign, TrendingUp, Bell, Key } from 'lucide-react';
+import { Plus, MapPin, Calendar, Clock, Users, Car, Navigation, CheckCircle, X, Upload, Snowflake, Ticket, CheckCircle2, XCircle, History, Edit, Phone, Star, DollarSign, TrendingUp, Bell, Key, ShieldAlert } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import BackButton from '../components/BackButton';
 import CityAutocomplete from '../components/CityAutocomplete';
+import SafetySosModal from '../components/SafetySosModal';
 import { rideService } from '../services/rideService';
 import { bookingService } from '../services/bookingService';
 import { userService } from '../services/userService';
@@ -32,6 +33,7 @@ const DriverDashboard = () => {
     const [bookingsPage, setBookingsPage] = useState(0); // zero-based
     const [bookingsSize, setBookingsSize] = useState(3);
     const [bookingsTotalPages, setBookingsTotalPages] = useState(0);
+    const [safetyModalBooking, setSafetyModalBooking] = useState(null);
     // Pending bookings for accept/decline
     const [pendingBookings, setPendingBookings] = useState([]);
     const [pendingPage, setPendingPage] = useState(0);
@@ -1604,22 +1606,42 @@ const DriverDashboard = () => {
                                                                             <div className="text-lg md:text-xl font-bold text-green-600">₹{(booking.totalPrice ?? booking.fareAmount ?? 0).toFixed(2)}</div>
                                                                         </div>
                                                                         {booking.status === 'CONFIRMED' && (
-                                                                            <button
-                                                                                onClick={() => handleVerifyOtp(booking.id)}
-                                                                                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-sm font-semibold shadow-md transform hover:scale-105 transition-all flex items-center space-x-1.5"
-                                                                            >
-                                                                                <Key className="h-4 w-4" />
-                                                                                <span>Verify OTP & Start</span>
-                                                                            </button>
+                                                                            <div className="flex flex-col sm:flex-row gap-2">
+                                                                                <button
+                                                                                    onClick={() => handleVerifyOtp(booking.id)}
+                                                                                    className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-sm font-semibold shadow-md transform hover:scale-105 transition-all flex items-center space-x-1.5"
+                                                                                >
+                                                                                    <Key className="h-4 w-4" />
+                                                                                    <span>Verify OTP & Start</span>
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => setSafetyModalBooking(booking)}
+                                                                                    className="px-3 py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white rounded-lg text-xs font-bold shadow-md transform hover:scale-105 transition-all flex items-center space-x-1"
+                                                                                    title="Emergency SOS & Safety"
+                                                                                >
+                                                                                    <ShieldAlert className="h-3.5 w-3.5" />
+                                                                                    <span>SOS</span>
+                                                                                </button>
+                                                                            </div>
                                                                         )}
                                                                         {booking.status === 'IN_PROGRESS' && (
-                                                                            <button
-                                                                                onClick={() => handleCompleteBooking(booking.id)}
-                                                                                className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg text-sm font-semibold shadow-md transform hover:scale-105 transition-all flex items-center space-x-1.5"
-                                                                            >
-                                                                                <CheckCircle className="h-4 w-4" />
-                                                                                <span>Complete Ride</span>
-                                                                            </button>
+                                                                            <div className="flex flex-col sm:flex-row gap-2">
+                                                                                <button
+                                                                                    onClick={() => handleCompleteBooking(booking.id)}
+                                                                                    className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg text-sm font-semibold shadow-md transform hover:scale-105 transition-all flex items-center space-x-1.5"
+                                                                                >
+                                                                                    <CheckCircle className="h-4 w-4" />
+                                                                                    <span>Complete Ride</span>
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => setSafetyModalBooking(booking)}
+                                                                                    className="px-3 py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white rounded-lg text-xs font-bold shadow-md transform hover:scale-105 transition-all flex items-center space-x-1 animate-pulse"
+                                                                                    title="Emergency SOS & Safety"
+                                                                                >
+                                                                                    <ShieldAlert className="h-3.5 w-3.5" />
+                                                                                    <span>SOS</span>
+                                                                                </button>
+                                                                            </div>
                                                                         )}
                                                                         {booking.status === 'COMPLETED' && (
                                                                             <span className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg text-sm font-semibold flex items-center space-x-2">
@@ -1938,6 +1960,17 @@ const DriverDashboard = () => {
                     </>
                 )}
             </main>
+
+            {/* Safety & SOS Modal */}
+            {safetyModalBooking && (
+                <SafetySosModal
+                    isOpen={!!safetyModalBooking}
+                    onClose={() => setSafetyModalBooking(null)}
+                    booking={safetyModalBooking}
+                    userProfile={userProfile}
+                    onProfileUpdated={loadUserProfile}
+                />
+            )}
 
             <Footer fullWidth={true} />
         </div>
