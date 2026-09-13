@@ -46,6 +46,8 @@ A full-stack, enterprise-grade ride sharing and carpooling platform designed to 
 
 - **Multi-Stop Route Matching**: Drivers can define up to 4 custom pickup locations and 4 drop locations per route; passengers can filter rides based on specific pickup/drop stops.
 - **Master Vehicle Management**: Drivers can upload and store vehicle specifications (AC, color, capacity, model) and multiple vehicle exterior/interior images once, automatically reusing them across scheduled rides.
+- **Ride Start OTP Verification**: Secure 4-digit OTP generated upon booking confirmation and verified by the driver at pickup before boarding, transitioning the trip to in-progress.
+- **Emergency SOS & 1-Click WhatsApp Sharing**: Instant WhatsApp trip sharing with complete driver, vehicle, and live route details, plus backend Emergency SOS trigger and one-tap emergency helpline dialers (112, 1091, 108).
 - **Complete Razorpay Payment Lifecycle**: Full end-to-end checkout supporting UPI (Google Pay, PhonePe, Paytm, BHIM), Credit/Debit Cards, NetBanking, and digital wallets, with SHA-256 HMAC signature verification and automatic driver wallet credit.
 - **Social & Standard Authentication**: Dual login options via Google OAuth2 ID Token verification and standard email/password credentials with BCrypt hashing and JWT session management.
 - **Automated Email Notifications**: SMTP-powered instant notifications for account registration, temporary credentials, booking confirmation, ride status updates, and cancellations.
@@ -353,6 +355,8 @@ erDiagram
         boolean is_approved
         boolean is_first_login
         varchar temp_password
+        varchar emergency_contact_name
+        varchar emergency_contact_phone
         datetime created_at
         datetime updated_at
     }
@@ -390,6 +394,10 @@ erDiagram
         varchar status
         varchar pickup_location
         varchar drop_location
+        varchar start_otp
+        boolean is_otp_verified
+        boolean sos_triggered
+        datetime sos_triggered_at
         datetime created_at
     }
 
@@ -446,6 +454,9 @@ erDiagram
 | `GET` | `/api/bookings/passenger/history` | Passenger | Fetch paginated historical passenger bookings |
 | `GET` | `/api/bookings/driver/bookings` | Driver | Fetch bookings for rides owned by current driver |
 | `PUT` | `/api/bookings/{id}/confirm` | Driver | Confirm booking request |
+| `PATCH`| `/api/bookings/{id}/verify-otp` | Driver | Verify 4-digit ride start OTP upon passenger pickup |
+| `PATCH`| `/api/bookings/{id}/complete` | Driver | Mark booking as completed upon trip arrival |
+| `POST` | `/api/bookings/{id}/sos-alert` | Authenticated | Trigger and dispatch emergency SOS alert with trip snapshot |
 | `PUT` | `/api/bookings/{id}/cancel` | Authenticated | Cancel booking & restore seats |
 
 ### 💳 Payments (`/api/payments`)
