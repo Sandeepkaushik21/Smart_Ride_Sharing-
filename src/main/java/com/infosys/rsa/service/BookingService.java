@@ -1,12 +1,15 @@
 package com.infosys.rsa.service;
 
 import com.infosys.rsa.dto.BookingRequest;
+import com.infosys.rsa.dto.RideInvoiceDTO;
 import com.infosys.rsa.dto.UpdateBookingLocationsRequest;
 import com.infosys.rsa.exception.*;
 import com.infosys.rsa.model.Booking;
+import com.infosys.rsa.model.Payment;
 import com.infosys.rsa.model.Ride;
 import com.infosys.rsa.model.User;
 import com.infosys.rsa.repository.BookingRepository;
+import com.infosys.rsa.repository.PaymentRepository;
 import com.infosys.rsa.repository.RideRepository;
 import com.infosys.rsa.repository.UserRepository;
 import org.slf4j.Logger;
@@ -15,6 +18,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -30,6 +35,9 @@ public class BookingService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private PaymentRepository paymentRepository;
 
     @Autowired
     private FareCalculationService fareCalculationService;
@@ -777,5 +785,123 @@ public class BookingService {
 
         logger.info("Emergency SOS alert logged and dispatched for booking ID: {}", bookingId);
         return updatedBooking;
+    }
+
+    // ---------------- GENERATE RIDE TAX INVOICE ----------------
+    @Transactional(readOnly = true)
+    public RideInvoiceDTO generateInvoice(Long userId, Long bookingId) {
+        logger.info("Generating tax invoice for booking ID: {} requested by user ID: {}", bookingId, userId);
+
+        Booking booking = bookingRepository.findByIdWithRide(bookingId)
+                .orElseThrow(() -> {
+                    logger.error("Booking not found with ID: {}", bookingId);
+                    return new RideNotFoundException("Booking not found with ID: " + bookingId);
+                });
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new PassengerNotFoundException("User not found with ID: " + userId));
+
+        boolean isAdmin = user.getRoles() != null && user.getRoles().stream()
+                .anyMatch(r -> "ROLE_ADMIN".equals(r.getName()) || "ADMIN".equals(r.getName()));
+
+        Long passengerId = booking.getPassenger() != null ? booking.getPassenger().getId() : null;
+        Long driverId = (booking.getRide() != null && booking.getRide().getDriver() != null) ? booking.getRide().getDriver().getId() : null;
+
+        if (!isAdmin && !userId.equals(passengerId) && !userId.equals(driverId)) {
+            logger.error("Unauthorized invoice access attempt by user ID: {} for booking ID: {}", userId, bookingId);
+            throw new PassengerNotFoundException("You are not authorized to view the invoice for this booking.");
+        }
+
+        Ride ride = booking.getRide();
+        User passenger = booking.getPassenger();
+        User driver = ride != null ? ride.getDriver() : null;
+
+        // Payment lookup
+        List<Payment> payments = paymentRepository.findByBookingId(bookingId);
+        Payment successfulPayment = payments.stream()
+                .filter(p -> Payment.PaymentStatus.SUCCESS.equals(p.getStatus()))
+                .findFirst()
+                .orElse(payments.isEmpty() ? null : payments.get(0));
+
+        // Tax & Financial Calculation (SAC 9964 Passenger Transport GST 5% = CGST 2.5% + SGST 2.5%)
+        double totalAmount = booking.getFareAmount() != null ? booking.getFareAmount() : 0.0;
+        double platformFee = Math.round(Math.min(20.0, totalAmount * 0.04) * 100.0) / 100.0;
+        double taxableBase = Math.round((totalAmount / 1.05) * 100.0) / 100.0;
+        double totalTax = Math.round((totalAmount - taxableBase) * 100.0) / 100.0;
+        double cgstAmount = Math.round((totalTax / 2.0) * 100.0) / 100.0;
+        double sgstAmount = Math.round((totalTax - cgstAmount) * 100.0) / 100.0;
+        double baseFare = Math.round(Math.max(0.0, taxableBase - platformFee) * 100.0) / 100.0;
+
+        int invoiceYear = booking.getCreatedAt() != null ? booking.getCreatedAt().getYear() : LocalDate.now().getYear();
+        String invoiceNumber = String.format("INV-%d-%06d", invoiceYear, booking.getId());
+
+        String paymentStatus = "PENDING";
+        String razorpayPaymentId = null;
+        String razorpayOrderId = null;
+        LocalDateTime paidAt = null;
+
+        if (successfulPayment != null) {
+            paymentStatus = successfulPayment.getStatus() != null ? successfulPayment.getStatus().name() : "SUCCESS";
+            razorpayPaymentId = successfulPayment.getRazorpayPaymentId();
+            razorpayOrderId = successfulPayment.getRazorpayOrderId();
+            paidAt = successfulPayment.getCreatedAt();
+        } else if (Booking.BookingStatus.CONFIRMED.equals(booking.getStatus()) ||
+                   Booking.BookingStatus.IN_PROGRESS.equals(booking.getStatus()) ||
+                   Booking.BookingStatus.COMPLETED.equals(booking.getStatus())) {
+            paymentStatus = "SUCCESS";
+            paidAt = booking.getUpdatedAt();
+        }
+
+        return RideInvoiceDTO.builder()
+                // Metadata
+                .invoiceNumber(invoiceNumber)
+                .invoiceDate(booking.getCreatedAt() != null ? booking.getCreatedAt() : LocalDateTime.now())
+                .gstin("29AAACR1234F1Z5")
+                .sacCode("9964")
+                .companyName("Smart Ride Sharing Technologies Ltd.")
+                .companyAddress("Electronic City Phase 1, Hosur Road, Bengaluru, Karnataka 560100")
+                .companyEmail("billing@smartrideshare.com")
+                .companySupportPhone("+91 1800-419-7433")
+                // Booking Info
+                .bookingId(booking.getId())
+                .bookingStatus(booking.getStatus() != null ? booking.getStatus().name() : "CONFIRMED")
+                .isOtpVerified(Boolean.TRUE.equals(booking.getIsOtpVerified()))
+                // Passenger Info
+                .passengerId(passenger != null ? passenger.getId() : null)
+                .passengerName(passenger != null ? passenger.getName() : "Passenger")
+                .passengerEmail(passenger != null ? passenger.getEmail() : "")
+                .passengerPhone(passenger != null ? passenger.getPhone() : "")
+                // Driver & Vehicle Info
+                .driverId(driver != null ? driver.getId() : null)
+                .driverName(driver != null ? driver.getName() : "Driver")
+                .driverPhone(driver != null ? driver.getPhone() : "")
+                .vehicleType(ride != null && ride.getVehicleType() != null ? ride.getVehicleType() : "Standard")
+                .vehicleModel(ride != null && ride.getVehicleModel() != null ? ride.getVehicleModel() : (driver != null ? driver.getVehicleModel() : "Sedan"))
+                .vehicleColor(ride != null && ride.getVehicleColor() != null ? ride.getVehicleColor() : "N/A")
+                .licensePlate(driver != null && driver.getLicensePlate() != null ? driver.getLicensePlate() : "N/A")
+                // Trip Details
+                .sourceCity(ride != null ? ride.getCitySource() : "")
+                .destinationCity(ride != null ? ride.getCityDestination() : "")
+                .pickupLocation(booking.getPickupLocation())
+                .dropoffLocation(booking.getDropoffLocation())
+                .rideDate(ride != null && ride.getDate() != null ? ride.getDate().toString() : "")
+                .rideTime(ride != null && ride.getTime() != null ? ride.getTime().toString() : "")
+                .numberOfSeats(booking.getNumberOfSeats() != null ? booking.getNumberOfSeats() : 1)
+                // Financials & Tax
+                .baseFare(baseFare)
+                .platformFee(platformFee)
+                .cgstRate(2.5)
+                .cgstAmount(cgstAmount)
+                .sgstRate(2.5)
+                .sgstAmount(sgstAmount)
+                .totalTax(totalTax)
+                .totalAmount(totalAmount)
+                // Payment
+                .paymentStatus(paymentStatus)
+                .paymentMethod("RAZORPAY_ONLINE")
+                .razorpayPaymentId(razorpayPaymentId)
+                .razorpayOrderId(razorpayOrderId)
+                .paidAt(paidAt)
+                .build();
     }
 }

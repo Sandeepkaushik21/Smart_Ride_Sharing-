@@ -2,6 +2,7 @@ package com.infosys.rsa.controller;
 
 import com.infosys.rsa.dto.BookingRequest;
 import com.infosys.rsa.dto.OtpVerificationRequest;
+import com.infosys.rsa.dto.RideInvoiceDTO;
 import com.infosys.rsa.dto.UpdateBookingLocationsRequest;
 import com.infosys.rsa.model.Booking;
 import com.infosys.rsa.model.Ride;
@@ -248,6 +249,19 @@ public class BookingController {
                 "message", "Emergency SOS Alert has been successfully triggered and dispatched.",
                 "booking", updatedBooking
         ));
+    }
+
+    // ---------------- GET RIDE TAX INVOICE ----------------
+    @GetMapping("/{id}/invoice")
+    @PreAuthorize("hasAnyRole('PASSENGER', 'DRIVER', 'ADMIN')")
+    public ResponseEntity<?> getRideInvoice(@PathVariable Long id, Authentication authentication) {
+        logger.info("Entering getRideInvoice() for bookingId: {}", id);
+        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+        logger.debug("User ID: {} requested invoice for booking ID: {}", userPrincipal.getId(), id);
+
+        RideInvoiceDTO invoice = bookingService.generateInvoice(userPrincipal.getId(), id);
+        logger.info("Invoice generated successfully for booking ID: {}", id);
+        return ResponseEntity.ok(invoice);
     }
 
     // ✅ Response wrapper for cancel API
