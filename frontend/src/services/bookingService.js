@@ -89,4 +89,9 @@ export const bookingService = {
     const response = await api.post(`/bookings/${bookingId}/sos-alert`, { note });
     return response.data;
   },
+
+  getInvoice: async (bookingId) => {
+    const response = await api.get(`/bookings/${bookingId}/invoice`);
+    return response.data;
+  },
 };

@@ -6,6 +6,7 @@ import BackButton from '../components/BackButton';
 import CityAutocomplete from '../components/CityAutocomplete';
 import RazorpayPaymentModal from '../components/RazorpayPaymentModal';
 import SafetySosModal from '../components/SafetySosModal';
+import RideInvoiceModal from '../components/RideInvoiceModal';
 import { rideService } from '../services/rideService';
 import { bookingService } from '../services/bookingService';
 import { userService } from '../services/userService';
@@ -29,6 +30,7 @@ const PassengerDashboard = () => {
 
     const [userProfile, setUserProfile] = useState(null);
     const [safetyModalBooking, setSafetyModalBooking] = useState(null);
+    const [invoiceModalBooking, setInvoiceModalBooking] = useState(null);
 
     const loadUserProfile = async () => {
         try {
@@ -859,57 +861,12 @@ _Shared for safety & live tracking via Smart Ride Sharing._`);
         }
     }, [bookings, rideHistory, isDatePassed]);
 
-    const handlePrintReceipt = async (booking) => {
+    const handlePrintReceipt = (booking) => {
         if (!booking) {
-            await showError('Cannot print receipt: Booking data is missing.');
+            showError('Cannot view invoice: Booking data is missing.');
             return;
         }
-        setLoading(true);
-        try {
-            const content = `
-                <h2>Ride Receipt - Booking ID: ${booking.id}</h2>
-                <p><strong>Status:</strong> ${booking.status}</p>
-                <p><strong>Route:</strong> ${booking.pickupLocation || booking.ride?.source} → ${booking.dropoffLocation || booking.ride?.destination}</p>
-                <p><strong>Date:</strong> ${formatDate(booking.ride?.date)} at ${formatTime(booking.ride?.time)}</p>
-                <p><strong>Seats Booked:</strong> ${booking.numberOfSeats || 1}</p>
-                <hr style="margin: 15px 0;">
-                <p style="font-size: 1.2em; font-weight: bold;">Total Fare Paid: ₹${booking.fareAmount?.toFixed(2) || 'N/A'}</p>
-                <p style="font-size: 0.8em; color: gray;">Thank you for riding with us!</p>
-            `;
-
-            const printWindow = window.open('', '_blank');
-            if (printWindow) {
-                printWindow.document.write(`
-                    <html>
-                    <head>
-                        <title>Receipt - Booking ${booking.id}</title>
-                        <style>
-                            body { font-family: Arial, sans-serif; padding: 20px; }
-                            h2 { color: #5B21B6; }
-                            hr { border: 0; border-top: 1px solid #ccc; }
-                        </style>
-                    </head>
-                    <body>
-                        ${content}
-                        <script>
-                            window.onload = function() {
-                                window.print();
-                            }
-                        </script>
-                    </body>
-                    </html>
-                `);
-                printWindow.document.close();
-            } else {
-                await showError('Could not open print window. Please allow pop-ups.');
-            }
-            await showSuccess('Receipt prepared for printing.');
-        } catch (error) {
-            console.error('Error generating receipt:', error);
-            await showError('Failed to generate receipt.');
-        } finally {
-            setLoading(false);
-        }
+        setInvoiceModalBooking(booking);
     };
 
     const getDriverName = (ride) => {
@@ -2217,6 +2174,15 @@ _Shared for safety & live tracking via Smart Ride Sharing._`);
                     booking={safetyModalBooking}
                     userProfile={userProfile}
                     onProfileUpdated={loadUserProfile}
+                />
+            )}
+
+            {/* Ride Tax Invoice Modal */}
+            {invoiceModalBooking && (
+                <RideInvoiceModal
+                    isOpen={!!invoiceModalBooking}
+                    onClose={() => setInvoiceModalBooking(null)}
+                    booking={invoiceModalBooking}
                 />
             )}
 

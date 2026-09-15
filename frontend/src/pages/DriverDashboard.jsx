@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, MapPin, Calendar, Clock, Users, Car, Navigation, CheckCircle, X, Upload, Snowflake, Ticket, CheckCircle2, XCircle, History, Edit, Phone, Star, DollarSign, TrendingUp, Bell, Key, ShieldAlert } from 'lucide-react';
+import { Plus, MapPin, Calendar, Clock, Users, Car, Navigation, CheckCircle, X, Upload, Snowflake, Ticket, CheckCircle2, XCircle, History, Edit, Phone, Star, DollarSign, TrendingUp, Bell, Key, ShieldAlert, Printer } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import BackButton from '../components/BackButton';
 import CityAutocomplete from '../components/CityAutocomplete';
 import SafetySosModal from '../components/SafetySosModal';
+import RideInvoiceModal from '../components/RideInvoiceModal';
 import { rideService } from '../services/rideService';
 import { bookingService } from '../services/bookingService';
 import { userService } from '../services/userService';
@@ -34,6 +35,7 @@ const DriverDashboard = () => {
     const [bookingsSize, setBookingsSize] = useState(3);
     const [bookingsTotalPages, setBookingsTotalPages] = useState(0);
     const [safetyModalBooking, setSafetyModalBooking] = useState(null);
+    const [invoiceModalBooking, setInvoiceModalBooking] = useState(null);
     // Pending bookings for accept/decline
     const [pendingBookings, setPendingBookings] = useState([]);
     const [pendingPage, setPendingPage] = useState(0);
@@ -1644,10 +1646,20 @@ const DriverDashboard = () => {
                                                                             </div>
                                                                         )}
                                                                         {booking.status === 'COMPLETED' && (
-                                                                            <span className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg text-sm font-semibold flex items-center space-x-2">
-                                                                                <CheckCircle className="h-4 w-4" />
-                                                                                <span>Completed</span>
-                                                                            </span>
+                                                                            <div className="flex flex-col sm:flex-row gap-2 items-center">
+                                                                                <span className="px-3 py-1.5 bg-green-100 text-green-800 rounded-lg text-xs font-semibold flex items-center space-x-1">
+                                                                                    <CheckCircle className="h-3.5 w-3.5" />
+                                                                                    <span>Completed</span>
+                                                                                </span>
+                                                                                <button
+                                                                                    onClick={() => setInvoiceModalBooking(booking)}
+                                                                                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-md transform hover:scale-105 transition-all flex items-center space-x-1"
+                                                                                    title="View Tax Invoice"
+                                                                                >
+                                                                                    <Printer className="h-3.5 w-3.5" />
+                                                                                    <span>Invoice</span>
+                                                                                </button>
+                                                                            </div>
                                                                         )}
                                                                     </div>
                                                                 </div>
@@ -1851,10 +1863,20 @@ const DriverDashboard = () => {
                                                                             </button>
                                                                         )}
                                                                         {booking.status === 'COMPLETED' && (
-                                                                            <span className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg text-sm font-semibold flex items-center space-x-2">
-                                                                                <CheckCircle className="h-4 w-4" />
-                                                                                <span>Completed</span>
-                                                                            </span>
+                                                                            <div className="flex flex-col sm:flex-row gap-2 items-center">
+                                                                                <span className="px-3 py-1.5 bg-green-100 text-green-800 rounded-lg text-xs font-semibold flex items-center space-x-1">
+                                                                                    <CheckCircle className="h-3.5 w-3.5" />
+                                                                                    <span>Completed</span>
+                                                                                </span>
+                                                                                <button
+                                                                                    onClick={() => setInvoiceModalBooking(booking)}
+                                                                                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-md transform hover:scale-105 transition-all flex items-center space-x-1"
+                                                                                    title="View Tax Invoice"
+                                                                                >
+                                                                                    <Printer className="h-3.5 w-3.5" />
+                                                                                    <span>Invoice</span>
+                                                                                </button>
+                                                                            </div>
                                                                         )}
                                                                     </div>
                                                                 </div>
@@ -1969,6 +1991,15 @@ const DriverDashboard = () => {
                     booking={safetyModalBooking}
                     userProfile={userProfile}
                     onProfileUpdated={loadUserProfile}
+                />
+            )}
+
+            {/* Ride Tax Invoice Modal */}
+            {invoiceModalBooking && (
+                <RideInvoiceModal
+                    isOpen={!!invoiceModalBooking}
+                    onClose={() => setInvoiceModalBooking(null)}
+                    booking={invoiceModalBooking}
                 />
             )}
 
