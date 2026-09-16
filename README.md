@@ -9,7 +9,7 @@
 [![Razorpay](https://img.shields.io/badge/Razorpay-Payment%20Gateway-0C2340.svg?logo=razorpay)](https://razorpay.com/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A full-stack, enterprise-grade ride sharing and carpooling platform designed to connect drivers with empty seats to commuters traveling along similar routes. The platform streamlines ride discovery, multi-stop pickup/drop location coordination, instant seat booking, secure online payments via Razorpay (UPI, Cards, NetBanking), real-time email notifications, and comprehensive administrative oversight.
+A full-stack, enterprise-grade ride sharing and carpooling platform designed to connect drivers with empty seats to commuters traveling along similar routes. The platform streamlines ride discovery, multi-stop pickup/drop location coordination, instant seat booking, secure online payments via Razorpay (UPI, Cards, NetBanking), GST-compliant downloadable tax invoices, real-time safety & SOS emergency dispatch, and comprehensive administrative oversight.
 
 ---
 
@@ -21,8 +21,9 @@ A full-stack, enterprise-grade ride sharing and carpooling platform designed to 
   - [1. User Onboarding & Authentication Flow](#1-user-onboarding--authentication-flow)
   - [2. Driver Ride Publishing Flow](#2-driver-ride-publishing-flow)
   - [3. Passenger Multi-Step Search & Booking Flow](#3-passenger-multi-step-search--booking-flow)
-  - [4. Payment Processing (Razorpay & Driver Wallet) Flow](#4-payment-processing-razorpay--driver-wallet-flow)
-  - [5. Booking Lifecycle State Machine](#5-booking-lifecycle-state-machine)
+  - [4. Ride Start OTP & Trip Safety Verification Flow](#4-ride-start-otp--trip-safety-verification-flow)
+  - [5. Payment Processing (Razorpay & Driver Wallet) Flow](#5-payment-processing-razorpay--driver-wallet-flow)
+  - [6. Booking Lifecycle State Machine](#6-booking-lifecycle-state-machine)
 - [Core Features by Role](#-core-features-by-role)
   - [Passenger Features](#passenger-features)
   - [Driver Features](#driver-features)
@@ -48,9 +49,10 @@ A full-stack, enterprise-grade ride sharing and carpooling platform designed to 
 - **Master Vehicle Management**: Drivers can upload and store vehicle specifications (AC, color, capacity, model) and multiple vehicle exterior/interior images once, automatically reusing them across scheduled rides.
 - **Ride Start OTP Verification**: Secure 4-digit OTP generated upon booking confirmation and verified by the driver at pickup before boarding, transitioning the trip to in-progress.
 - **Emergency SOS & 1-Click WhatsApp Sharing**: Instant WhatsApp trip sharing with complete driver, vehicle, and live route details, plus backend Emergency SOS trigger and one-tap emergency helpline dialers (112, 1091, 108).
+- **Downloadable PDF Tax Invoice & Expense Receipts**: Complete GST-compliant Tax Invoice system (SAC Code `9964`, 2.5% CGST + 2.5% SGST breakdown, Razorpay transaction proofs, digital signature seals, and print-ready A4 PDF export) accessible by passengers and drivers.
 - **Complete Razorpay Payment Lifecycle**: Full end-to-end checkout supporting UPI (Google Pay, PhonePe, Paytm, BHIM), Credit/Debit Cards, NetBanking, and digital wallets, with SHA-256 HMAC signature verification and automatic driver wallet credit.
 - **Social & Standard Authentication**: Dual login options via Google OAuth2 ID Token verification and standard email/password credentials with BCrypt hashing and JWT session management.
-- **Automated Email Notifications**: SMTP-powered instant notifications for account registration, temporary credentials, booking confirmation, ride status updates, and cancellations.
+- **Automated Email Notifications**: SMTP-powered instant notifications for account registration, temporary credentials, booking confirmation, ride status updates, cancellations, and emergency SOS alerts.
 - **Interactive Admin Control Center**: Administrative dashboard featuring driver verification workflows, user management, financial statistics, platform KPI metrics, and CSV reporting.
 
 ---
@@ -63,8 +65,8 @@ The application adopts a decoupled **Single Page Application (SPA) + Monolithic 
 graph TB
     subgraph Frontend ["Client Layer (React 19 + Vite + Tailwind CSS)"]
         UI_Guest["Public Pages\n(Landing, Login, Register)"]
-        UI_Pass["Passenger Portal\n(Search Wizard, Bookings, Payment)"]
-        UI_Driver["Driver Portal\n(Vehicle Details, Post Ride, Wallet)"]
+        UI_Pass["Passenger Portal\n(Search Wizard, Bookings, Payment, Invoices, SOS)"]
+        UI_Driver["Driver Portal\n(Vehicle Details, Post Ride, OTP Verify, Invoices, Wallet)"]
         UI_Admin["Admin Center\n(Approvals, Analytics, Logs)"]
         Axios["Axios HTTP Client\n(JWT Interceptors)"]
     end
@@ -84,14 +86,14 @@ graph TB
         subgraph Services ["Service Layer (Business Logic)"]
             AuthSvc["AuthService"]
             RideSvc["RideService"]
-            BookSvc["BookingService"]
+            BookSvc["BookingService\n(OTP, SOS, Invoice Engine)"]
             PaySvc["PaymentService"]
             AdminSvc["AdminService"]
             MailSvc["EmailService"]
         end
 
         subgraph DataAccess ["Data Layer (Spring Data JPA)"]
-            Repos["JPA Repositories\n(UserRepository, RideRepository, etc.)"]
+            Repos["JPA Repositories\n(UserRepository, RideRepository, BookingRepository, PaymentRepository)"]
         end
     end
 
@@ -103,7 +105,7 @@ graph TB
         Razorpay["Razorpay API\n(Payments & Orders)"]
         GoogleAuth["Google OAuth2\n(Identity Token Verification)"]
         LocationIQ["LocationIQ API\n(Geocoding & Autocomplete)"]
-        GmailSMTP["Gmail SMTP Server\n(Transactional Emails)"]
+        GmailSMTP["Gmail SMTP Server\n(Transactional Emails & SOS Alerts)"]
     end
 
     UI_Guest --> Axios
@@ -223,7 +225,7 @@ sequenceDiagram
 
     Passenger->>UI: Clicks "Book Ride"
     UI->>BookCtrl: POST /api/bookings/book { rideId, seats, pickupLocation, dropLocation }
-    BookCtrl->>DB: Check seat availability & create Booking (Status: PENDING)
+    BookCtrl->>DB: Check seat availability & create Booking (Status: PENDING, generate 4-digit OTP)
     BookCtrl-->>UI: Booking Created { bookingId, fareAmount }
 
     UI->>PayCtrl: POST /api/payments/create-order { bookingId, amount }
@@ -238,13 +240,52 @@ sequenceDiagram
     UI->>PayCtrl: POST /api/payments/verify { paymentId, orderId, signature, bookingId }
     PayCtrl->>PayCtrl: Validates SHA-256 HMAC Signature
     PayCtrl->>DB: Update Payment (Status: SUCCESS), Update Booking (Status: CONFIRMED), Decrement Ride available seats
-    PayCtrl->>Mail: Send Booking Confirmation Email with Ride & Driver Details
+    PayCtrl->>Mail: Send Booking Confirmation Email with Start OTP & Driver Details
     PayCtrl-->>UI: 200 OK (Booking Confirmed)
 ```
 
 ---
 
-### 4. Payment Processing (Razorpay & Driver Wallet) Flow
+### 4. Ride Start OTP & Trip Safety Verification Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Passenger
+    actor Driver
+    participant UI as App Dashboard
+    participant BookCtrl as BookingController
+    participant BookSvc as BookingService
+    participant DB as MySQL Database
+    participant Mail as EmailService
+
+    Note over Passenger,Driver: Pickup Point Arrival
+    Passenger->>Driver: Shares 4-Digit Ride Start OTP
+    Driver->>UI: Enters OTP in Driver Dashboard
+    UI->>BookCtrl: PATCH /api/bookings/{id}/verify-otp { otp: "3892" }
+    BookCtrl->>BookSvc: verifyBookingOtp(driverId, bookingId, otp)
+    BookSvc->>DB: Verify OTP matches booking & set status = IN_PROGRESS, isOtpVerified = true
+    BookSvc-->>UI: 200 OK (Boarding Confirmed & In-Progress)
+
+    alt Emergency SOS Triggered (by Passenger or Driver)
+        Passenger->>UI: Clicks "🚨 Emergency SOS"
+        UI->>BookCtrl: POST /api/bookings/{id}/sos-alert
+        BookCtrl->>BookSvc: triggerSosAlert(userId, bookingId, note)
+        BookSvc->>DB: Flag booking with sosTriggered = true, sosTriggeredAt = now()
+        BookSvc->>Mail: Dispatch urgent SOS Alert emails with trip, vehicle & contact snapshot
+        BookSvc-->>UI: SOS Dispatched
+    end
+
+    Note over Passenger,Driver: Destination Arrival
+    Driver->>UI: Clicks "Mark Ride Complete"
+    UI->>BookCtrl: PATCH /api/bookings/{id}/complete
+    BookCtrl->>DB: Set booking status = COMPLETED
+    BookCtrl-->>UI: 200 OK (Trip Completed, Eligible for Tax Invoice & Reviews)
+```
+
+---
+
+### 5. Payment Processing (Razorpay & Driver Wallet) Flow
 
 ```mermaid
 sequenceDiagram
@@ -267,18 +308,18 @@ sequenceDiagram
 
 ---
 
-### 5. Booking Lifecycle State Machine
+### 6. Booking Lifecycle State Machine
 
 ```mermaid
 stateDiagram-v2
     [*] --> PENDING : Passenger requests booking
-    PENDING --> CONFIRMED : Payment verified via Razorpay
+    PENDING --> CONFIRMED : Payment verified via Razorpay (Start OTP Generated)
     PENDING --> CANCELLED : Payment failed / timeout / user aborts
-    CONFIRMED --> IN_PROGRESS : Driver starts ride
-    CONFIRMED --> CANCELLED : Passenger / Driver cancels booking
+    CONFIRMED --> IN_PROGRESS : Driver verifies 4-Digit Start OTP at pickup
+    CONFIRMED --> CANCELLED : Passenger / Driver cancels booking (Seats restored)
     IN_PROGRESS --> COMPLETED : Driver marks destination reached
-    COMPLETED --> [*] : Driver Wallet Credited
-    CANCELLED --> [*] : Seats restored to Ride
+    COMPLETED --> [*] : Driver Wallet Credited & Tax Invoice available
+    CANCELLED --> [*] : Booking Terminated
 ```
 
 ---
@@ -289,14 +330,19 @@ stateDiagram-v2
 - **Smart City & Stop Search**: Autocomplete search for source and destination cities with multi-stop pickup/drop filter aggregation.
 - **Vehicle Inspection**: View driver vehicle photos, color, model, AC availability, and driver ratings before booking.
 - **Seamless Checkout**: Multiple payment options (UPI, GPay, PhonePe, Cards, NetBanking) via Razorpay.
-- **Real-Time Booking Management**: View active bookings, cancel rides with automatic seat restoration, and download/print ride receipts.
+- **Ride Start OTP Security**: View and copy your private 4-digit start OTP required for safe passenger boarding.
+- **Emergency Safety Center**: 1-Click WhatsApp Live Trip Sharing, backend SOS emergency dispatcher, and one-tap national helpline dialers (112, 1091, 108).
+- **Downloadable Tax Invoices & Expense Receipts**: 1-Click view, print, and A4 PDF export of GST-compliant ride invoices (SAC 9964) with full tax breakdown and Razorpay payment proofs.
+- **Real-Time Booking Management**: View active bookings, cancel rides with automatic seat restoration, and download ride receipts.
 - **Ride History & Reviews**: Complete historical trip log with the ability to submit star ratings and text reviews for drivers.
 
 ### Driver Features
 - **Vehicle Profile Hub**: Store and update master vehicle details, capacity, features, and multiple vehicle photos.
 - **Flexible Ride Publishing**: Schedule one-time or recurring rides with customizable base fare, seat capacity, departure time, and up to 4 pickup and 4 drop waypoints.
-- **Booking Management**: Accept, reject, or monitor passenger bookings with real-time seat availability calculation.
+- **Ride Start OTP Verification**: Input and verify passenger OTPs at pickup to authenticate passenger identity and initiate trip tracking.
 - **Trip Lifecycle Control**: Mark rides as Scheduled, In-Progress, or Completed.
+- **Emergency Safety Protocol**: Access Safety & SOS center to dispatch emergency notifications during trips.
+- **Tax Invoices for Completed Trips**: Access and download tax invoice receipts for all completed rides.
 - **Earnings & Wallet Tracker**: Real-time summary of total earnings, pending payouts, completed payouts, and historical transaction logs.
 
 ### Administrator Features
@@ -313,7 +359,7 @@ stateDiagram-v2
 | :--- | :--- | :--- |
 | **Frontend Framework** | React 19 + Vite 7 | High-performance Single Page Application (SPA) |
 | **Styling & UI** | Tailwind CSS 3.4 + Lucide Icons | Responsive modern design and icon system |
-| **Notifications & Modals** | SweetAlert2 | Interactive confirmation dialogs and toasts |
+| **Notifications & Modals** | SweetAlert2 | Interactive confirmation dialogs, OTP prompts, and toasts |
 | **Routing** | React Router v7 | Client-side routing with guarded role routes |
 | **HTTP Client** | Axios | REST communication with JWT interceptors |
 | **Backend Framework** | Spring Boot 3.5.7 | Enterprise Java application server |
@@ -324,7 +370,7 @@ stateDiagram-v2
 | **Payment Gateway** | Razorpay Java SDK 1.4.3 | Payment order creation, verification, and webhooks |
 | **Geocoding & Maps** | LocationIQ REST API | Address lookup and coordinate calculation |
 | **Social Login** | Google OAuth2 API Client | Google ID token cryptographic verification |
-| **Email Service** | Spring Boot Starter Mail (JavaMail) | SMTP transactional email delivery |
+| **Email Service** | Spring Boot Starter Mail (JavaMail) | SMTP transactional email delivery & SOS alerts |
 | **Documentation** | SpringDoc OpenAPI (Swagger UI) | Interactive API exploration |
 | **Code Quality & Testing** | JUnit 5 + Mockito + JaCoCo + ESLint | Automated test runner, coverage reporting, and linting |
 
@@ -449,7 +495,7 @@ erDiagram
 ### 🎟 Bookings (`/api/bookings`)
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/bookings/book` | Passenger | Create pending ride booking |
+| `POST` | `/api/bookings/book` | Passenger | Create pending ride booking with generated start OTP |
 | `GET` | `/api/bookings/my-bookings` | Passenger | Fetch paginated passenger active bookings |
 | `GET` | `/api/bookings/passenger/history` | Passenger | Fetch paginated historical passenger bookings |
 | `GET` | `/api/bookings/driver/bookings` | Driver | Fetch bookings for rides owned by current driver |
@@ -457,6 +503,7 @@ erDiagram
 | `PATCH`| `/api/bookings/{id}/verify-otp` | Driver | Verify 4-digit ride start OTP upon passenger pickup |
 | `PATCH`| `/api/bookings/{id}/complete` | Driver | Mark booking as completed upon trip arrival |
 | `POST` | `/api/bookings/{id}/sos-alert` | Authenticated | Trigger and dispatch emergency SOS alert with trip snapshot |
+| `GET` | `/api/bookings/{id}/invoice` | Authenticated | Generate itemized GST Tax Invoice & Expense Receipt DTO |
 | `PUT` | `/api/bookings/{id}/cancel` | Authenticated | Cancel booking & restore seats |
 
 ### 💳 Payments (`/api/payments`)
@@ -473,7 +520,7 @@ erDiagram
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/users/profile` | Authenticated | Retrieve profile details of logged-in user |
-| `PUT` | `/api/users/profile` | Authenticated | Update user profile information |
+| `PUT` | `/api/users/profile` | Authenticated | Update user profile & emergency contact details |
 | `GET` | `/api/users/master-vehicle-details` | Driver | Get saved master vehicle configuration |
 | `POST` | `/api/users/master-vehicle-details` | Driver | Save/update master vehicle specifications and photos |
 
@@ -637,13 +684,13 @@ RSA_Infosys/
 │   ├── main/
 │   │   ├── java/com/infosys/rsa/
 │   │   │   ├── config/                  # Security, CORS, Jackson, DataInitializer
-│   │   │   ├── controller/              # REST API controllers
-│   │   │   ├── dto/                     # Request and response transfer objects
+│   │   │   ├── controller/              # REST API controllers (Auth, Rides, Bookings, Payments, etc.)
+│   │   │   ├── dto/                     # Request and response transfer objects (RideInvoiceDTO, etc.)
 │   │   │   ├── exception/               # Global exception handling & error responses
-│   │   │   ├── model/                   # JPA Entities (User, Ride, Booking, Payment)
+│   │   │   ├── model/                   # JPA Entities (User, Ride, Booking, Payment, Role, Review)
 │   │   │   ├── repository/              # Spring Data JPA repositories
 │   │   │   ├── security/                # JWT filters, UserDetails service, AuthProvider
-│   │   │   └── service/                 # Core business services & mailer
+│   │   │   └── service/                 # Business services, Mailer, Fare & Invoice calculations
 │   │   └── resources/
 │   │       ├── application.properties   # Environment configurations & credentials
 │   │       └── static/                  # Static assets & welcome pages
@@ -656,9 +703,9 @@ RSA_Infosys/
     ├── eslint.config.js                 # ESLint rules
     ├── index.html                       # HTML root template
     └── src/
-        ├── components/                  # Reusable UI widgets (Navbar, BackButton, etc.)
+        ├── components/                  # Reusable UI widgets (RideInvoiceModal, SafetySosModal, Navbar, etc.)
         ├── pages/                       # Route pages (Landing, Login, Dashboards)
-        ├── services/                    # Axios API integration modules
+        ├── services/                    # Axios API integration modules (bookingService, rideService, etc.)
         └── utils/                       # SweetAlert2 helpers and formatters
 ```
 
