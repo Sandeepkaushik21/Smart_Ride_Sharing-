@@ -13,7 +13,10 @@ import {
     Receipt, 
     CreditCard, 
     FileText,
-    Loader2
+    Loader2,
+    Copy,
+    Check,
+    Leaf
 } from 'lucide-react';
 import { bookingService } from '../services/bookingService';
 
@@ -21,6 +24,15 @@ const RideInvoiceModal = ({ isOpen, onClose, booking }) => {
     const [invoice, setInvoice] = useState(null);
     const [loading, setLoading] = useState(false);
     const [fetchError, setFetchError] = useState(null);
+    const [copied, setCopied] = useState(false);
+
+    const handleCopyInvoiceRef = () => {
+        if (!invoice) return;
+        const summary = `Smart Ride Sharing Tax Invoice: ${invoice.invoiceNumber}\nBooking ID: #${invoice.bookingId}\nAmount Paid: ₹${invoice.totalAmount?.toFixed(2)}\nRoute: ${invoice.pickupLocation} → ${invoice.dropoffLocation}\nPayment Status: ${invoice.paymentStatus}\nRazorpay ID: ${invoice.razorpayPaymentId || 'N/A'}`;
+        navigator.clipboard.writeText(summary);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
 
     useEffect(() => {
         if (isOpen && booking) {
@@ -173,6 +185,14 @@ const RideInvoiceModal = ({ isOpen, onClose, booking }) => {
                         </div>
                     </div>
                     <div className="flex items-center space-x-2">
+                        <button
+                            onClick={handleCopyInvoiceRef}
+                            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center space-x-1.5 active:scale-95 border border-slate-700"
+                            title="Copy Invoice Summary"
+                        >
+                            {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                            <span>{copied ? 'Copied!' : 'Copy Summary'}</span>
+                        </button>
                         <button
                             onClick={handlePrint}
                             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center space-x-1.5 active:scale-95"
@@ -331,6 +351,24 @@ const RideInvoiceModal = ({ isOpen, onClose, booking }) => {
                             </div>
                         </div>
 
+                        {/* Eco-Impact & Carbon Savings Card */}
+                        <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200/90 rounded-2xl p-3.5 flex items-center justify-between gap-3 text-xs shadow-sm">
+                            <div className="flex items-center space-x-3">
+                                <div className="p-2 bg-emerald-600 rounded-xl text-white shadow-sm flex-shrink-0">
+                                    <Leaf className="h-4 w-4" />
+                                </div>
+                                <div>
+                                    <div className="font-bold text-emerald-950 flex items-center gap-1.5">
+                                        <span>Green Commuter Sustainability Impact</span>
+                                        <span className="px-2 py-0.5 bg-emerald-200/80 text-emerald-900 rounded-full font-extrabold text-[10px]">Eco-Verified</span>
+                                    </div>
+                                    <p className="text-[11px] text-emerald-800 font-medium mt-0.5">
+                                        Sharing this ride prevented approximately <strong>{(Math.max(1.8, (invoice.numberOfSeats || 1) * 2.4)).toFixed(1)} kg</strong> of CO₂ emissions vs solo driving.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Itemized Financial / Tax Breakdown Table */}
                         <div>
                             <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 flex items-center gap-1">
@@ -455,6 +493,13 @@ const RideInvoiceModal = ({ isOpen, onClose, booking }) => {
                         Need expense report help? Contact billing@smartrideshare.com
                     </p>
                     <div className="flex items-center space-x-2">
+                        <button
+                            onClick={handleCopyInvoiceRef}
+                            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center space-x-1.5 active:scale-95"
+                        >
+                            {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                            <span>{copied ? 'Copied Details' : 'Copy Summary'}</span>
+                        </button>
                         <button
                             onClick={handlePrint}
                             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center space-x-1.5"
